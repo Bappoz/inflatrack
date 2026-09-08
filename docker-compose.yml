@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-inflatrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inflatrack}
+      POSTGRES_DB: ${POSTGRES_DB:-inflatrack}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inflatrack} -d ${POSTGRES_DB:-inflatrack}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+volumes:
+  pgdata:

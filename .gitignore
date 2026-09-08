@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# Ambiente
+.env
+
+# Dados brutos e derivados — nunca versionar (ver docs/carga.md)
+data/
+*.json.gz
+
+# Material de trabalho da planilha de acompanhamento
+planilha/
