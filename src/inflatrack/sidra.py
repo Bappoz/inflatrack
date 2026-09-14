@@ -28,6 +28,7 @@ URL_METADADOS = "https://servicodados.ibge.gov.br/api/v3/agregados/{agregado}/me
 
 LIMITE_VALORES_POR_REQUISICAO = 50_000
 MARCADORES_AUSENTE = frozenset({"...", "..", "-", "X"})
+CODIGO_INDICE_GERAL = "7169"
 
 _TIMEOUT = httpx.Timeout(120.0, connect=15.0)
 
@@ -91,29 +92,40 @@ def buscar_metadados(cliente: httpx.Client, agregado: int) -> dict:
     return resposta.json()
 
 
-def categorias(metadados: dict) -> list[tuple[str, str, str | None]]:
-    """Extrai ``(codigo, nome, codigo_pai)`` da classificação 315.
+def categorias(metadados: dict) -> list[tuple[str, str, str, str | None]]:
+    """Extrai ``(id_sidra, codigo, nome, codigo_pai)`` da classificação 315.
 
     O SIDRA entrega o rótulo colado, ``"1101002.Arroz"``. O código do pai é
     prefixo do filho: subitem 1101002 -> item 1101 -> subgrupo 11 -> grupo 1.
     O índice geral não tem ponto no rótulo e não tem pai.
+
+    ``id_sidra`` é o identificador interno da categoria (campo ``id`` dos
+    metadados) — é ele, e não o código natural, que os valores devolvem em
+    ``D4C``. Os dois só coincidem por acaso no índice geral.
     """
-    saida: list[tuple[str, str, str | None]] = []
+    saida: list[tuple[str, str, str, str | None]] = []
     for classificacao in metadados.get("classificacoes", []):
         if str(classificacao.get("id")) != "315":
             continue
         for categoria in classificacao["categorias"]:
+            id_sidra = str(categoria["id"])
             rotulo = categoria["nome"]
             codigo, separador, nome = rotulo.partition(".")
             if not separador:
-                saida.append(("7169", rotulo.strip(), None))
+                saida.append((id_sidra, CODIGO_INDICE_GERAL, rotulo.strip(), None))
                 continue
             codigo = codigo.strip()
             pai = {7: codigo[:4], 4: codigo[:2], 2: codigo[:1]}.get(len(codigo))
-            saida.append((codigo, nome.strip(), pai))
+            saida.append((id_sidra, codigo, nome.strip(), pai))
     return saida
 
 
 def nivel_do_codigo(codigo: str) -> str:
-    """Nível da cesta a partir do comprimento do código."""
+    """Nível da cesta a partir do comprimento do código.
+
+    ``7169`` é o sentinela do índice geral (sem estrutura de prefixo) —
+    ver :func:`categorias`.
+    """
+    if codigo == CODIGO_INDICE_GERAL:
+        return "geral"
     return {1: "grupo", 2: "subgrupo", 4: "item", 7: "subitem"}.get(len(codigo), "geral")

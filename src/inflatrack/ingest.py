@@ -64,11 +64,17 @@ def gravar_bruto(destino: Path, agregado: int, periodo: str, payload: list[dict]
     return caminho
 
 
-def sincronizar_cesta(conexao: psycopg.Connection, agregado: int, metadados: dict) -> int:
+def sincronizar_cesta(
+    conexao: psycopg.Connection, agregado: int, metadados: dict
+) -> dict[str, str]:
     """Insere a classificação e a versão vigente daquele agregado.
 
     A versão existe porque o mesmo código muda de nome entre agregados — 43
     subitens foram renomeados entre 2006 e 2026. Ver docs/adr/0001.
+
+    Devolve o mapa ``id_sidra -> codigo`` desse agregado: os valores da API
+    identificam a categoria pelo ``id`` interno (``D4C``), não pelo código
+    natural gravado em `classificacao`.
     """
     categorias = sidra.categorias(metadados)
     periodo = metadados["periodicidade"]
@@ -78,25 +84,42 @@ def sincronizar_cesta(conexao: psycopg.Connection, agregado: int, metadados: dic
         cursor.executemany(
             "insert into classificacao (codigo, nivel) values (%s, %s)"
             " on conflict (codigo) do nothing",
-            [(codigo, sidra.nivel_do_codigo(codigo)) for codigo, _, _ in categorias],
+            [(codigo, sidra.nivel_do_codigo(codigo)) for _, codigo, _, _ in categorias],
         )
         cursor.executemany(
             "insert into classificacao_versao"
             " (codigo, id_fonte, nome, codigo_pai, vigencia_inicio)"
             " values (%s, %s, %s, %s, %s)"
             " on conflict (codigo, id_fonte) do update set nome = excluded.nome",
-            [(cod, agregado, nome, pai, vigencia_inicio) for cod, nome, pai in categorias],
+            [(codigo, agregado, nome, pai, vigencia_inicio) for _, codigo, nome, pai in categorias],
         )
-    return len(categorias)
+    return {id_sidra: codigo for id_sidra, codigo, _, _ in categorias}
 
 
 def carregar_periodo(
-    conexao: psycopg.Connection, agregado: int, periodo: str, payload: list[dict]
+    conexao: psycopg.Connection,
+    agregado: int,
+    periodo: str,
+    payload: list[dict],
+    mapa_classificacao: dict[str, str] | None,
 ) -> int:
-    """Copia um mês para uma tabela temporária e funde na tabela de fato."""
+    """Copia um mês para uma tabela temporária e funde na tabela de fato.
+
+    ``mapa_classificacao`` traduz o ``D4C`` (id interno do SIDRA) para o
+    código natural gravado em `classificacao` — ver :func:`sincronizar_cesta`.
+    Agregados sem dimensão de classificação (1737) não têm ``D4C`` no payload
+    e caem sempre no índice geral.
+    """
     mes = mes_para_data(periodo)
     linhas = [
-        (agregado, linha["D4C"], int(linha["D1C"]), int(linha["D2C"]), mes, linha["V"])
+        (
+            agregado,
+            mapa_classificacao[linha["D4C"]] if mapa_classificacao else sidra.CODIGO_INDICE_GERAL,
+            int(linha["D1C"]),
+            int(linha["D2C"]),
+            mes,
+            linha["V"],
+        )
         for linha in payload
         if not sidra.eh_ausente(linha["V"])
     ]
@@ -105,7 +128,8 @@ def carregar_periodo(
 
     with conexao.cursor() as cursor:
         cursor.execute(
-            "create temp table carga (like observacao including defaults) on commit drop"
+            "create temp table carga (like observacao including defaults including identity)"
+            " on commit drop"
         )
         colunas = ", ".join(COLUNAS_OBSERVACAO)
         with cursor.copy(f"copy carga ({colunas}) from stdin") as copia:
@@ -124,10 +148,15 @@ def executar(args: argparse.Namespace) -> int:
 
     with httpx.Client() as cliente, psycopg.connect(args.dsn) as conexao:
         metadados = sidra.buscar_metadados(cliente, args.agregado)
+        mapa_classificacao: dict[str, str] | None = None
         if args.agregado != 1737:
-            quantas = sincronizar_cesta(conexao, args.agregado, metadados)
+            mapa_classificacao = sincronizar_cesta(conexao, args.agregado, metadados)
             conexao.commit()
-            logger.info("cesta sincronizada: %d categorias do agregado %d", quantas, args.agregado)
+            logger.info(
+                "cesta sincronizada: %d categorias do agregado %d",
+                len(mapa_classificacao),
+                args.agregado,
+            )
 
         for periodo in sidra.meses(inicio, fim):
             payload = sidra.buscar_valores(
@@ -138,7 +167,9 @@ def executar(args: argparse.Namespace) -> int:
                 classificacao=None if args.agregado == 1737 else "315",
             )
             gravar_bruto(destino_bruto, args.agregado, periodo, payload)
-            inseridas = carregar_periodo(conexao, args.agregado, periodo, payload)
+            inseridas = carregar_periodo(
+                conexao, args.agregado, periodo, payload, mapa_classificacao
+            )
             conexao.commit()
             total += inseridas
             logger.info("%s/%s: %d linhas novas", args.agregado, periodo, inseridas)
