@@ -55,11 +55,21 @@ markdown_extensions:
   - md_in_html
 
 nav:
-  - Início: index.md
-  - Caracterização da Carga: carga.md
-  - Decisões de Arquitetura (ADRs):
-      - 0001 - Modelagem do Sistema de Origem: adr/0001-modelagem-do-sistema-de-origem.md
-  - Diário de Bordo: diario/index.md
+  - Visão Geral:
+    - Sobre: visaoGeral/sobre.md
+    - Cronograma: visaoGeral/cronograma.md
+  - Onboarding:
+    - Setup: onboarding/setup.md
+  - Arquitetura: 
+    - Visão Geral: arquitetura/visaoGeral.md
+    - Fluxo de Dados: arquitetura/fluxoDados.md
+    - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
+    - Componentes: arquitetura/componentes.md
+    - Fonte Dados: arquitetura/fonteDados.md
+  - Pipeline de Dados: pipeline/pipelineDados.md
+  - Dicionário de Dados: dicionario/dicionario.md
+  - Visualização: visualizacao/visualizacao.md
+  - Evidencias: evidencias/evidencias.md
 
 extra_css:
   - stylesheets/extra.css
