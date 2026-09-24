@@ -10,6 +10,8 @@ just seed-amostra   # 3 meses do IPCA — carga rápida de verificação
 just seed           # série completa jul/2006 -> jul/2026 (~4,7 mi de linhas)
 just verificar-carga
 just check          # fmt + lint + test — o gate antes de dizer "pronto"
+just docs           # sobe a documentação local (MkDocs) com live-reload
+just docs-build     # compila e valida a documentação estática
 ```
 `justfile` é a fonte canônica. Não rodar o comando cru.
 

@@ -72,6 +72,12 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/carga.md` | Caracterização da carga de trabalho (passo 1 do Método de Decisão) |
 | `docs/diario/` | Diário de bordo semanal da Squad |
+| `mkdocs.yml` | Configuração da documentação (Material for MkDocs) e GitHub Pages |
+
+## Documentação
+
+A documentação interativa com busca, diagramas e detalhes arquiteturais está publicada via GitHub Pages em:
+👉 **[https://bappoz.github.io/inflatrack/](https://bappoz.github.io/inflatrack/)**
 
 ## Licença
 

@@ -14,3 +14,7 @@ data/
 
 # Material de trabalho da planilha de acompanhamento
 planilha/
+
+# MkDocs build
+site/
+

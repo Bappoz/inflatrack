@@ -46,3 +46,12 @@ test:
 
 # O gate antes de dizer "pronto".
 check: fmt lint test
+
+# Sobe servidor local de documentação (MkDocs) com live-reload.
+docs:
+    uv run --group docs mkdocs serve
+
+# Compila a documentação estática validando integridade e links.
+docs-build:
+    uv run --group docs mkdocs build --strict
+

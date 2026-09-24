@@ -1,0 +1,66 @@
+site_name: InflaTrack
+site_description: Plataforma de dados para reajuste inflacionário do pequeno e médio lojista
+site_url: https://bappoz.github.io/inflatrack/
+repo_name: Bappoz/inflatrack
+repo_url: https://github.com/Bappoz/inflatrack
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: pt-BR
+  logo: assets/Logo.svg
+  favicon: assets/Logo.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Mudar para modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Mudar para modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Início: index.md
+  - Caracterização da Carga: carga.md
+  - Decisões de Arquitetura (ADRs):
+      - 0001 - Modelagem do Sistema de Origem: adr/0001-modelagem-do-sistema-de-origem.md
+  - Diário de Bordo: diario/index.md
+
+extra_css:
+  - stylesheets/extra.css
+

@@ -48,7 +48,7 @@ fatos da origem que forçam a mão:
 ## Padrões de acesso previstos
 
 As cinco consultas, com frequência e tipo, estão em
-[`docs/carga.md`](../carga.md#taxa-de-leitura-e-padrão-de-acesso). O resumo que
+[`docs/carga.md`](../carga.md#taxa-de-leitura-e-padrao-de-acesso). O resumo que
 decide: **leitura domina (95%+)**, o filtro quase sempre é
 `(subitem, localidade, variável, mês)`, e a única consulta que junta as duas
 metades do sistema é a 5 — produto do lojista × observação do IBGE, pela FK do
