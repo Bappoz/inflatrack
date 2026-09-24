@@ -57,9 +57,8 @@ markdown_extensions:
 nav:
   - Visão Geral:
     - Sobre: visaoGeral/sobre.md
+    - Onboarding: visaoGeral/onboarding.md
     - Cronograma: visaoGeral/cronograma.md
-  - Onboarding:
-    - Setup: onboarding/setup.md
   - Arquitetura: 
     - Visão Geral: arquitetura/visaoGeral.md
     - Fluxo de Dados: arquitetura/fluxoDados.md

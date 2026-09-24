@@ -1,6 +1,6 @@
-# Subir do Zero
+# Onboarding
 
-## Requisitos
+## Pré-Requisitos
 
 - **Docker Compose v2**
 - **Python 3.12+** ou [uv](https://docs.astral.sh/uv/)
