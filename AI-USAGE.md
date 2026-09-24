@@ -96,3 +96,25 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 - Adicionar teste automatizado que cubra a tradução `D4C -> codigo` e a
   criação da tabela `carga`, para não depender de execução manual contra a
   API real a cada regressão.
+
+## 2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage
+
+**O que a ferramenta fez**
+- Escreveu o script de inicialização do banco analítico local `scripts/setup_duckdb.sql` (e o utilitário Python `scripts/init_db.py`).
+- Ajustou o `PIVOT` da view DuckDB `vw_commodities_features` listando explicitamente as cotações na cláusula `IN (...)`, devido à limitação nativa do DuckDB de não suportar views com criação dinâmica de colunas a partir de dados.
+- Implementou o client da API `src/inflatrack/alphavantage.py` tratando o rate limiting explícito do plano free da Alpha Vantage (pausas de ~13s).
+- Desenvolveu as CLIs de ingestão `src/inflatrack/ingest_commodities.py` (download via API e armazenamento em formato apache parquet na camada *raw*) e carga `src/inflatrack/load_commodities.py` (leitura dos parquets e `UPSERT` direto no banco DuckDB).
+- Adicionou as dependências de ambiente com o gerenciador `uv`: `duckdb`, `pandas`, `pyarrow`, `requests` e `python-dotenv`.
+- Documentou a execução do novo pipeline de commodities em `docs/fontes/como_rodar.md`.
+
+**O que foi verificado e como**
+- A inicialização do banco rodou de forma funcional na máquina, confirmando a criação das tabelas corretas.
+- O script de carga (`load_commodities.py`) foi verificado via geração de arquivos *mock* artificiais localmente usando pandas/pyarrow, provando a eficácia e tolerância a falhas na leitura dos arquivos em lote `data/commodities_raw/*.parquet` nativamente.
+- O formato Wide Format para Machine Learning da View via `PIVOT` foi testado com sucesso conectando ao arquivo e usando `.df()` para inspecionar os tipos e colunas (9 features geradas + data da medição).
+
+**O que NÃO foi verificado**
+- O download real dos dados (requisições de rede à API Alpha Vantage) durante o processo, pois o `.env` estava propositalmente sem a chave de uso diário definida (`ALPHAVANTAGE_API_KEY=`).
+
+**Decisões que continuam sendo da Squad**
+- Preencher a chave `ALPHAVANTAGE_API_KEY` na configuração `.env`.
+- Executar o download ponta-a-ponta para validar os schemas do JSON real retornado pela API e se os mesmos se encaixam no esperado.
