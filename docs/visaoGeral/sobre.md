@@ -14,10 +14,7 @@ A caracterização completa da carga de trabalho e o detalhamento das 5 pergunta
 
 ---
 
-## Fontes de Dados
+## Fonte de dados
 
-| Nome | Descrição |
-|---|---|
-| [SIDRA](../fontes/sidra.md) | Sistema IBGE de Recuperação Automática. Responsável pelo fornecimento das séries temporais oficiais dos índices de inflação (IPCA e INPC) via API (`apisidra.ibge.gov.br`), contemplando variações mensais, acumuladas e números-índice por categoria e localidade. |
+A tabela completa com as fontes de dados está disponível em [Fontes de Dados](../arquitetura/fonteDados.md).
 
----
