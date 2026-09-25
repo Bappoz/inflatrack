@@ -4,15 +4,14 @@ Esta seção detalha o fluxo de dados exclusivo para o módulo de Macroeconomia 
 
 ## Fontes (Dólar, Selic e AlphaVantage)
 
-ETL analítico: as respostas das APIs financeiras aterrissam localmente, são limpas pelo `pandas` (com Forward Fill) e injetadas no banco de colunas (DuckDB). O código vive nas suítes `ingest_*.py` e `load_*.py`.
+ETL analítico: as respostas das APIs financeiras aterrissam localmente, são limpas pelo `pandas` (com Forward Fill) e injetadas no banco de colunas (DuckDB). O código está consolidado nos scripts `ingest_*.py`.
 
 ```mermaid
 flowchart LR
     A[APIs BCB e AlphaVantage] --> B[ingest_*.py]
     B --> C[(data/*_raw/<br/>JSON gzip)]
-    B --> D[(data/*_bronze/<br/>Parquet)]
-    D --> E[load_*.py]
-    E --> F[(inflatrack.duckdb<br/>Silver)]
+    B --> D[(Pandas DataFrame<br/>em memória)]
+    D --> F[(inflatrack.duckdb<br/>Silver)]
     F -. planejado .-> G[Modelos Data Science<br/>Análise Macro]
 ```
 
@@ -31,10 +30,10 @@ flowchart LR
 **2. Tratamento Temporal (Bronze)**
 - Remoção intradiária: O Pandas aplica `keep="last"` para ignorar boletins parciais do dia e manter apenas a cotação de fechamento oficial.
 - **Forward Fill:** A cotação da sexta-feira é duplicada para Sábado, Domingo e Feriados.
-- Os dados tratados viram blocos `.parquet`.
+- Os dados são passados diretamente em memória para a carga Silver.
 
 **3. Carga Idempotente (Silver)**
-- Scripts `load_*.py` conectam ao `DuckDB`.
+- Os mesmos scripts `ingest_*.py` conectam ao `DuckDB`.
 - Operação com a cláusula `ON CONFLICT DO UPDATE`.
 
 ### Garantias
@@ -46,7 +45,7 @@ flowchart LR
 ### Como saber se falhou
 
 - O script acusa erro 403 (`requests.exceptions.HTTPError`) caso o IP seja bloqueado pelo WAF do Banco Central.
-- A função de `load_*.py` falhará graciosamente imprimindo `Erro ao carregar` mas sem corromper as linhas já processadas, graças ao modelo transacional isolado do arquivo `.parquet`.
+- A função de inserção no DuckDB falhará graciosamente, imprimindo o alerta `Erro ao carregar` sem corromper as linhas já inseridas, graças à transação nativa do banco.
 
 ### Como rodar
 

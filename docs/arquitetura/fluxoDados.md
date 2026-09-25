@@ -12,10 +12,7 @@ flowchart TB
     subgraph Crua
         R1[(data/raw/<br/>JSON gzip)]
         R2[(data/bcb_raw/<br/>JSON gzip)]
-    end
-    subgraph Bronze
-        B1[(data/bcb_bronze/<br/>Parquet)]
-        B2[(data/commodities_raw/<br/>Parquet)]
+        R3[(data/commodities_raw/<br/>Parquet)]
     end
     subgraph Bancos
         PG[(PostgreSQL<br/>observacao + cesta)]
@@ -23,8 +20,8 @@ flowchart TB
         DK[(DuckDB<br/>dolar, selic, commodities)]
     end
     S -->|mensal, 1 req/mês| R1 --> PG
-    BCB -->|diária| R2 --> B1 --> DK
-    AV -->|diária, 9 req| B2 --> DK
+    BCB -->|diária| R2 --> DK
+    AV -->|diária, 9 req| R3 --> DK
     PG -->|FK do subitem| TX
     PG -.-> V[Telas do lojista<br/>planejado]
     TX -.-> V

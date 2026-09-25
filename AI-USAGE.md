@@ -137,3 +137,27 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 **O que NÃO foi verificado**
 - Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
   foi medido de novo.
+
+## 2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
+
+**O que a ferramenta fez**
+- Analisou o cliente de API `src/inflatrack/bcb.py` focado no SGS (Sistema Gerenciador de Séries Temporais) do Banco Central do Brasil para buscar os códigos 1 (Dólar Venda Diário) e 11 (Taxa Selic Efetiva Diária).
+- Verificou o script de ingestão CLI `src/inflatrack/ingest_bcb.py` que converte a saída JSON da API para tabelas Pandas e salva localmente em blocos Parquet (`dolar.parquet` e `selic.parquet`).
+
+**O que foi verificado e como**
+- A análise dos arquivos da squad confirmou que o formato em `ingest_bcb.py` é exatamente o padrão adotado na `ingest_commodities.py` previamente feita pelo time (Silver -> Parquet, CLI com argparse, etc.).
+- Conferida a existência do `docker-compose.yml` base para PostgreSQL (`inflatrack`) e checagem da estrutura de diretórios (`migrations/`, `sql/`, `scripts/`).
+
+**O que NÃO foi verificado**
+- Não foi feita a conexão direta de rede para a API do BCB por dentro do ambiente sandbox de execução.
+- O script `load_bcb.py` não foi escrito ainda, o que transportaria os arquivos parquet recém baixados para o DuckDB ou PostgreSQL do projeto.
+
+**Decisões que continuam sendo da Squad**
+- Definir como juntar todos esses dados na tabela fato final (DuckDB/dbt) e estruturar o pipeline de agendamento usando o orquestrador (Dagster) prometido no fluxo.
+
+## 2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia
+
+**O que a ferramenta fez**
+- Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (`dolar_olinda.py`, `ingest_dolar.py`, `load_dolar.py`) e Selic (`selic_sgs.py`, `ingest_selic.py`, `load_selic.py`).
+- Criou os arquivos de teste automatizado na pasta `tests/` (`test_dolar_olinda.py` e `test_selic_sgs.py`), inaugurando a cobertura de testes do projeto via `pytest` e *Mocks*.
+- Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas `pipelineMacro.md`, `evidencias_macro.md`, `dicionario/macroeconomia.md` e o `adr_0002_macro.md`.
