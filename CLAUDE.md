@@ -1,0 +1,1 @@
+A cada 3 mensagens do usuário atualize o arquivo AI-USAGE.md para registrar como a inteligência artificial está sendo usada no nosso projeto

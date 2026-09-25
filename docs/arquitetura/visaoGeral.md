@@ -4,7 +4,7 @@ O InflaTrack junta duas metades de natureza oposta:
 
 | Metade | O que guarda | Volume | Escrita |
 |---|---|---|---|
-| **Referência pública** | Séries do IBGE (IPCA, INPC) e variáveis explicativas (commodities) | ~4,7 mi linhas de IPCA; ~6,4 mi com INPC | Lote, mensal (IBGE) ou diária (commodities) |
+| **Referência pública** | Séries do IBGE (IPCA, INPC), variáveis explicativas (commodities) e dados em tempo real como o valor do dólar | ~4,7 mi linhas de IPCA; ~6,4 mi com INPC | Lote, mensal (IBGE) ou diária (commodities) |
 | **Transacional própria** | Lojista, produto e reajuste | Baixíssimo | Aplicar reajuste: a única escrita que exige transação |
 
 A ponte entre as duas é a FK `produto.codigo_subitem_ipca`: é ela que permite responder "quanto a inflação do que eu vendo subiu".
