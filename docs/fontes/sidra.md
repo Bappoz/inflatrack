@@ -1,4 +1,4 @@
-# SIDRA/IBGE
+# IPCA/INPC
 
 Todas as séries temporais são obtidas diretamente da API do SIDRA/IBGE (`apisidra.ibge.gov.br`):
 
