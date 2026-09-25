@@ -185,3 +185,19 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 **Decisões que continuam sendo da Squad**
 - Apagar ou manter `data_old/` (49 MB), que ficou no disco como backup.
 
+## 2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China
+
+**O que a ferramenta fez**
+- Mapeou os arquivos de contexto da pasta `Bancos 2/Planilha inicial` para auxiliar o integrante da squad na caracterização dos dados para a Primeira Entrega da disciplina.
+- Auxiliou na escolha e justificativa técnica da inclusão do **PIB da China (World Bank API)** como variável macroeconômica explicativa da demanda por commodities.
+- Preencheu tecnicamente os 5 blocos da planilha da disciplina (Fontes, Formatos, Modelos, Cargas/Engines e Pipeline) para o PIB da China.
+- Criou o documento `docs/fontes/pib_china.md` no padrão MkDocs do repositório, detalhando volumetria, retenção, pureza e restrições da API do Banco Mundial.
+- Atualizou o índice da arquitetura em `docs/arquitetura/fonteDados.md` e o menu de navegação em `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Verificada a conformidade do formato de documentação comparando com `docs/fontes/commodities.md` e `docs/fontes/sidra.md`.
+
+**O que NÃO foi verificado**
+- O código do cliente de ingestão em Python para a API do Banco Mundial ainda não foi implementado em `src/inflatrack/`; apenas a caracterização, modelagem e documentação foram concluídas.
+
+
