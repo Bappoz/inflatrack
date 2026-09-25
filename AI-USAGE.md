@@ -196,8 +196,12 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 
 **O que foi verificado e como**
 - Verificada a conformidade do formato de documentação comparando com `docs/fontes/commodities.md` e `docs/fontes/sidra.md`.
+- Criada a migration `migrations/0004_pib_china.sql` e aplicada ao banco de dados PostgreSQL.
+- Criado o script `src/inflatrack/ingest_pib_china.py` com padrão ELT (salva JSON em `data/raw/pib_china/` e faz UPSERT no banco).
+- **Execução e validação real**: Ingestão ponta-a-ponta executada contra a API do Banco Mundial (`api.worldbank.org`), processando 66 anos de dados históricos (1960-2025) salvos na tabela `pib_china` do PostgreSQL.
 
 **O que NÃO foi verificado**
-- O código do cliente de ingestão em Python para a API do Banco Mundial ainda não foi implementado em `src/inflatrack/`; apenas a caracterização, modelagem e documentação foram concluídas.
+- Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.
+
 
 
