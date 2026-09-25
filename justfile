@@ -55,3 +55,15 @@ docs:
 docs-build:
     uv run --group docs mkdocs build --strict
 
+# Carga isolada do Dólar (Extração, Transformação e Carga Analítica)
+seed-dolar:
+    uv run python src/inflatrack/ingest_dolar.py --de 2020-01-01 --ate 2026-07-31
+
+# Carga isolada da Selic (Extração, Transformação e Carga Analítica)
+seed-selic:
+    uv run python src/inflatrack/ingest_selic.py --de 2020-01-01 --ate 2026-07-31
+
+# Carga isolada das Commodities (AlphaVantage -> DuckDB)
+seed-commodities:
+    uv run python src/inflatrack/ingest_commodities.py --commodity ALL --modo historico
+    uv run python src/inflatrack/load_commodities.py

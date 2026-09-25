@@ -6,11 +6,13 @@ Da fonte até a tela do lojista. Detalhe das etapas em [Pipeline de Dados](../pi
 flowchart TB
     subgraph Fontes
         S[SIDRA/IBGE<br/>IPCA e INPC]
-        AV[Alpha Vantage<br/>commodities]
+        BCB[BCB<br/>Olinda e SGS]
+        AV[Alpha Vantage<br/>Commodities]
     end
     subgraph Crua
         R1[(data/raw/ipca-inpc/<br/>JSON gzip)]
         R2[(data/raw/commodities_raw/<br/>JSON gzip)]
+        R3[(data/bcb_raw/<br/>JSON gzip)]
     end
     subgraph Transformada
         PQ[(data/parquet/<br/>Parquet)]
@@ -18,9 +20,10 @@ flowchart TB
     subgraph Bancos
         PG[(PostgreSQL<br/>observacao + cesta)]
         TX[(PostgreSQL<br/>lojista, produto, reajuste)]
-        DK[(DuckDB<br/>commodity_cotacao)]
+        DK[(DuckDB<br/>dolar, selic, commodities)]
     end
     S -->|mensal, 1 req/mês| R1 --> PG
+    BCB -->|diária| R3 --> DK
     AV -->|diária, 9 req| R2 --> PQ --> DK
     PG -->|FK do subitem| TX
     PG -.-> V[Telas do lojista<br/>planejado]
@@ -41,4 +44,5 @@ flowchart TB
 |---|---|---|---|
 | SIDRA (7060, 7063, 1737) | mensal, dias 9 a 12 | PostgreSQL | manual (`uv run python -m inflatrack.ingest`) |
 | SIDRA (2938, 1419) | nunca mais (séries encerradas) | PostgreSQL | só na carga histórica (`just seed`) |
-| Alpha Vantage | diária / mensal | DuckDB | manual ([como rodar](../como_rodar/cr_commodities.md)) |
+| BCB (Olinda e SGS) | diária (dias úteis) | DuckDB | manual (`just seed-macro`) |
+| Alpha Vantage | diária / mensal | DuckDB | manual (`just seed-macro`) |
