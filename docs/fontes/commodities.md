@@ -65,7 +65,7 @@ Todas as séries são obtidas diretamente da API da Alpha Vantage (`www.alphavan
 
 - **Carga histórica:** um evento, 9 requisições (uma por série), reexecutável. A API devolve a série inteira a cada chamada, então o histórico completo cabe em uma única rodada.
 - **Regime:** ~822 registros novos por ano (~750 das 3 séries diárias em dias úteis + 72 das 6 séries mensais). Em média, 3 linhas por dia útil; no dia de fechamento do mês, mais 6.
-- **Escrita real vs. custo de coleta:** o cliente ([alphavantage.py](../../src/inflatrack/alphavantage.py)) não filtra por data, então cada rodada baixa a série completa e o Parquet da camada bronze é sobrescrito. O volume de escrita útil é minúsculo, mas o volume trafegado é o histórico inteiro a cada execução.
+- **Escrita real vs. custo de coleta:** o cliente ([alphavantage.py](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/alphavantage.py)) não filtra por data, então cada rodada baixa a série completa e o Parquet da camada bronze é sobrescrito. O volume de escrita útil é minúsculo, mas o volume trafegado é o histórico inteiro a cada execução.
 - **Escrita transacional:** nenhuma. A carga é em lote e reexecutável, sem exigência de atomicidade entre séries.
 
 ### Taxa de leitura e padrão de acesso

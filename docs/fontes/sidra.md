@@ -37,8 +37,21 @@ Todas as séries temporais são obtidas diretamente da API do SIDRA/IBGE (`apisi
 
 O dado passa por duas camadas com natureza diferente (ELT: grava a resposta crua e só depois transforma dentro do banco), por isso cada resposta separa a **camada crua** do **banco relacional**.
 
+!!! note "Estado atual"
+    Descreve o que está implementado hoje (entrega 1): JSON gzip em disco + PostgreSQL 16. A migração da camada analítica para DuckDB/Parquet está em discussão e, quando decidida, atualiza esta seção.
 
--> Precisa ser reescrito pois será atualizado para duckdb
+| Atributo | Camada crua (`data/raw/`) | Banco relacional (tabela `observacao`) |
+| :--- | :--- | :--- |
+| **Conjunto de dados** | Resposta da API exatamente como veio, um arquivo por agregado e mês (`{agregado}-{AAAAMM}.json.gz`) | Observações de IPCA/INPC das 5 fontes unificadas numa série só |
+| **Formato atual** | JSON compacto (`/f/c/h/n`) em gzip | Tabela PostgreSQL (heap); `valor numeric(16,7)`, `mes_referencia date` |
+| **Texto ou binário** | Texto (comprimido) | Binário |
+| **Orientação** | Linha | Linha |
+| **Tamanho estimado** | 46 MB para os ~880 arquivos da carga histórica; ~0,6 MB por mês e agregado | ~4,7 mi linhas de IPCA (~6,4 mi com INPC) + ~260 mil/ano por índice. 700 MB a 1 GB com índices (**estimativa** por largura de linha, não medida) |
+| **Como é lido** | Registro inteiro, uma vez, na carga ou em reprocessamento | Poucas colunas (`valor`, `mes_referencia`) filtradas por subitem + localidade + variável |
+| **Frequência de leitura** | Quase nula — não é consultada | Alta — toda tela do lojista lê daqui |
+| **Formato proposto** | Manter JSON gzip | Manter PostgreSQL na E1; réplica colunar (Parquet) para as consultas analíticas |
+| **Justificativa da escolha** | Existe para reprocessar sem chamar a API e provar de onde veio o número. Converter destruiria a auditoria; gzip porque o JSON repete as chaves em cada objeto | O valor da consulta está no JOIN com a hierarquia da cesta e com o produto do lojista (FK do subitem). Colunar trocaria a escrita transacional barata por leitura analítica, que só as perguntas 2 e 3 precisam |
+| **Ganho esperado** | 18× menos disco (10,4 MB → 0,6 MB por mês, medido) | Na E1, nenhuma troca de formato |
 
 ---
 
@@ -62,11 +75,24 @@ Leitura da **origem** (a API):
 | 2 | Valores de um mês | 1 por agregado ativo por mês (3 no regime) | lote | `apisidra.ibge.gov.br/values/t/{agregado}/.../p/{AAAAMM}/f/c/h/n` |
 | 3 | Calendário de divulgação | 1 por mês (recomendado; hoje não implementado) | pontual | `servicodados.ibge.gov.br/api/v3/calendario` |
 
+Leitura do **armazenamento** (as perguntas do lojista). A leitura domina (estimativa de 95%+ das operações):
+
+| # | Consulta | Frequência | Tipo | Latência alvo | Acesso |
+|---|---|---|---|---|---|
+| 1 | Inflação acumulada do meu setor em 12 meses | ~5/lojista/dia | pontual | < 300 ms | filtro por (subitem, localidade, variável 2265), 1 linha |
+| 2 | Meses do ano com maior pico histórico | ~1/lojista/dia | agregada | < 5 s | `GROUP BY` mês do ano sobre ~240 meses (2938 + 1419 + 7060 unificadas) |
+| 3 | Impacto no poder de compra desde 2006 | < 1/lojista/dia | agregada | < 5 s | razão de dois números-índice do 1737 (exato, só índice geral Brasil) ou produto de 241 variações mensais |
+| 4 | Inflação geral × da minha região em 5 anos | ~1/lojista/dia | agregada | < 300 ms | autojunção da `observacao`: Brasil × praça do lojista |
+| 5 | Reajuste mínimo para não perder margem | ~10/lojista/dia | pontual + escrita | < 300 ms | junta `produto` com `observacao` pela FK do subitem |
+
+O índice `observacao_consulta_idx (codigo_classificacao, codigo_localidade, codigo_variavel, mes_referencia desc)` cobre 1, 4 e 5 diretamente. Frequências são estimativas de uso: ainda não há usuário.
+
 
 ---
 
 ## 4. Restrições que a origem impõe
 
+- **Teto de 50.000 valores por requisição.** Um mês do 7060 são 31.076 valores e passa; dois meses (62.152) devolvem HTTP 400. Paginar por mês é imposição, não escolha.
 - **~30% das linhas são marcadores de ausência** (medido no 7060). Só `-` e `...` aparecem nos dados carregados; a ajuda da API também define `..` e `X`. O `-` é a ausência de categoria não pesquisada numa localidade, mas a ajuda o define como "zero absoluto". O código o trata como ausente, o que é coerente com o padrão observado, mas **não está confirmado** na documentação. `-0.67` é deflação real, e filtrar por prefixo `-` apagaria esses meses sem erro.
 - **Mês ainda não divulgado devolve lista vazia (`[]`)**, sem erro. Uma janela `--ate` além do último mês publicado apenas não traz linhas, e não há sinal de que "faltou dado". Convém checar o calendário antes de rodar.
 - **Esquema heterogêneo.** O agregado 2938 não publica o acumulado em 12 meses e cobre 12 localidades em vez de 17. Ingerir com o mesmo código, sem tratar o caso, produz série truncada sem erro.

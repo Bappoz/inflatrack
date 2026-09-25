@@ -66,7 +66,9 @@ nav:
     - Componentes: arquitetura/componentes.md
     - Fonte Dados: arquitetura/fonteDados.md
   - Pipeline de Dados: pipeline/pipelineDados.md
-  - Dicionário de Dados: dicionario/dicionario.md
+  - Dicionário de Dados:
+    - Visão Geral: dicionario/dicionario.md
+    - SIDRA (IPCA/INPC): dicionario/sidra.md
   - Visualização: visualizacao/visualizacao.md
   - Evidencias: evidencias/evidencias.md
 
