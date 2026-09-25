@@ -118,3 +118,22 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 **Decisões que continuam sendo da Squad**
 - Preencher a chave `ALPHAVANTAGE_API_KEY` na configuração `.env`.
 - Executar o download ponta-a-ponta para validar os schemas do JSON real retornado pela API e se os mesmos se encaixam no esperado.
+
+## 2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs
+
+**O que a ferramenta fez**
+- Levou para o site as linhas do IPCA/INPC da planilha de acompanhamento,
+  conferindo cada afirmação contra `migrations/`, `sidra.py` e `ingest.py`:
+  seção 2 e leitura do armazenamento em `fontes/sidra.md`, dicionário
+  `dicionario/sidra.md` e a seção do IPCA em `pipeline/pipelineDados.md`.
+- Corrigiu links quebrados (`carga.md` removido, link para `src/`) que faziam
+  `mkdocs build --strict` falhar.
+
+**O que foi verificado e como**
+- `just docs-build` (`mkdocs build --strict`) passa sem warning.
+- Os dois exemplos SQL do dicionário foram validados só sintaticamente com
+  `pglast`; não rodaram contra o banco (Docker indisponível na sessão).
+
+**O que NÃO foi verificado**
+- Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
+  foi medido de novo.

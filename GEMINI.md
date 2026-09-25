@@ -1,0 +1,1 @@
+Referencie o arquivo CLAUDE.md na sua execução ao invés deste arquivo

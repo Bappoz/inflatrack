@@ -20,7 +20,7 @@ qual reajuste aplicar. A origem tem duas metades de natureza oposta:
 2. **Transacional própria** — lojista, produto e reajuste. Volume baixíssimo,
    integridade alta, é a única escrita frequente do sistema.
 
-A carga está caracterizada com número em [`docs/carga.md`](../carga.md). Os três
+A carga está caracterizada com número em [Fonte SIDRA/IBGE](fontes/sidra.md). Os três
 fatos da origem que forçam a mão:
 
 - A cesta **muda de estrutura**. Entre jul/2006 e jul/2026 houve duas revisões
@@ -48,7 +48,7 @@ fatos da origem que forçam a mão:
 ## Padrões de acesso previstos
 
 As cinco consultas, com frequência e tipo, estão em
-[`docs/carga.md`](../carga.md#taxa-de-leitura-e-padrao-de-acesso). O resumo que
+[Fonte SIDRA/IBGE](fontes/sidra.md#taxa-de-leitura-e-padrao-de-acesso). O resumo que
 decide: **leitura domina (95%+)**, o filtro quase sempre é
 `(subitem, localidade, variável, mês)`, e a única consulta que junta as duas
 metades do sistema é a 5 — produto do lojista × observação do IBGE, pela FK do

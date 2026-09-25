@@ -56,7 +56,7 @@ markdown_extensions:
 
 nav:
   - Visão Geral:
-    - Sobre: visaoGeral/sobre.md
+    - Sobre: index.md
     - Onboarding: visaoGeral/onboarding.md
     - Cronograma: visaoGeral/cronograma.md
   - Arquitetura: 
@@ -65,8 +65,14 @@ nav:
     - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
     - Componentes: arquitetura/componentes.md
     - Fonte Dados: arquitetura/fonteDados.md
+    - SIDRA (IPCA/INPC): fontes/sidra.md
+    - Commodities e Energia: fontes/commodities.md
+    - ADR 0001 (Modelagem da origem): arquitetura.md
   - Pipeline de Dados: pipeline/pipelineDados.md
-  - Dicionário de Dados: dicionario/dicionario.md
+  - Dicionário de Dados:
+    - Visão Geral: dicionario/dicionario.md
+    - SIDRA (IPCA/INPC): dicionario/sidra.md
+    - Transacional (Lojista): dicionario/transacional.md
   - Visualização: visualizacao/visualizacao.md
   - Evidencias: evidencias/evidencias.md
 
