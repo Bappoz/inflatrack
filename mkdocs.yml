@@ -67,14 +67,21 @@ nav:
     - Fonte Dados: arquitetura/fonteDados.md
     - SIDRA (IPCA/INPC): fontes/sidra.md
     - Commodities e Energia: fontes/commodities.md
+    - Banco Central (Dólar/Selic): fontes/bcb.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
-  - Pipeline de Dados: pipeline/pipelineDados.md
+    - ADR 0002 (Motor Analitico DuckDB): adr_0002_macro.md
+  - Pipeline de Dados:
+    - SIDRA (IPCA/INPC): pipeline/pipelineDados.md
+    - Macroeconomia: pipeline/pipelineMacro.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - SIDRA (IPCA/INPC): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
+    - Macroeconomia: dicionario/macroeconomia.md
   - Visualização: visualizacao/visualizacao.md
-  - Evidencias: evidencias/evidencias.md
+  - Evidências:
+    - SIDRA (IPCA): evidencias/evidencias.md
+    - Macroeconomia: evidencias/evidencias_macro.md
 
 extra_css:
   - stylesheets/extra.css
