@@ -28,7 +28,7 @@ Todas as séries temporais são obtidas diretamente da API do SIDRA/IBGE (`apisi
 | **Previsibilidade do formato** *(alta / média / baixa)* | Média (o payload compacto tem chaves fixas (`D1C`, `D2C`, `D4C`, `V`), mas o esquema muda entre agregados e a cesta muda de estrutura: 43 subitens renomeados, 111 removidos e 103 acrescentados entre 2006 e 2026. O `D4C` traz o id interno do SIDRA, não o código natural da categoria, e exige tradução pelos metadados) |
 | **Contém dado pessoal?** *(sim / não)* | Não (índices agregados por categoria e localidade, sem informação de indivíduos ou domicílios) |
 | **Base legal LGPD** *(se contém dado pessoal)* | Não se aplica |
-| **Retenção** *(por quanto tempo guardar)* | Permanente. A série é a base histórica do produto (acumulado desde 2006), e reingerir ~2,2 GB por perda de dado não é aceitável. A resposta crua é mantida em gzip (`data/raw/`, ~18× menor) para reprocessamento e auditoria. |
+| **Retenção** *(por quanto tempo guardar)* | Permanente. A série é a base histórica do produto (acumulado desde 2006), e reingerir ~2,2 GB por perda de dado não é aceitável. A resposta crua é mantida em gzip (`data/raw/ipca-inpc/`, ~18× menor) para reprocessamento e auditoria. |
 | **O que quebra se essa fonte falhar** | A atualização mensal dos índices: o produto passa a responder com base no último mês carregado, e o cálculo de inflação acumulada e de reajuste mínimo fica defasado. O histórico já carregado permanece íntegro, e a carga é idempotente, então basta reexecutar quando a API voltar. |
 
 ---
@@ -40,7 +40,7 @@ O dado passa por duas camadas com natureza diferente (ELT: grava a resposta crua
 !!! note "Estado atual"
     Descreve o que está implementado hoje (entrega 1): JSON gzip em disco + PostgreSQL 16. A migração da camada analítica para DuckDB/Parquet está em discussão e, quando decidida, atualiza esta seção.
 
-| Atributo | Camada crua (`data/raw/`) | Banco relacional (tabela `observacao`) |
+| Atributo | Camada crua (`data/raw/ipca-inpc/`) | Banco relacional (tabela `observacao`) |
 | :--- | :--- | :--- |
 | **Conjunto de dados** | Resposta da API exatamente como veio, um arquivo por agregado e mês (`{agregado}-{AAAAMM}.json.gz`) | Observações de IPCA/INPC das 5 fontes unificadas numa série só |
 | **Formato atual** | JSON compacto (`/f/c/h/n`) em gzip | Tabela PostgreSQL (heap); `valor numeric(16,7)`, `mes_referencia date` |
@@ -62,7 +62,7 @@ O dado passa por duas camadas com natureza diferente (ELT: grava a resposta crua
 - **Carga histórica:** um evento, reexecutável. São ~4,7 milhões de linhas de IPCA (~6,4 milhões com o INPC) em ~880 requisições de valores, uma por mês e por agregado (66 + 96 + 79 + 79 + 560), mais uma de metadados por agregado. As 320 primeiras são pesadas (~9 s cada no formato compacto); as 560 do agregado 1737 são leves, mas desnecessárias (ver restrições).
 - **Regime:** uma janela por mês, logo após a divulgação do IBGE (dias 9 a 12). São ~21,6 mil linhas novas por índice, cerca de 43 mil com IPCA e INPC, mais uma linha do número-índice do 1737. Nada chega fora dessa janela.
 - **Descarte na entrada:** a API devolve ~31 mil linhas por mês no 7060, e ~30% delas são marcadores de ausência que a carga descarta (medido em jul/2026: 9.456 de 31.076). O volume gravado é menor que o trafegado.
-- **Reprocessamento:** a resposta crua fica em `data/raw/` (gzip, 46 MB para os 880 arquivos), então refazer a transformação não exige chamar a API de novo.
+- **Reprocessamento:** a resposta crua fica em `data/raw/ipca-inpc/` (gzip, 46 MB para os 880 arquivos), então refazer a transformação não exige chamar a API de novo.
 - **Escrita transacional:** nenhuma nesta fonte. A carga é em lote, por mês, e no desenho atual reexecutar o mesmo mês não duplica linhas.
 
 ### Taxa de leitura e padrão de acesso

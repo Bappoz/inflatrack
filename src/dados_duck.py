@@ -1,6 +1,6 @@
 import duckdb
 
-conn = duckdb.connect("data/inflatrack.duckdb")
+conn = duckdb.connect("data/duckdb/inflatrack.duckdb")
 
 print("--- Ativos Diários (WTI, Brent, Gás Natural) ---")
 df_daily = conn.execute("SELECT * FROM vw_features_daily ORDER BY data_referencia DESC LIMIT 5").df()

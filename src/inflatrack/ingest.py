@@ -4,7 +4,7 @@ Uso::
 
     uv run python -m inflatrack.ingest --agregado 7060 --de 2026-01 --ate 2026-07
 
-A carga é ELT: grava a resposta crua em ``data/raw/`` (gzip, ~18x menor) e só
+A carga é ELT: grava a resposta crua em ``data/raw/ipca-inpc/`` (gzip, ~18x menor) e só
 depois transforma dentro do banco. A camada crua existe para reprocessar e para
 provar de onde veio o número — não para ser consultada.
 
@@ -185,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--de", required=True, metavar="AAAA-MM")
     parser.add_argument("--ate", required=True, metavar="AAAA-MM")
-    parser.add_argument("--raw-dir", default="data/raw")
+    parser.add_argument("--raw-dir", default="data/raw/ipca-inpc")
     parser.add_argument("--dsn", default=None)
     args = parser.parse_args(argv)
     args.dsn = args.dsn or dsn_do_ambiente()

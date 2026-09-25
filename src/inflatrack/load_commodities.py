@@ -20,17 +20,17 @@ COMMODITY_CONFIGS = {
 
 def get_db_path():
     base_dir = Path(os.getcwd())
-    data_dir = base_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "inflatrack.duckdb"
+    db_dir = base_dir / "data" / "duckdb"
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / "inflatrack.duckdb"
 
-def get_raw_dir():
+def get_parquet_dir():
     base_dir = Path(os.getcwd())
-    return base_dir / "data" / "commodities_raw"
+    return base_dir / "data" / "parquet"
 
 def load_data():
     db_path = get_db_path()
-    raw_dir = get_raw_dir()
+    parquet_dir = get_parquet_dir()
     
     logger.info(f"Conectando ao banco de dados: {db_path}")
     conn = duckdb.connect(str(db_path))
@@ -48,7 +48,7 @@ def load_data():
         """, (symbol, config["name"], config["category"], config["unit"]))
     
     # Carregar todos os parquets
-    parquet_pattern = str(raw_dir / "*.parquet")
+    parquet_pattern = str(parquet_dir / "*.parquet")
     logger.info(f"Carregando dados dos arquivos parquet: {parquet_pattern}")
     
     # Verifica se existem arquivos parquet

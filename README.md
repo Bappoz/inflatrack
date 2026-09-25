@@ -67,7 +67,7 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 |---|---|
 | `migrations/` | Esquema físico, aplicado em ordem na primeira subida do container |
 | `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
-| `src/inflatrack/ingest.py` | CLI de carga: crua em `data/raw/`, depois `COPY` para o banco |
+| `src/inflatrack/ingest.py` | CLI de carga: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
 | `sql/` | Consultas de verificação de carga |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/carga.md` | Caracterização da carga de trabalho (passo 1 do Método de Decisão) |
