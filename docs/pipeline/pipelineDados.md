@@ -12,7 +12,7 @@ ELT em lote: a resposta da API é gravada crua e só depois transformada dentro 
 flowchart LR
     A[API de metadados] --> C[ingest.py]
     B[API de valores<br/>1 requisição por mês] --> C
-    C --> D[(data/raw/<br/>JSON gzip)]
+    C --> D[(data/raw/ipca-inpc/<br/>JSON gzip)]
     C --> E[(PostgreSQL<br/>observacao)]
     E -. planejado .-> F[View de consumo<br/>telas do lojista]
 ```
@@ -32,7 +32,7 @@ flowchart LR
 - Deriva pai e nível pelo prefixo do código.
 - Monta o mapa `D4C` (id interno do SIDRA) → código natural, usado na etapa 2.
 
-**2. Carga histórica** — API de valores (2938, 1419, 7060, 7063, 1737) → `data/raw/` e `observacao`
+**2. Carga histórica** — API de valores (2938, 1419, 7060, 7063, 1737) → `data/raw/ipca-inpc/` e `observacao`
 
 - Pagina por mês (teto de 50.000 valores por requisição).
 - Grava o JSON cru em gzip antes de transformar.
@@ -40,7 +40,7 @@ flowchart LR
 - Traduz `D4C` pelo mapa da etapa 1.
 - `COPY` para tabela temporária e `INSERT ... ON CONFLICT DO NOTHING` na `observacao`.
 
-**3. Atualização mensal** — API de valores (7060, 7063, 1737) → `data/raw/` e `observacao`
+**3. Atualização mensal** — API de valores (7060, 7063, 1737) → `data/raw/ipca-inpc/` e `observacao`
 
 - Mesmo script da etapa 2, só com o mês novo em `--de`/`--ate`.
 - Valor revisado pelo IBGE entra como linha nova (insert-only).

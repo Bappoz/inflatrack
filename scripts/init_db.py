@@ -4,9 +4,9 @@ from pathlib import Path
 
 def get_db_path():
     base_dir = Path(os.getcwd())
-    data_dir = base_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "inflatrack.duckdb"
+    db_dir = base_dir / "data" / "duckdb"
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / "inflatrack.duckdb"
 
 def init_db():
     db_path = get_db_path()

@@ -14,8 +14,8 @@ A ponte entre as duas é a FK `produto.codigo_subitem_ipca`: é ela que permite 
 | Peça | Tecnologia | Papel |
 |---|---|---|
 | Banco principal | PostgreSQL 16.4 (Docker Compose, limite de 2 GB de memória) | Referência do IBGE + lado transacional |
-| Camada crua do IPCA | Arquivos JSON gzip em `data/raw/` | Auditoria e reprocessamento sem chamar a API |
-| Base analítica de commodities | DuckDB + Parquet em `data/` | Features para os modelos de previsão ([detalhes](../fontes/commodities.md)) |
+| Camada crua do IPCA | Arquivos JSON gzip em `data/raw/ipca-inpc/` | Auditoria e reprocessamento sem chamar a API |
+| Base analítica de commodities | Parquet em `data/parquet/` + DuckDB em `data/duckdb/` | Features para os modelos de previsão ([detalhes](../fontes/commodities.md)) |
 | Ingestão | Python 3.12, `httpx`, `psycopg` | Clientes das APIs e carga ELT |
 | Automação | `just` + `uv` | Comandos canônicos (`just --list`) |
 

@@ -138,6 +138,53 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 - Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
   foi medido de novo.
 
+## 2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de `data/`
+
+**O que a ferramenta fez**
+- Atualizou os scripts para a nova hierarquia de `data/` criada pela Squad:
+  cru do IPCA em `data/raw/ipca-inpc/` (default do `--raw-dir` em `ingest.py`),
+  cru das commodities em `data/raw/commodities_raw/`, Parquet em
+  `data/parquet/` e banco em `data/duckdb/inflatrack.duckdb`
+  (`load_commodities.py`, `scripts/init_db.py`, `src/dados_duck.py`).
+- Tornou a ingestão de commodities de fato ELT: `ingest_commodities.py` agora
+  grava a resposta da Alpha Vantage em JSON gzip na camada crua e só depois
+  relê esse arquivo para gerar o Parquet — antes o Parquet nascia da resposta
+  em memória e a camada crua não existia para essa fonte.
+
+**O que foi verificado e como**
+- Round-trip raw → Parquet de `ingest_commodities.py` exercitado primeiro com
+  payload sintético (sem gastar cota da API), incluindo o descarte de valores
+  `"."`.
+- **Pipeline completo rodado do zero**, com `data/` renomeado para `data_old/`
+  e a árvore reconstruída do nada: `scripts/init_db.py` criou
+  `data/duckdb/inflatrack.duckdb`; `ingest_commodities --commodity ALL --modo
+  historico` gerou os 9 `.json.gz` em `data/raw/commodities_raw/` e os 9
+  `.parquet` em `data/parquet/`; `load_commodities` carregou 26.781 registros
+  no DuckDB. As views foram inspecionadas com `src/dados_duck.py`
+  (`vw_features_daily` até 2026-09-22, `vw_features_monthly` até 2026-07-01).
+- **Conexão real com a Alpha Vantage:** 9 requisições HTTP bem-sucedidas
+  (WTI, BRENT, NATURAL_GAS, WHEAT, CORN, COTTON, SUGAR, COFFEE,
+  ALL_COMMODITIES), com o rate limiting de ~12 s entre chamadas funcionando.
+  O schema do JSON real bate com o esperado por `process_response`. O total
+  ficou 13 linhas acima do backup — os pregões novos das séries diárias.
+- **Conexão real com o SIDRA:** `just up` subiu o Postgres e
+  `ingest --agregado 7060 --de 2026-05 --ate 2026-07` fez 1 requisição à API
+  de metadados (457 categorias sincronizadas) e 3 à API de valores, gravando
+  `7060-202605/06/07.json.gz` em `data/raw/ipca-inpc/`. As três retornaram
+  "0 linhas novas", o que confirma a idempotência: o volume `pgdata` sobreviveu
+  e esses meses já estavam carregados. `observacao` segue com 5,9 mi de linhas
+  nos cinco agregados.
+
+**O que NÃO foi verificado**
+- A inserção de linhas novas em `observacao`: como o volume `pgdata` não foi
+  derrubado, a carga do IPCA só exercitou o caminho idempotente. Para ver o
+  `COPY` inserindo de fato é preciso `just reset` antes.
+- A carga histórica completa do IPCA (`just seed`, ~880 requisições ao SIDRA)
+  não foi refeita — o histórico veio do backup em disco.
+
+**Decisões que continuam sendo da Squad**
+- Apagar ou manter `data_old/` (49 MB), que ficou no disco como backup.
+
 ## 2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
 
 **O que a ferramenta fez**

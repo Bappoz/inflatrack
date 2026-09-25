@@ -15,7 +15,7 @@ ALPHAVANTAGE_API_KEY=sua_chave_aqui
 
 ## 2. Inicialização do Banco de Dados
 
-O primeiro passo é garantir que o arquivo do DuckDB (`data/inflatrack.duckdb`), as suas tabelas base e suas visualizações (views) existam. 
+O primeiro passo é garantir que o arquivo do DuckDB (`data/duckdb/inflatrack.duckdb`), as suas tabelas base e suas visualizações (views) existam. 
 Para inicializar o banco pela primeira vez (ou recriar suas estruturas), execute a partir da raiz do projeto:
 
 ```bash
@@ -26,7 +26,7 @@ Isso criará as tabelas `commodity` (dimensão), `commodity_cotacao` (fatos) e a
 
 ## 3. Ingestão dos Dados (Raw / Parquet)
 
-O script de ingestão consulta a API e salva as cotações na camada *raw* do projeto no formato `.parquet` dentro do diretório `data/commodities_raw/`.
+O script de ingestão consulta a API, grava a resposta crua em `data/raw/commodities_raw/` (JSON gzip) e só depois transforma esse arquivo cru em `.parquet` dentro de `data/parquet/`.
 
 Para baixar o histórico de **todas** as commodities configuradas (este comando consumirá 9 requisições da sua cota diária):
 ```bash
@@ -43,7 +43,7 @@ uv run python -m inflatrack.ingest_commodities --commodity BRENT --modo historic
 ## 4. Carga para o Banco (DuckDB)
 
 Após extrair os dados e salvá-los no formato `.parquet`, é necessário carregá-los para as tabelas do banco DuckDB. 
-O script de carga processa automaticamente todos os parquets existentes no diretório *raw* e realiza a atualização e inserção (*UPSERT*) nos dados finais:
+O script de carga processa automaticamente todos os parquets existentes em `data/parquet/` e realiza a atualização e inserção (*UPSERT*) nos dados finais:
 
 ```bash
 uv run python -m inflatrack.load_commodities
@@ -56,7 +56,7 @@ Caso deseje testar a visualização dos dados via Python, você pode rodar o seg
 
 ```python
 import duckdb
-conn = duckdb.connect("data/inflatrack.duckdb")
+conn = duckdb.connect("data/duckdb/inflatrack.duckdb")
 df = conn.execute("SELECT * FROM vw_commodities_features ORDER BY data_referencia DESC LIMIT 5").df()
 print(df)
 ```

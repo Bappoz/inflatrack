@@ -47,7 +47,7 @@ Todas as séries são obtidas diretamente da API da Alpha Vantage (`www.alphavan
 | :--- | :--- |
 | **Conjunto de dados** | Cotações Históricas de Commodities (Raw / Silver / Gold) |
 | **Fonte de origem** *(nº da aba 1)* | Alpha Vantage |
-| **Formato atual** | `.parquet` (Raw) carregado em base embutida `DuckDB` |
+| **Formato atual** | `.json.gz` (Raw) transformado em `.parquet` e carregado em base embutida `DuckDB` |
 | **Texto ou binário** | Binário |
 | **Orientação** *(linha / coluna / não se aplica)* | Linha (na tabela física `commodity_cotacao`) com leitura transposta em Coluna (nas Views PIVOT, para machine learning) |
 | **Tamanho estimado** *(em 1 ano)* | < 1 MB / ano (séries temporais numéricas extremamente leves) |
