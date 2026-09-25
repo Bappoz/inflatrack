@@ -1,0 +1,29 @@
+Engenharia de Dados aplicada ao seu projeto — BD2 / FCTE-UnB,,,,
+Planilha de acompanhamento. Preencha a partir do projeto que a sua equipe está desenvolvendo.,,,,
+,,,,
+COMO USAR,,,,
+Uma aba por bloco da aula,"As abas 1 a 5 seguem exatamente os cinco blocos da apresentação: fontes, formatos, modelos, cargas/engines e pipeline.",,,
+Preencha as células em amarelo claro,Só elas esperam resposta. Cabeçalhos e exemplos não devem ser alterados.,,,
+A primeira linha de cada tabela é um EXEMPLO,"Está em cinza itálico, é fictícia e serve para mostrar o nível de detalhe esperado. Não apague — use como referência.",,,
+Acrescente linhas quando precisar,"As tabelas vêm com espaço de sobra; se faltar, insira linhas antes da última.",,,
+Justificativa vale mais que ferramenta,"Em toda coluna ""por quê"", a resposta esperada não é o nome de um produto: é o critério que levou à escolha.",,,
+Não invente número,"Estimativa é aceita, desde que a coluna diga que é estimativa e como foi obtida.",,,
+,,,,
+LEGENDA DE CORES,,,,
+Preencha aqui,Célula de preenchimento — é aqui que a equipe escreve.,,,
+Exemplo fictício,"Linha de exemplo — não apague, use como referência.",,,
+Cabeçalho,Nome da coluna — não altere.,,,
+Calculado,Campo calculado automaticamente — não altere.,,,
+,,,,
+PROGRESSO DO PREENCHIMENTO (calculado automaticamente),,,,
+Aba,O que a aba responde,Linhas preenchidas,Mínimo esperado,Situação
+1 Fontes,De onde vem o dado do projeto e o que a origem impõe,12,4,OK
+2 Formatos,Em que formato o dado é gravado e por quê,5,3,OK
+3 Modelos,Como o dado é representado (entidades e modelo escolhido),13,4,OK
+4 Cargas e Engines,Que carga cada armazenamento aguenta e com que garantia,3,2,OK
+5 Pipeline,Como o dado vai da origem ao consumo,4,3,OK
+Riscos,O que derruba o pipeline e como mitigar,4,3,OK
+ADR,A decisão registrada com contexto e alternativas,14,10,OK
+,Abas concluídas,7 de 7,,
+,,,,
+"Fonte dos conceitos: apresentação ""Engenharia de Dados 101"" (BD2), adaptada de Chip Huyen, CS 329S — Stanford. Bibliografia: Reis & Housley, Fundamentos de Engenharia de Dados (Novatec, 2023); Kleppmann, Designing Data-Intensive Applications.",,,,

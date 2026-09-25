@@ -1,0 +1,13 @@
+Identificação do projeto e da equipe,,
+Preencha antes de começar as demais abas.,,
+,,
+Campo,Resposta da equipe,Observação / o que se espera
+Nome do projeto,InflaTrack,Como o projeto é chamado.
+Equipe (nomes completos),"Johnnatan de Salles Sanches, João Pedro Lopes da Cruz, Pedro Henrique Américo, Lucas Andrade Zanetti, Artur Fernandes Galdino",Todos os integrantes.
+Disciplina / turma / semestre,Sistema de Bancos de Dados 2 / 3 / 2026.2,
+"Em uma frase, o que o sistema faz",O InflaTrack mostra ao pequeno e médio lojista quanto a inflação do setor dele subiu e qual reajuste ele precisa aplicar para não perder margem.,Sem jargão. Uma frase.
+Problema que ele resolve,"Dificuldade de precificação e planejamento financeiro frente à inflação: Pequenos e médios lojistas frequentemente enfrentam perdas de margem de lucro e perda de poder de compra ao não conseguir acompanhar a variação histórica e setorial da inflação (IPCA), tendo dificuldade para prever reajustes de preços de fornecedores, contratos de aluguel e impacto no consumo final.",
+Quem usa o sistema,Atacadão dia a dia,Os atores principais.
+Repositório / link do projeto,https://github.com/Bappoz/inflatrack,
+Data de preenchimento,02/09/2026,
+Versão deste documento,1.0,Atualize a cada revisão.
