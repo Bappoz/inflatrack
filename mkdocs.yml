@@ -67,6 +67,7 @@ nav:
     - Fonte Dados: arquitetura/fonteDados.md
     - IPCA/INPC (SIDRA): fontes/sidra.md
     - Commodities e Energia: fontes/commodities.md
+    - PIB da China (World Bank): fontes/pib_china.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
   - Pipeline de Dados: pipeline/pipelineDados.md
   - Dicionário de Dados:

@@ -18,9 +18,18 @@ reset:
 psql:
     docker compose exec db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}"
 
+# Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
+db-ui:
+    -docker rm -f adminer 2>/dev/null
+    docker run -d --name adminer --network inflatrack_default -p 8080:8080 adminer
+
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
     uv run python -m inflatrack.ingest --agregado 7060 --de 2026-05 --ate 2026-07
+
+# Carga do PIB da China a partir da World Bank API.
+seed-pib-china:
+    uv run python -m inflatrack.ingest_pib_china
 
 # Carga histórica completa jul/2006 -> jul/2026 (~2,2 GB, dezenas de minutos; ver docs/carga.md).
 seed:
