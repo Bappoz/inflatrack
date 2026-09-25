@@ -3,13 +3,14 @@ import os
 import json
 import gzip
 import pandas as pd
+import duckdb
 from datetime import datetime
 from pathlib import Path
 from inflatrack.dolar_olinda import OlindaClient
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("ingest_dolar")
+logger = logging.getLogger("etl_dolar")
 
 def get_dir(layer: str):
     base_dir = Path(os.getcwd())
@@ -24,7 +25,37 @@ def salvar_raw_dolar(data: list, dt_inicio_iso: str, dt_fim_iso: str):
     logger.info(f"Arquivo RAW salvo em {filepath}")
     return filepath
 
-def processar_bronze_dolar(raw_filepath: Path):
+def carregar_duckdb(df: pd.DataFrame):
+    db_path = Path(os.getcwd()) / "data" / "inflatrack.duckdb"
+    logger.info(f"Conectando ao banco analítico: {db_path}")
+    conn = duckdb.connect(str(db_path))
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS dolar_cotacao (
+            data_referencia DATE PRIMARY KEY,
+            cotacaoCompra DOUBLE,
+            cotacaoVenda DOUBLE
+        );
+    """)
+    
+    try:
+        # DuckDB lê o df (Dataframe do Pandas) nativamente pela variável
+        conn.execute("CREATE TEMP TABLE temp_df AS SELECT * FROM df")
+        conn.execute("""
+            INSERT INTO dolar_cotacao (data_referencia, cotacaoCompra, cotacaoVenda)
+            SELECT data_referencia, cotacaoCompra, cotacaoVenda FROM temp_df
+            ON CONFLICT (data_referencia) DO UPDATE SET
+                cotacaoCompra = EXCLUDED.cotacaoCompra,
+                cotacaoVenda = EXCLUDED.cotacaoVenda
+        """)
+        count = conn.execute("SELECT COUNT(*) FROM dolar_cotacao").fetchone()[0]
+        logger.info(f"Dólar carregado no DuckDB! Total de linhas na tabela: {count}")
+    except Exception as e:
+        logger.warning(f"Erro ao carregar Dólar: {e}")
+    finally:
+        conn.close()
+
+def processar_bronze_e_carregar(raw_filepath: Path):
     with gzip.open(raw_filepath, "rt", encoding="utf-8") as f:
         df = pd.DataFrame(json.load(f))
     
@@ -39,12 +70,12 @@ def processar_bronze_dolar(raw_filepath: Path):
     df = df.drop_duplicates(subset=["data_referencia"], keep="last")
     df.set_index("data_referencia", inplace=True)
     
-    # Preenche furos de finais de semana e feriados com o valor do dia anterior (Sexta)
+    # Preenche furos de finais de semana e feriados em memória
     df_completo = df.resample("D").ffill().reset_index()
+    logger.info(f"Transformação Bronze em memória concluída: {len(df_completo)} dias processados.")
     
-    output_file = get_dir("bcb_bronze") / "dolar_tratado.parquet"
-    df_completo.to_parquet(output_file, index=False)
-    logger.info(f"Bronze Dólar salvo: {len(df_completo)} dias em {output_file}")
+    # Carrega direto pro DuckDB (sem gerar arquivo .parquet intermediário)
+    carregar_duckdb(df_completo)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -52,14 +83,13 @@ def main():
     parser.add_argument("--ate", required=True, help="Formato ISO (AAAA-MM-DD)")
     args = parser.parse_args()
     
-    # Converte ISO para Padrão Olinda (MM-DD-YYYY)
     dt_de = datetime.strptime(args.de, "%Y-%m-%d").strftime("%m-%d-%Y")
     dt_ate = datetime.strptime(args.ate, "%Y-%m-%d").strftime("%m-%d-%Y")
     
     client = OlindaClient()
     payload = client.buscar_dolar(dt_de, dt_ate)
     raw_path = salvar_raw_dolar(payload, args.de, args.ate)
-    processar_bronze_dolar(raw_path)
+    processar_bronze_e_carregar(raw_path)
 
 if __name__ == "__main__":
     main()

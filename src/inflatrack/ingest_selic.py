@@ -3,13 +3,14 @@ import os
 import json
 import gzip
 import pandas as pd
+import duckdb
 from datetime import datetime
 from pathlib import Path
 from inflatrack.selic_sgs import SGSClient
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("ingest_selic")
+logger = logging.getLogger("etl_selic")
 
 def get_dir(layer: str):
     base_dir = Path(os.getcwd())
@@ -24,7 +25,34 @@ def salvar_raw_selic(data: list, dt_inicio_iso: str, dt_fim_iso: str):
     logger.info(f"Arquivo RAW salvo em {filepath}")
     return filepath
 
-def processar_bronze_selic(raw_filepath: Path):
+def carregar_duckdb(df: pd.DataFrame):
+    db_path = Path(os.getcwd()) / "data" / "inflatrack.duckdb"
+    logger.info(f"Conectando ao banco analítico: {db_path}")
+    conn = duckdb.connect(str(db_path))
+    
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS selic_taxa (
+            data_referencia DATE PRIMARY KEY,
+            taxa_efetiva DOUBLE
+        );
+    """)
+    
+    try:
+        conn.execute("CREATE TEMP TABLE temp_df AS SELECT * FROM df")
+        conn.execute("""
+            INSERT INTO selic_taxa (data_referencia, taxa_efetiva)
+            SELECT data_referencia, taxa_efetiva FROM temp_df
+            ON CONFLICT (data_referencia) DO UPDATE SET
+                taxa_efetiva = EXCLUDED.taxa_efetiva
+        """)
+        count = conn.execute("SELECT COUNT(*) FROM selic_taxa").fetchone()[0]
+        logger.info(f"Selic carregada no DuckDB! Total de linhas na tabela: {count}")
+    except Exception as e:
+        logger.warning(f"Erro ao carregar Selic: {e}")
+    finally:
+        conn.close()
+
+def processar_bronze_e_carregar(raw_filepath: Path):
     with gzip.open(raw_filepath, "rt", encoding="utf-8") as f:
         df = pd.DataFrame(json.load(f))
     
@@ -36,15 +64,13 @@ def processar_bronze_selic(raw_filepath: Path):
     df["taxa_efetiva"] = df["valor"].astype(float)
     df = df[["data_referencia", "taxa_efetiva"]]
     
-    # Tratamento de fim de semana específico para a série da Selic
     df["data_referencia"] = pd.to_datetime(df["data_referencia"])
     df = df.drop_duplicates(subset=["data_referencia"], keep="last")
     df.set_index("data_referencia", inplace=True)
     df_completo = df.resample("D").ffill().reset_index()
     
-    output_file = get_dir("bcb_bronze") / "selic_tratada.parquet"
-    df_completo.to_parquet(output_file, index=False)
-    logger.info(f"Bronze Selic salvo: {len(df_completo)} dias em {output_file}")
+    logger.info(f"Transformação Bronze em memória concluída: {len(df_completo)} dias processados.")
+    carregar_duckdb(df_completo)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -52,14 +78,13 @@ def main():
     parser.add_argument("--ate", required=True, help="Formato ISO (AAAA-MM-DD)")
     args = parser.parse_args()
     
-    # Converte ISO para Padrão SGS (DD/MM/YYYY)
     dt_de = datetime.strptime(args.de, "%Y-%m-%d").strftime("%d/%m/%Y")
     dt_ate = datetime.strptime(args.ate, "%Y-%m-%d").strftime("%d/%m/%Y")
     
     client = SGSClient()
     payload = client.buscar_serie(11, dt_de, dt_ate)
     raw_path = salvar_raw_selic(payload, args.de, args.ate)
-    processar_bronze_selic(raw_path)
+    processar_bronze_e_carregar(raw_path)
 
 if __name__ == "__main__":
     main()
