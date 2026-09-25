@@ -67,6 +67,7 @@ nav:
     - Fonte Dados: arquitetura/fonteDados.md
     - SIDRA (IPCA/INPC): fontes/sidra.md
     - Commodities e Energia: fontes/commodities.md
+    - ADR 0001 (Modelagem da origem): arquitetura.md
   - Pipeline de Dados: pipeline/pipelineDados.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md

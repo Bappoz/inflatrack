@@ -19,12 +19,37 @@ flowchart LR
 
 ### Etapas
 
-| # | Etapa | Origem → Destino | Transformações | Frequência | Status |
-|---|---|---|---|---|---|
-| 1 | Sincronizar a cesta | API de metadados → `classificacao`, `classificacao_versao` | separar código e nome do rótulo (`"1101002.Arroz"`); derivar pai e nível pelo prefixo do código; montar o mapa `D4C` (id interno do SIDRA) → código natural | 1 vez por agregado a cada execução | Implementado |
-| 2 | Carga histórica (jul/2006 – jul/2026) | API de valores (2938, 1419, 7060, 7063, 1737) → `data/raw/` e `observacao` | paginar por mês (teto de 50.000 valores); gravar o JSON cru em gzip; descartar marcadores de ausência (`...`, `..`, `-`, `X`) sem descartar negativos; traduzir `D4C`; `COPY` para tabela temporária e `INSERT ... ON CONFLICT DO NOTHING` | 1 vez, reexecutável | Implementado; validado só com amostra do 7060 (mai–jul/2026) |
-| 3 | Atualização mensal | API de valores (7060, 7063, 1737) → `data/raw/` e `observacao` | as mesmas da etapa 2, só para o mês novo; valor revisado pelo IBGE entra como linha nova (insert-only) | mensal, após a divulgação (dias 9 a 12) | Manual — mesmo script com `--de`/`--ate`; agendamento não implementado |
-| 4 | Publicação para consumo | `observacao` + `classificacao_versao` + `produto` → view materializada | resolver o nome vigente do subitem; usar a variável 2265 ou derivá-la da variação mensal conforme `tem_acum_12m`; juntar produto ao subitem | após cada carga mensal | Planejado |
+| # | Etapa | Frequência | Status |
+|---|---|---|---|
+| 1 | Sincronizar a cesta | 1 vez por agregado a cada execução | Implementado |
+| 2 | Carga histórica (jul/2006 – jul/2026) | 1 vez, reexecutável | Implementado; validado só com amostra do 7060 (mai–jul/2026) |
+| 3 | Atualização mensal | mensal, após a divulgação (dias 9 a 12) | Manual; agendamento não implementado |
+| 4 | Publicação para consumo | após cada carga mensal | Planejado |
+
+**1. Sincronizar a cesta** — API de metadados → `classificacao` e `classificacao_versao`
+
+- Separa código e nome do rótulo (`"1101002.Arroz"`).
+- Deriva pai e nível pelo prefixo do código.
+- Monta o mapa `D4C` (id interno do SIDRA) → código natural, usado na etapa 2.
+
+**2. Carga histórica** — API de valores (2938, 1419, 7060, 7063, 1737) → `data/raw/` e `observacao`
+
+- Pagina por mês (teto de 50.000 valores por requisição).
+- Grava o JSON cru em gzip antes de transformar.
+- Descarta marcadores de ausência (`...`, `..`, `-`, `X`) sem descartar negativos.
+- Traduz `D4C` pelo mapa da etapa 1.
+- `COPY` para tabela temporária e `INSERT ... ON CONFLICT DO NOTHING` na `observacao`.
+
+**3. Atualização mensal** — API de valores (7060, 7063, 1737) → `data/raw/` e `observacao`
+
+- Mesmo script da etapa 2, só com o mês novo em `--de`/`--ate`.
+- Valor revisado pelo IBGE entra como linha nova (insert-only).
+
+**4. Publicação para consumo** — `observacao` + `classificacao_versao` + `produto` → view materializada
+
+- Resolve o nome vigente do subitem.
+- Usa a variável 2265 ou a deriva da variação mensal, conforme `fonte_agregado.tem_acum_12m`.
+- Junta o produto do lojista ao subitem.
 
 ### Garantias
 
