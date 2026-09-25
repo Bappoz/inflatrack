@@ -5,3 +5,4 @@ Uma página por fonte, descrevendo as tabelas que ela alimenta no banco. A carac
 | Fonte | Tabelas | Banco |
 |---|---|---|
 | [SIDRA/IBGE (IPCA e INPC)](sidra.md) | `fonte_agregado`, `variavel`, `localidade`, `classificacao`, `classificacao_versao`, `observacao` | PostgreSQL |
+| [Transacional (Lojista)](transacional.md) | `lojista`, `produto`, `reajuste` | PostgreSQL |
