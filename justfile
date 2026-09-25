@@ -22,6 +22,10 @@ psql:
 seed-amostra:
     uv run python -m inflatrack.ingest --agregado 7060 --de 2026-05 --ate 2026-07
 
+# Carga do PIB da China a partir da World Bank API.
+seed-pib-china:
+    uv run python -m inflatrack.ingest_pib_china
+
 # Carga histórica completa jul/2006 -> jul/2026 (~2,2 GB, dezenas de minutos; ver docs/carga.md).
 seed:
     uv run python -m inflatrack.ingest --agregado 2938 --de 2006-07 --ate 2011-12
