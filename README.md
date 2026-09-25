@@ -21,9 +21,9 @@ Requisitos: Docker Compose v2, [`uv`](https://docs.astral.sh/uv/) e
 
 ```bash
 git clone https://github.com/Bappoz/inflatrack.git && cd inflatrack
-cp .env.example .env
-just reset          # sobe o Postgres e aplica migrations/0001..0003 em ordem
+just reset          # sobe o Postgres e aplica migrations/0001..0004 em ordem
 just seed-amostra   # 3 meses do IPCA — confere que a ingestão funciona
+just seed-pib-china # carrega o histórico do PIB da China (World Bank API)
 ```
 
 Para a série inteira (jul/2006 a jul/2026, ~4,7 milhões de linhas, ~2,2 GB
@@ -37,9 +37,24 @@ just verificar-carga
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 
+## Visualização no Navegador
+
+### 1. Interface Gráfica do Banco de Dados (Adminer)
+Para visualizar as tabelas do PostgreSQL e as linhas salvas direto pelo navegador:
+```bash
+just db-ui
+# Ou comando equivalente:
+# docker rm -f adminer 2>/dev/null ; docker run -d --name adminer --network inflatrack_default -p 8080:8080 adminer
+```
+Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
+
+* **Sistema**: `PostgreSQL`
+* **Servidor**: `inflatrack-db-1`
+* **Usuário / Senha / Banco**: `inflatrack`
+
 ## Fontes
 
-Todas do SIDRA/IBGE, via `apisidra.ibge.gov.br`. Números medidos em 2026-09-08.
+### Referência de Inflação Nacional (SIDRA/IBGE)
 
 | Agregado | Índice | Período | Linhas com valor | Observação |
 |---|---|---|---|---|
@@ -48,6 +63,13 @@ Todas do SIDRA/IBGE, via `apisidra.ibge.gov.br`. Números medidos em 2026-09-08.
 | [7060](https://sidra.ibge.gov.br/Tabela/7060) | IPCA | jan/2020 – | ~1,71 mi | 457 categorias (POF 2017-2018) |
 | [7063](https://sidra.ibge.gov.br/Tabela/7063) | INPC | jan/2020 – | ~1,7 mi | Famílias de 1 a 5 salários mínimos |
 | [1737](https://sidra.ibge.gov.br/Tabela/1737) | IPCA | dez/1979 – | 560 pontos | Número-índice (base dez/1993 = 100), só Brasil e índice geral |
+
+### Variáveis Macroeconômicas e Externas
+
+| Fonte | Indicador | Período | Frequência | Papel no Projeto |
+|---|---|---|---|---|
+| [Alpha Vantage](https://www.alphavantage.co/) | Commodities e Energia | Séries históricas | Diária / Mensal | Cotações de petróleo, gás natural e commodities agrícolas |
+| [World Bank API](https://data.worldbank.org/country/china) | PIB da China | 1960 – 2025 | Anual / Trimestral | Indicador antecedente de demanda global por commodities |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 
@@ -65,13 +87,13 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 
 | Caminho | Papel |
 |---|---|
-| `migrations/` | Esquema físico, aplicado em ordem na primeira subida do container |
+| `migrations/` | Esquema físico (0001..0004), aplicado em ordem na primeira subida do container |
 | `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
-| `src/inflatrack/ingest.py` | CLI de carga: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
+| `src/inflatrack/ingest.py` | CLI de carga do IPCA/INPC: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
+| `src/inflatrack/ingest_pib_china.py` | Ingestão e carga do PIB da China (World Bank API) no PostgreSQL |
 | `sql/` | Consultas de verificação de carga |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
-| `docs/carga.md` | Caracterização da carga de trabalho (passo 1 do Método de Decisão) |
-| `docs/diario/` | Diário de bordo semanal da Squad |
+| `docs/fontes/pib_china.md` | Caracterização completa da fonte do PIB da China |
 | `mkdocs.yml` | Configuração da documentação (Material for MkDocs) e GitHub Pages |
 
 ## Documentação
