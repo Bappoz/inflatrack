@@ -27,7 +27,6 @@ theme:
         name: Mudar para modo claro
   features:
     - navigation.tabs
-    - navigation.sections
     - navigation.top
     - navigation.expand
     - search.suggest
@@ -64,15 +63,19 @@ nav:
     - Fluxo de Dados: arquitetura/fluxoDados.md
     - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
     - Componentes: arquitetura/componentes.md
-    - Fonte Dados: arquitetura/fonteDados.md
-    - IPCA/INPC (SIDRA): fontes/sidra.md
-    - Commodities e Energia: fontes/commodities.md
+    - Fonte Dados: 
+      - Tabela fontes: arquitetura/fonteDados.md
+      - IPCA/INPC (SIDRA): fontes/sidra.md
+      - Commodities e Energia: fontes/commodities.md
+      - PIB e Setores (SIDRA 1846): fontes/pib.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
+    - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
   - Pipeline de Dados: pipeline/pipelineDados.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
+    - PIB e Setores (SIDRA 1846): dicionario/pib.md
   - Visualização: visualizacao/visualizacao.md
   - Evidencias: evidencias/evidencias.md
 

@@ -35,6 +35,17 @@ verificar-carga:
     docker compose exec -T db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}" \
         -f /dev/stdin < sql/verificar_carga.sql
 
+# Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
+pib-ingest de="1996" ate="2026":
+    uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
+
+# Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
+pib-load:
+    uv run python -m inflatrack.load_pib
+
+# Ingestão + carga do PIB, de ponta a ponta.
+pib: pib-ingest pib-load
+
 fmt:
     uv run ruff format src/
 

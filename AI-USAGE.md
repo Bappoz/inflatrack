@@ -185,3 +185,94 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 **Decisões que continuam sendo da Squad**
 - Apagar ou manter `data_old/` (49 MB), que ficou no disco como backup.
 
+
+---
+
+## 2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)
+
+**Prompt da Squad**
+Implementar a tabela [1846 do SIDRA](https://sidra.ibge.gov.br/tabela/1846) na
+trilha existente: baixar pela API os indicadores que afetam o preço ao
+consumidor (agropecuária, eletricidade e gás, serviços, comércio, transporte,
+atividades financeiras, impostos sobre produtos, PIB, despesas de consumo,
+exportação e importação), gravar o cru em `json.gz`, organizar em Parquet no
+padrão do projeto e levar ao DuckDB — ponderando se atualizar o banco existente
+ou criar um por fonte.
+
+**O que a ferramenta fez**
+- `src/inflatrack/pib.py`: catálogo da tabela 1846 — as 23 categorias da
+  classificação `c11255`, a marcação de `grupo` (atividade / demanda /
+  agregado) e o recorte de 12 indicadores do **núcleo** pedido pela Squad.
+  Os nomes vêm dos metadados da API, não hardcoded; renomeação na origem se
+  propaga sozinha.
+- `src/inflatrack/ingest_pib.py`: CLI de ingestão ELT, um `json.gz` por ano em
+  `data/raw/pib_raw/`, Parquet em `data/parquet/pib/`.
+- `scripts/setup_duckdb_pib.sql` + `src/inflatrack/load_pib.py`: tabelas
+  `pib_setor` / `pib_valor` e três views (`vw_pib_setor_trimestral`,
+  `vw_pib_nucleo`, `vw_features_pib_trimestral`), com UPSERT idempotente.
+- `scripts/init_db.py` passou a aplicar **todos** os `setup_duckdb*.sql`, não
+  só o das commodities.
+- Receitas `just pib-ingest`, `just pib-load` e `just pib`.
+- Docs: `docs/fontes/pib.md` e `docs/adr/0002-duckdb-unico.md`, mais entradas
+  na nav do MkDocs e nas tabelas de fontes e estrutura do README.
+- Em pedidos seguintes da Squad na mesma sessão: linha da nova fonte na tabela
+  de `docs/arquitetura/fonteDados.md` (ao lado de SIDRA e Alpha Vantage) e o
+  grupo **Fonte Dados** da nav do MkDocs tornado retrátil — bastou remover
+  `navigation.sections` das `features` do tema. Essa flag marca o grupo com a
+  classe `md-nav__item--section`, que o CSS do Material renderiza como rótulo
+  fixo e sem seta; sem ela o item vira `md-nav__item--nested`, com checkbox de
+  toggle. `navigation.expand` foi mantida, então os grupos abrem expandidos e
+  podem ser recolhidos — verificado no HTML gerado em `site/`.
+
+**Decisão ponderada: um DuckDB ou um por fonte**
+Optou-se por **manter o `inflatrack.duckdb` único**, com prefixo de tabela por
+fonte. O critério foi o padrão de acesso, não o volume: a pergunta de gestão do
+projeto é multifonte ("o comércio encareceu porque o frete subiu?"), e num
+arquivo isso é `JOIN`, enquanto entre arquivos exige `ATTACH` em toda sessão e
+impede FK entre as metades. O raciocínio completo, com as alternativas e as
+quatro regras que tornam a escolha sustentável, está no ADR 0002.
+
+**Armadilha concreta encontrada**
+`inflatrack.load_commodities` lê `data/parquet/*.parquet` com glob raso e
+pressupõe o esquema `(symbol, data_referencia, preco)`. Um Parquet de PIB solto
+nessa pasta quebraria a carga das commodities — daí a subpasta
+`data/parquet/pib/`. Também foi preciso guarda explícita em
+`pib.trimestre_para_data`: o período da 1846 é `AAAATT` e não `AAAAMM`, e
+reaproveitar `ingest.mes_para_data` transformaria o 3º trimestre em março sem
+erro nenhum.
+
+**O que foi verificado e como**
+- **Conexão real com o SIDRA:** 1 requisição de metadados + 31 de valores (uma
+  por ano, 1996–2026), todas HTTP 200, em ~9 s. Gerou 31 `json.gz` (22,5 KB) em
+  `data/raw/pib_raw/` e 31 `.parquet` (202 KB) em `data/parquet/pib/`,
+  totalizando 2.806 linhas — 2026 traz 46 (2 trimestres × 23), coerente com a
+  periodicidade declarada nos metadados (fim em `202602`).
+- **Carga no DuckDB:** 23 setores e 2.806 observações. `load_pib` rodado duas
+  vezes seguidas manteve 2.806 — idempotência do UPSERT confirmada.
+- **Não regrediu as commodities:** `commodity_cotacao` segue com 26.781 linhas
+  e `vw_features_daily`/`vw_features_monthly` continuam listadas após a carga.
+- Views inspecionadas com dado real: `vw_features_pib_trimestral` no 2T/2026
+  devolve PIB de R$ 3,43 tri e as 12 colunas do núcleo; `vw_pib_nucleo` no mesmo
+  trimestre mostra consumo das famílias em 61,68% do PIB e agropecuária com
+  −18,81% contra o mesmo trimestre do ano anterior.
+- `ruff check` e `ruff format --check` limpos nos três módulos novos;
+  `mkdocs build --strict` passou.
+
+**O que NÃO foi verificado**
+- A hipótese econômica por trás do recorte do **núcleo** (que esses 12
+  indicadores, e não outros, são os que mais pressionam o preço na prateleira) é
+  uma sugestão da ferramenta a partir da lista da Squad — não foi testada
+  estatisticamente contra a série do IPCA.
+- Não há teste automatizado: o projeto ainda não tem `tests/`, e `just test`
+  segue sem casos para esta fonte.
+- A série da 1846 é de **valores correntes**, que misturam variação de preço e
+  de quantidade. Para isolar preço seria preciso cruzar com a tabela de volume
+  (deflator implícito) — fora do escopo deste pedido.
+
+**Decisões que continuam sendo da Squad**
+- O caminho da camada crua ficou em `data/raw/pib_raw/` (e não `data/pib_raw/`)
+  para seguir a hierarquia criada no commit `adff981`. O flag `--raw-dir`
+  permite mudar; se a Squad preferir a raiz, é trocar o default.
+- Se vale trazer também a tabela de índices de volume da 1846 para separar
+  preço de quantidade.
+- Promover o ADR 0002 de "proposto" a "aceito".

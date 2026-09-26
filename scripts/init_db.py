@@ -10,16 +10,20 @@ def get_db_path():
 
 def init_db():
     db_path = get_db_path()
-    sql_path = Path(os.getcwd()) / "scripts" / "setup_duckdb.sql"
-    
+    scripts_dir = Path(os.getcwd()) / "scripts"
+
+    # Uma fonte por arquivo (setup_duckdb.sql = commodities,
+    # setup_duckdb_pib.sql = contas nacionais). Todos são idempotentes:
+    # só CREATE ... IF NOT EXISTS e CREATE OR REPLACE VIEW.
+    sql_paths = sorted(scripts_dir.glob("setup_duckdb*.sql"))
+
     print(f"Inicializando banco de dados DuckDB em: {db_path}")
     conn = duckdb.connect(str(db_path))
-    
-    with open(sql_path, "r", encoding="utf-8") as f:
-        sql = f.read()
-        
-    conn.execute(sql)
-    print("Script setup_duckdb.sql executado com sucesso.")
+
+    for sql_path in sql_paths:
+        conn.execute(sql_path.read_text(encoding="utf-8"))
+        print(f"Script {sql_path.name} executado com sucesso.")
+
     conn.close()
 
 if __name__ == "__main__":
