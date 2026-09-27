@@ -343,3 +343,71 @@ erro nenhum.
 **O que NÃO foi verificado**
 - A carga histórica completa desde 2020 e a Alpha Vantage não foram reexecutadas
   para evitar consumo desnecessário de tempo e cota externa.
+
+## 2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)
+
+**O que a ferramenta fez**
+- Iniciou a quebra de `docs/fontes/bcb.md` em dois documentos por indicador,
+  criando `docs/fontes/selic.md` na mesma estrutura de `docs/fontes/commodities.md`.
+- Escreveu as quatro seções do documento a partir da leitura do código
+  (`selic_sgs.py`, `ingest_selic.py`, `scripts/setup_duckdb_macro.sql`): série
+  coletada, Fonte de Origem, Conjunto de Dados/Armazenamento, Carga de trabalho
+  e Restrições da origem.
+- Registrou dois fatos que não estavam documentados: a Selic **não tem camada
+  Parquet** (a transformação é em memória entre o raw e o DuckDB), e cada rodada
+  faz `UPSERT` do calendário inteiro da janela (~2.460 linhas) para incorporar
+  1 dado novo, além de arquivar de novo o `.json.gz` da janela completa.
+- Adicionou a página ao `nav` do `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Todos os números de schema, formato de data, retentativa, timeout e semântica
+  de `observado` foram lidos diretamente dos arquivos-fonte citados.
+- A ausência de camada Parquet para a Selic foi confirmada por inspeção de
+  `data/parquet/` (só commodities e PIB) e do fluxo de `ingest_selic.py`.
+
+**O que NÃO foi verificado**
+- Os tamanhos do raw (~15 KB por arquivo, ~4 MB/ano) são **estimativa**:
+  `data/raw/bcb/` não existe nesta máquina, a carga da Selic nunca rodou aqui.
+- "Frequência de leitura: alta" descreve o uso pretendido em notebooks de treino;
+  não há notebooks no repositório para confirmar.
+- `mkdocs build --strict` não foi executado após a edição do `nav`.
+
+**Decisões que continuam sendo da Squad**
+- ~~Se `docs/fontes/bcb.md` deve perder a parte da Selic~~ — resolvido na Fase 2
+  abaixo: a Squad pediu a remoção do `bcb.md`.
+- Se vale particionar o raw do BCB por ano para eliminar a redundância apontada.
+
+## 2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do `bcb.md`
+
+**O que a ferramenta fez**
+- Criou `docs/fontes/dolar.md` na mesma estrutura das demais fontes, com as
+  quatro seções preenchidas a partir de `dolar_olinda.py` e `ingest_dolar.py`.
+- Registrou o que é específico do Olinda/PTAX: múltiplos boletins por dia útil
+  (origem da deduplicação por `dataHoraCotacao`), data em `MM-DD-YYYY` entre
+  aspas simples no valor do parâmetro, payload embrulhado na chave `value`, e
+  carga anterior ao fechamento do câmbio gravando valor provisório.
+- Reaproveitou o aviso `!!! abstract "Decisão Arquitetural (ADR)"` do antigo
+  `bcb.md` na seção "Séries coletadas" do Dólar, e escreveu um equivalente para
+  a Selic (série 11 é efetiva diária, não a meta do Copom — série 432).
+- Substituiu a linha única de "Dólar e Selic" por duas linhas na tabela de
+  `docs/arquitetura/fonteDados.md`, ajustou o `nav` do `mkdocs.yml` e removeu
+  `docs/fontes/bcb.md`.
+
+**O que foi verificado e como**
+- `uv run mkdocs build --strict` passou depois da remoção: nenhum link órfão
+  para `fontes/bcb.md` restou (conferido com busca no repositório).
+- Antes de remover o `bcb.md`, foi conferido que suas seções de fluxo de carga
+  já estavam duplicadas em `docs/pipeline/pipelineMacro.md`.
+- A afirmação de que a troca SGS→Olinda está em um ADR foi **corrigida**: o
+  ADR 0003 só cobre o calendário civil e a coluna `observado`. A página diz
+  agora que essa decisão ainda não tem ADR próprio.
+
+**O que NÃO foi verificado**
+- Os tamanhos do raw do Dólar são estimativa; `data/raw/bcb/` não existe nesta
+  máquina e a carga não foi executada.
+- A contagem de boletins por dia útil devolvida pelo `CotacaoDolarPeriodo` não
+  foi medida com requisição real; está descrita qualitativamente.
+
+**Decisões que continuam sendo da Squad**
+- Se a troca SGS→Olinda merece um ADR próprio ou uma seção no ADR 0003.
+- Se vale particionar o raw do BCB por ano para eliminar as janelas repetidas.
