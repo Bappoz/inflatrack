@@ -20,5 +20,14 @@ services:
         limits:
           memory: 2G
 
+  adminer:
+    image: adminer:5.4.1-standalone
+    profiles: [tools]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+
 volumes:
   pgdata:

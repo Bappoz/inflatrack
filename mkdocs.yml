@@ -69,6 +69,7 @@ nav:
       - Commodities e Energia: fontes/commodities.md
       - PIB e Setores (SIDRA 1846): fontes/pib.md
       - Banco Central (Dólar/Selic): fontes/bcb.md
+      - PIB da China (World Bank): fontes/pib_china.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md

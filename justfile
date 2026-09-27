@@ -18,9 +18,27 @@ reset:
 psql:
     docker compose exec db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}"
 
+# Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
+db-ui:
+    docker compose --profile tools up -d --wait adminer
+
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
     uv run python -m inflatrack.ingest --agregado 7060 --de 2026-05 --ate 2026-07
+
+# World Bank -> raw + Parquet anual.
+pib-china-ingest:
+    uv run python -m inflatrack.ingest_pib_china
+
+# Sobe o Parquet do PIB da China para o mesmo DuckDB das commodities.
+pib-china-load:
+    uv run python -m inflatrack.load_pib_china
+
+# Ingestão + carga do PIB da China, de ponta a ponta.
+pib-china: pib-china-ingest pib-china-load
+
+# Alias mantido para compatibilidade com a documentação anterior do PR.
+seed-pib-china: pib-china
 
 # Carga histórica completa jul/2006 -> jul/2026 (~2,2 GB, dezenas de minutos; ver docs/carga.md).
 seed:
