@@ -34,6 +34,14 @@ just seed
 just verificar-carga
 ```
 
+Os indicadores macro que explicam o movimento do preço (PIB, agropecuária,
+comércio, transporte, energia, impostos, consumo, exportação e importação)
+vêm das Contas Nacionais Trimestrais e levam ~10 segundos:
+
+```bash
+just pib            # SIDRA 1846: raw gzip -> Parquet -> DuckDB
+```
+
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 
@@ -48,6 +56,7 @@ Todas do SIDRA/IBGE, via `apisidra.ibge.gov.br`. Números medidos em 2026-09-08.
 | [7060](https://sidra.ibge.gov.br/Tabela/7060) | IPCA | jan/2020 – | ~1,71 mi | 457 categorias (POF 2017-2018) |
 | [7063](https://sidra.ibge.gov.br/Tabela/7063) | INPC | jan/2020 – | ~1,7 mi | Famílias de 1 a 5 salários mínimos |
 | [1737](https://sidra.ibge.gov.br/Tabela/1737) | IPCA | dez/1979 – | 560 pontos | Número-índice (base dez/1993 = 100), só Brasil e índice geral |
+| [1846](https://sidra.ibge.gov.br/Tabela/1846) | Contas Nacionais Trimestrais | 1996T1 – | 2.806 pontos | PIB, valor adicionado por setor e componentes da demanda; só Brasil, trimestral — ver [docs/fontes/pib.md](docs/fontes/pib.md) |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 
@@ -68,6 +77,9 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 | `migrations/` | Esquema físico, aplicado em ordem na primeira subida do container |
 | `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
 | `src/inflatrack/ingest.py` | CLI de carga: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
+| `src/inflatrack/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
+| `src/inflatrack/ingest_pib.py` | CLI do PIB: crua em `data/raw/pib_raw/`, depois Parquet em `data/parquet/pib/` |
+| `src/inflatrack/load_pib.py` | Sobe o Parquet do PIB para o DuckDB (`just pib-load`) |
 | `sql/` | Consultas de verificação de carga |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/carga.md` | Caracterização da carga de trabalho (passo 1 do Método de Decisão) |

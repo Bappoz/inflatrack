@@ -12,7 +12,7 @@ flowchart TB
     subgraph Crua
         R1[(data/raw/ipca-inpc/<br/>JSON gzip)]
         R2[(data/raw/commodities_raw/<br/>JSON gzip)]
-        R3[(data/bcb_raw/<br/>JSON gzip)]
+        R3[(data/raw/bcb/<br/>JSON gzip)]
     end
     subgraph Transformada
         PQ[(data/parquet/<br/>Parquet)]

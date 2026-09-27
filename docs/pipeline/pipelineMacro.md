@@ -9,7 +9,7 @@ ETL analítico: as respostas das APIs financeiras aterrissam localmente, são li
 ```mermaid
 flowchart LR
     A[APIs BCB e AlphaVantage] --> B[ingest_*.py]
-    B --> C[(data/*_raw/<br/>JSON gzip)]
+    B --> C[(data/raw/<br/>JSON gzip)]
     B --> D[(Pandas DataFrame<br/>em memória)]
     D --> F[(inflatrack.duckdb<br/>Silver)]
     F -. planejado .-> G[Modelos Data Science<br/>Análise Macro]
@@ -24,12 +24,12 @@ flowchart LR
 | 3 | Carga Idempotente (Silver / DuckDB) | Diária (UPSERT) | Implementado |
 
 **1. Extração e Aterrissagem (RAW)**
-- `dolar_olinda.py` e `selic_sgs.py` formatam as datas para o padrão das APIs.
-- O payload é descarregado intocado em `json.gz` para auditoria, preservando a assinatura original do governo/provedor.
+- `ingest_dolar.py` e `ingest_selic.py` formatam as datas para o padrão de cada API.
+- As observações retornadas são gravadas sem alteração em `json.gz` antes da transformação.
 
 **2. Tratamento Temporal (Bronze)**
-- Remoção intradiária: O Pandas aplica `keep="last"` para ignorar boletins parciais do dia e manter apenas a cotação de fechamento oficial.
-- **Forward Fill:** A cotação da sexta-feira é duplicada para Sábado, Domingo e Feriados.
+- Deduplicação defensiva: se houver mais de uma linha na data, o Pandas ordena `dataHoraCotacao` e mantém a última.
+- **Forward Fill:** O último valor útil conhecido é carregado para sábados, domingos e feriados; `observado = false` identifica essas linhas.
 - Os dados são passados diretamente em memória para a carga Silver.
 
 **3. Carga Idempotente (Silver)**
@@ -39,13 +39,14 @@ flowchart LR
 ### Garantias
 
 - **Idempotência Matemática:** Graças à chave primária de data e o `ON CONFLICT`, o script pode ser executado centenas de vezes sobre o mesmo período sem gerar linhas duplicadas.
-- **Continuidade do Calendário:** O *Forward Fill* garante que não existirão "buracos" no cruzamento com a base de vendas do lojista (que opera nos finais de semana).
-- **Cobertura de Testes:** A lógica de formatação de parâmetros das APIs está coberta por testes automatizados (`pytest` via `unittest.mock`) blindando contra mudanças inesperadas.
+- **Continuidade do Calendário:** O *forward fill* cobre toda a janela solicitada, inclusive quando ela começa em feriado ou fim de semana, usando dez dias de histórico anterior.
+- **Rastreabilidade:** `observado` permite separar valores publicados dos carregados para alinhamento.
+- **Cobertura de Testes:** Clientes HTTP, transformação temporal e UPSERT idempotente são cobertos por testes automatizados.
 
 ### Como saber se falhou
 
-- O script acusa erro 403 (`requests.exceptions.HTTPError`) caso o IP seja bloqueado pelo WAF do Banco Central.
-- A função de inserção no DuckDB falhará graciosamente, imprimindo o alerta `Erro ao carregar` sem corromper as linhas já inseridas, graças à transação nativa do banco.
+- Erros HTTP, payloads inesperados, datas inválidas e falhas do DuckDB encerram o processo com código diferente de zero.
+- Uma resposta vazia não é tratada como sucesso.
 
 ### Como rodar
 

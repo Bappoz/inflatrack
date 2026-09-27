@@ -1,95 +1,115 @@
+"""Ingestão da cotação diária do dólar comercial pela API Olinda/PTAX."""
+
+from __future__ import annotations
+
 import argparse
-import os
-import json
 import gzip
-import pandas as pd
-import duckdb
-from datetime import datetime
-from pathlib import Path
-from inflatrack.dolar_olinda import OlindaClient
+import json
 import logging
+import sys
+from datetime import date, timedelta
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("etl_dolar")
+import duckdb
+import pandas as pd
+import requests
 
-def get_dir(layer: str):
-    base_dir = Path(os.getcwd())
-    data_dir = base_dir / "data" / layer
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+from inflatrack.dolar_olinda import OlindaClient, OlindaError
 
-def salvar_raw_dolar(data: list, dt_inicio_iso: str, dt_fim_iso: str):
-    filepath = get_dir("bcb_raw") / f"dolar_{dt_inicio_iso}_a_{dt_fim_iso}.json.gz"
-    with gzip.open(filepath, "wt", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-    logger.info(f"Arquivo RAW salvo em {filepath}")
-    return filepath
+logger = logging.getLogger("inflatrack.ingest_dolar")
 
-def carregar_duckdb(df: pd.DataFrame):
-    db_path = Path(os.getcwd()) / "data" / "inflatrack.duckdb"
-    logger.info(f"Conectando ao banco analítico: {db_path}")
-    conn = duckdb.connect(str(db_path))
-    
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS dolar_cotacao (
-            data_referencia DATE PRIMARY KEY,
-            cotacaoCompra DOUBLE,
-            cotacaoVenda DOUBLE
-        );
-    """)
-    
+RAW_DIR_PADRAO = Path("data/raw/bcb")
+DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
+SCHEMA_SQL = Path(__file__).resolve().parents[2] / "scripts" / "setup_duckdb_macro.sql"
+
+
+def salvar_raw(data: list[dict], destino: Path, inicio: date, fim: date) -> Path:
+    destino.mkdir(parents=True, exist_ok=True)
+    caminho = destino / f"dolar_{inicio.isoformat()}_a_{fim.isoformat()}.json.gz"
+    with gzip.open(caminho, "wt", encoding="utf-8") as arquivo:
+        json.dump(data, arquivo, ensure_ascii=False)
+    return caminho
+
+
+def transformar(data: list[dict], inicio: date, fim: date) -> pd.DataFrame:
+    """Seleciona o último boletim do dia e carrega o último valor conhecido."""
+    if not data:
+        raise ValueError("a API Olinda não retornou cotações")
+    quadro = pd.DataFrame(data)
+    obrigatorias = {"dataHoraCotacao", "cotacaoCompra", "cotacaoVenda"}
+    if not obrigatorias.issubset(quadro.columns):
+        raise ValueError("resposta da API Olinda sem as colunas esperadas")
+
+    quadro["instante"] = pd.to_datetime(quadro["dataHoraCotacao"], errors="raise")
+    quadro["data_referencia"] = quadro["instante"].dt.normalize()
+    quadro = quadro.sort_values("instante").drop_duplicates(subset=["data_referencia"], keep="last")
+    quadro = quadro.set_index("data_referencia")
+    quadro = quadro.rename(
+        columns={"cotacaoCompra": "cotacao_compra", "cotacaoVenda": "cotacao_venda"}
+    )[["cotacao_compra", "cotacao_venda"]]
+    datas_observadas = quadro.index
+
+    calendario = pd.date_range(inicio, fim, freq="D")
+    quadro = quadro.reindex(quadro.index.union(calendario)).sort_index().ffill()
+    quadro = quadro.reindex(calendario)
+    if quadro[["cotacao_compra", "cotacao_venda"]].isna().any().any():
+        raise ValueError("não há cotação anterior para preencher o início do período")
+    quadro["observado"] = quadro.index.isin(datas_observadas)
+    return quadro.reset_index(names="data_referencia")
+
+
+def carregar(conexao: duckdb.DuckDBPyConnection, quadro: pd.DataFrame) -> int:
+    conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
+    conexao.register("carga_dolar", quadro)
+    conexao.execute(
+        """
+        INSERT INTO dolar_cotacao
+        SELECT data_referencia, cotacao_compra, cotacao_venda, observado FROM carga_dolar
+        ON CONFLICT (data_referencia) DO UPDATE SET
+            cotacao_compra = EXCLUDED.cotacao_compra,
+            cotacao_venda = EXCLUDED.cotacao_venda,
+            observado = EXCLUDED.observado
+        """
+    )
+    return conexao.execute("SELECT count(*) FROM dolar_cotacao").fetchone()[0]
+
+
+def executar(args: argparse.Namespace) -> int:
+    inicio = date.fromisoformat(args.de)
+    fim = date.fromisoformat(args.ate)
+    if inicio > fim:
+        raise ValueError("--de não pode ser maior que --ate")
+
+    # O lookback fornece o valor anterior para preencher feriado/fim de semana no início.
+    busca_inicio = inicio - timedelta(days=10)
+    data = OlindaClient().buscar_dolar(busca_inicio.strftime("%m-%d-%Y"), fim.strftime("%m-%d-%Y"))
+    raw = salvar_raw(data, Path(args.raw_dir), inicio, fim)
+    logger.info("resposta crua salva em %s", raw)
+    quadro = transformar(data, inicio, fim)
+
+    db = Path(args.db)
+    db.parent.mkdir(parents=True, exist_ok=True)
+    with duckdb.connect(str(db)) as conexao:
+        total = carregar(conexao, quadro)
+    logger.info("%d dias processados; %d linhas em dolar_cotacao", len(quadro), total)
+    return len(quadro)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--de", default="2020-01-01", help="AAAA-MM-DD")
+    parser.add_argument("--ate", default=date.today().isoformat(), help="AAAA-MM-DD")
+    parser.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO))
+    parser.add_argument("--db", default=str(DB_PADRAO))
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
-        # DuckDB lê o df (Dataframe do Pandas) nativamente pela variável
-        conn.execute("CREATE TEMP TABLE temp_df AS SELECT * FROM df")
-        conn.execute("""
-            INSERT INTO dolar_cotacao (data_referencia, cotacaoCompra, cotacaoVenda)
-            SELECT data_referencia, cotacaoCompra, cotacaoVenda FROM temp_df
-            ON CONFLICT (data_referencia) DO UPDATE SET
-                cotacaoCompra = EXCLUDED.cotacaoCompra,
-                cotacaoVenda = EXCLUDED.cotacaoVenda
-        """)
-        count = conn.execute("SELECT COUNT(*) FROM dolar_cotacao").fetchone()[0]
-        logger.info(f"Dólar carregado no DuckDB! Total de linhas na tabela: {count}")
-    except Exception as e:
-        logger.warning(f"Erro ao carregar Dólar: {e}")
-    finally:
-        conn.close()
+        executar(args)
+    except (requests.RequestException, json.JSONDecodeError, OlindaError, ValueError) as erro:
+        logger.error("carga do dólar abortada: %s", erro)
+        return 1
+    return 0
 
-def processar_bronze_e_carregar(raw_filepath: Path):
-    with gzip.open(raw_filepath, "rt", encoding="utf-8") as f:
-        df = pd.DataFrame(json.load(f))
-    
-    if df.empty:
-        logger.warning("Nenhum dado encontrado.")
-        return
-        
-    df["data_referencia"] = pd.to_datetime(df["dataHoraCotacao"]).dt.date
-    df = df[["data_referencia", "cotacaoCompra", "cotacaoVenda"]]
-    
-    df["data_referencia"] = pd.to_datetime(df["data_referencia"])
-    df = df.drop_duplicates(subset=["data_referencia"], keep="last")
-    df.set_index("data_referencia", inplace=True)
-    
-    # Preenche furos de finais de semana e feriados em memória
-    df_completo = df.resample("D").ffill().reset_index()
-    logger.info(f"Transformação Bronze em memória concluída: {len(df_completo)} dias processados.")
-    
-    # Carrega direto pro DuckDB (sem gerar arquivo .parquet intermediário)
-    carregar_duckdb(df_completo)
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--de", required=True, help="Formato ISO (AAAA-MM-DD)")
-    parser.add_argument("--ate", required=True, help="Formato ISO (AAAA-MM-DD)")
-    args = parser.parse_args()
-    
-    dt_de = datetime.strptime(args.de, "%Y-%m-%d").strftime("%m-%d-%Y")
-    dt_ate = datetime.strptime(args.ate, "%Y-%m-%d").strftime("%m-%d-%Y")
-    
-    client = OlindaClient()
-    payload = client.buscar_dolar(dt_de, dt_ate)
-    raw_path = salvar_raw_dolar(payload, args.de, args.ate)
-    processar_bronze_e_carregar(raw_path)
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

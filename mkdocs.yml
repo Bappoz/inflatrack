@@ -27,7 +27,6 @@ theme:
         name: Mudar para modo claro
   features:
     - navigation.tabs
-    - navigation.sections
     - navigation.top
     - navigation.expand
     - search.suggest
@@ -64,12 +63,15 @@ nav:
     - Fluxo de Dados: arquitetura/fluxoDados.md
     - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
     - Componentes: arquitetura/componentes.md
-    - Fonte Dados: arquitetura/fonteDados.md
-    - IPCA/INPC (SIDRA): fontes/sidra.md
-    - Commodities e Energia: fontes/commodities.md
-    - Banco Central (Dólar/Selic): fontes/bcb.md
+    - Fonte Dados:
+      - Tabela fontes: arquitetura/fonteDados.md
+      - IPCA/INPC (SIDRA): fontes/sidra.md
+      - Commodities e Energia: fontes/commodities.md
+      - PIB e Setores (SIDRA 1846): fontes/pib.md
+      - Banco Central (Dólar/Selic): fontes/bcb.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
-    - ADR 0002 (Motor Analitico DuckDB): adr_0002_macro.md
+    - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
+    - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
   - Pipeline de Dados:
     - SIDRA (IPCA/INPC): pipeline/pipelineDados.md
     - Macroeconomia: pipeline/pipelineMacro.md
@@ -78,6 +80,7 @@ nav:
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
     - Macroeconomia: dicionario/macroeconomia.md
+    - PIB e Setores (SIDRA 1846): dicionario/pib.md
   - Visualização: visualizacao/visualizacao.md
   - Evidências:
     - SIDRA (IPCA): evidencias/evidencias.md
@@ -85,4 +88,3 @@ nav:
 
 extra_css:
   - stylesheets/extra.css
-
