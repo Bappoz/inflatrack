@@ -83,3 +83,19 @@ docs:
 # Compila a documentação estática validando integridade e links.
 docs-build:
     uv run --group docs mkdocs build --strict
+
+# Carga isolada do Dólar (o fim padrão é a data atual).
+seed-dolar de="2020-01-01":
+    uv run python -m inflatrack.ingest_dolar --de {{de}}
+
+# Carga isolada da Selic (o fim padrão é a data atual).
+seed-selic de="2020-01-01":
+    uv run python -m inflatrack.ingest_selic --de {{de}}
+
+# Carga isolada das Commodities (AlphaVantage -> DuckDB)
+seed-commodities:
+    uv run python -m inflatrack.ingest_commodities --commodity ALL --modo historico
+    uv run python -m inflatrack.load_commodities
+
+# Macroeconomia de ponta a ponta, em sequência por causa do escritor único do DuckDB.
+seed-macro: seed-dolar seed-selic seed-commodities
