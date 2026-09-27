@@ -20,16 +20,25 @@ psql:
 
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
-    -docker rm -f adminer 2>/dev/null
-    docker run -d --name adminer --network inflatrack_default -p 8080:8080 adminer
+    docker compose --profile tools up -d --wait adminer
 
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
     uv run python -m inflatrack.ingest --agregado 7060 --de 2026-05 --ate 2026-07
 
-# Carga do PIB da China a partir da World Bank API.
-seed-pib-china:
+# World Bank -> raw + Parquet anual.
+pib-china-ingest:
     uv run python -m inflatrack.ingest_pib_china
+
+# Sobe o Parquet do PIB da China para o mesmo DuckDB das commodities.
+pib-china-load:
+    uv run python -m inflatrack.load_pib_china
+
+# Ingestão + carga do PIB da China, de ponta a ponta.
+pib-china: pib-china-ingest pib-china-load
+
+# Alias mantido para compatibilidade com a documentação anterior do PR.
+seed-pib-china: pib-china
 
 # Carga histórica completa jul/2006 -> jul/2026 (~2,2 GB, dezenas de minutos; ver docs/carga.md).
 seed:
@@ -43,6 +52,17 @@ seed:
 verificar-carga:
     docker compose exec -T db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}" \
         -f /dev/stdin < sql/verificar_carga.sql
+
+# Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
+pib-ingest de="1996" ate="2026":
+    uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
+
+# Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
+pib-load:
+    uv run python -m inflatrack.load_pib
+
+# Ingestão + carga do PIB, de ponta a ponta.
+pib: pib-ingest pib-load
 
 fmt:
     uv run ruff format src/
@@ -63,4 +83,3 @@ docs:
 # Compila a documentação estática validando integridade e links.
 docs-build:
     uv run --group docs mkdocs build --strict
-

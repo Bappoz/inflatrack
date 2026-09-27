@@ -21,7 +21,7 @@ Requisitos: Docker Compose v2, [`uv`](https://docs.astral.sh/uv/) e
 
 ```bash
 git clone https://github.com/Bappoz/inflatrack.git && cd inflatrack
-just reset          # sobe o Postgres e aplica migrations/0001..0004 em ordem
+just reset          # sobe o Postgres e aplica migrations/0001..0003 em ordem
 just seed-amostra   # 3 meses do IPCA — confere que a ingestão funciona
 just seed-pib-china # carrega o histórico do PIB da China (World Bank API)
 ```
@@ -34,22 +34,31 @@ just seed
 just verificar-carga
 ```
 
+Os indicadores macro que explicam o movimento do preço (PIB, agropecuária,
+comércio, transporte, energia, impostos, consumo, exportação e importação)
+vêm das Contas Nacionais Trimestrais e levam ~10 segundos:
+
+```bash
+just pib            # SIDRA 1846: raw gzip -> Parquet -> DuckDB
+```
+
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 
 ## Visualização no Navegador
 
-### 1. Interface Gráfica do Banco de Dados (Adminer)
+### Interface gráfica do PostgreSQL (Adminer)
+
 Para visualizar as tabelas do PostgreSQL e as linhas salvas direto pelo navegador:
+
 ```bash
 just db-ui
-# Ou comando equivalente:
-# docker rm -f adminer 2>/dev/null ; docker run -d --name adminer --network inflatrack_default -p 8080:8080 adminer
 ```
+
 Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
 
 * **Sistema**: `PostgreSQL`
-* **Servidor**: `inflatrack-db-1`
+* **Servidor**: `db`
 * **Usuário / Senha / Banco**: `inflatrack`
 
 ## Fontes
@@ -63,13 +72,14 @@ Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
 | [7060](https://sidra.ibge.gov.br/Tabela/7060) | IPCA | jan/2020 – | ~1,71 mi | 457 categorias (POF 2017-2018) |
 | [7063](https://sidra.ibge.gov.br/Tabela/7063) | INPC | jan/2020 – | ~1,7 mi | Famílias de 1 a 5 salários mínimos |
 | [1737](https://sidra.ibge.gov.br/Tabela/1737) | IPCA | dez/1979 – | 560 pontos | Número-índice (base dez/1993 = 100), só Brasil e índice geral |
+| [1846](https://sidra.ibge.gov.br/Tabela/1846) | Contas Nacionais Trimestrais | 1996T1 – | 2.806 pontos | PIB, valor adicionado por setor e componentes da demanda; só Brasil, trimestral — ver [docs/fontes/pib.md](docs/fontes/pib.md) |
 
 ### Variáveis Macroeconômicas e Externas
 
 | Fonte | Indicador | Período | Frequência | Papel no Projeto |
 |---|---|---|---|---|
 | [Alpha Vantage](https://www.alphavantage.co/) | Commodities e Energia | Séries históricas | Diária / Mensal | Cotações de petróleo, gás natural e commodities agrícolas |
-| [World Bank API](https://data.worldbank.org/country/china) | PIB da China | 1960 – 2025 | Anual / Trimestral | Indicador antecedente de demanda global por commodities |
+| [World Bank API](https://data.worldbank.org/country/china) | PIB da China | 1960 – 2025 | Anual | Indicador antecedente de demanda global por commodities |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 
@@ -87,10 +97,14 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 
 | Caminho | Papel |
 |---|---|
-| `migrations/` | Esquema físico (0001..0004), aplicado em ordem na primeira subida do container |
+| `migrations/` | Esquema físico do PostgreSQL, aplicado em ordem na primeira subida do container |
 | `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
 | `src/inflatrack/ingest.py` | CLI de carga do IPCA/INPC: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
-| `src/inflatrack/ingest_pib_china.py` | Ingestão e carga do PIB da China (World Bank API) no PostgreSQL |
+| `src/inflatrack/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
+| `src/inflatrack/ingest_pib.py` | CLI do PIB: crua em `data/raw/pib_raw/`, depois Parquet em `data/parquet/pib/` |
+| `src/inflatrack/load_pib.py` | Sobe o Parquet do PIB para o DuckDB (`just pib-load`) |
+| `src/inflatrack/ingest_pib_china.py` | World Bank: resposta crua e Parquet anual do PIB da China |
+| `src/inflatrack/load_pib_china.py` | Sobe o PIB da China para o DuckDB analítico (`just pib-china-load`) |
 | `sql/` | Consultas de verificação de carga |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/fontes/pib_china.md` | Caracterização completa da fonte do PIB da China |
@@ -103,4 +117,4 @@ A documentação interativa com busca, diagramas e detalhes arquiteturais está 
 
 ## Licença
 
-Código sob MIT. Os dados são do IBGE e mantêm os termos de uso da origem.
+Código sob MIT. Os dados mantêm os termos de uso do IBGE e do Banco Mundial.
