@@ -2,6 +2,7 @@
 |---|---|
 | [SIDRA](../fontes/sidra.md) | Sistema IBGE de Recuperação Automática. Responsável pelo fornecimento das séries temporais oficiais dos índices de inflação (IPCA e INPC) via API (`apisidra.ibge.gov.br`), contemplando variações mensais, acumuladas e números-índice por categoria e localidade. |
 | [Commodities e Energia (Alpha Vantage)](../fontes/commodities.md) | API REST da Alpha Vantage que fornece séries históricas de preços de energia (Petróleo WTI, Brent, Gás Natural) e agrícolas (Trigo, Milho, Algodão, Açúcar, Café e índice global), com frequência diária para energia e mensal para agrícolas. Usada como variável explicativa e para treinamento dos modelos de previsão dos preços. |
+| [PIB da China (World Bank)](../fontes/pib_china.md) | API REST pública do Banco Mundial. Fornece as séries temporais de crescimento percentual do PIB e valor bruto da China, atuando como indicador antecedente de demanda global por commodities e repasse de custos na inflação brasileira. |
 | [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | Contas Nacionais Trimestrais do IBGE, pela mesma API do SIDRA (`apisidra.ibge.gov.br`). Fornece, a preços correntes e por trimestre desde 1996, o PIB, o valor adicionado por atividade (agropecuária, comércio, transporte, eletricidade e gás, serviços, atividades financeiras), os impostos sobre produtos e os componentes da demanda (consumo das famílias e da administração pública, exportação e importação). Usada como variável explicativa macroeconômica: diz **por que** o preço se moveu, enquanto o IPCA diz **quanto**. |
 
 ---
