@@ -21,6 +21,8 @@ Organização progressiva do dado: cada camada só lê da anterior, e a crua nun
 | [Taxa SELIC](../fontes/selic.md) | `data/raw/bcb/selic_*.json.gz` | Em memória (`ffill` sobre o calendário civil) | DuckDB: `selic_taxa` | Composta no `join` diário com as demais séries macro |
 | [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | `data/raw/pib_raw/` (um JSON gzip por ano) | `data/parquet/pib/` | DuckDB: `pib_setor`, `pib_valor` | `vw_pib_setor_trimestral`, `vw_pib_nucleo`, `vw_features_pib_trimestral` |
 | [PIB da China](../fontes/pib_china.md) | `data/raw/pib_china/` | `data/parquet/pib_china/` | DuckDB: `pib_china` | Consumida direto da silver |
+| [PIB dos EUA](../fontes/pib_usa.md) | `data/raw/pib_usa/` | `data/parquet/pib_usa/` | DuckDB: `pib_usa` | Consumida direto da silver |
+| [PIB da Rússia](../fontes/pib_russia.md) | `data/raw/pib_russia/` | `data/parquet/pib_russia/` | DuckDB: `pib_russia` | Consumida direto da silver |
 
 !!! note "Por que a bronze não é sempre persistida"
     A raw já guarda a origem intacta e reprocessável, então a bronze só se materializa quando alguém a lê. No IPCA, uma bronze persistida duplicaria ~4,7 mi linhas em texto sem nenhuma consulta que a leia. Nas fontes analíticas, o Parquet **é** a bronze e se paga: é o formato que o DuckDB lê direto e que permite recarregar o banco sem chamar a API. Nas séries do Banco Central o payload é pequeno o bastante para a transformação inteira caber em memória, e gravar um Parquet intermediário só criaria um terceiro arquivo a versionar.

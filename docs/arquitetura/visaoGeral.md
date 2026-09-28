@@ -21,6 +21,8 @@ Seis origens, todas públicas e sem autenticação exceto a Alpha Vantage (chave
 | [Taxa SELIC](../fontes/selic.md) | SGS série 11 (BCB) | Diária (dias úteis) | DuckDB |
 | [PIB e Setores](../fontes/pib.md) | SIDRA 1846 (IBGE) | Trimestral | DuckDB |
 | [PIB da China](../fontes/pib_china.md) | Banco Mundial | Anual | DuckDB |
+| [PIB dos EUA](../fontes/pib_usa.md) | Banco Mundial | Anual | DuckDB |
+| [PIB da Rússia](../fontes/pib_russia.md) | Banco Mundial | Anual | DuckDB |
 
 Todas seguem a mesma trilha de camadas, detalhada em [Arquitetura Medallion](arquiteturaMedallion.md): resposta crua em `data/raw/<fonte>/`, transformação (em Parquet ou em memória) e carga idempotente na silver.
 

@@ -8,6 +8,8 @@ Uma página por fonte, descrevendo as tabelas que ela alimenta no banco. A carac
 | [Transacional (Lojista)](transacional.md) | `lojista`, `produto`, `reajuste` | PostgreSQL |
 | [PIB e Setores (SIDRA 1846)](pib.md) | `pib_setor`, `pib_valor` | DuckDB |
 | [PIB da China (World Bank)](pib_china.md) | `pib_china` | DuckDB |
+| [PIB dos EUA (World Bank)](pib_usa.md) | `pib_usa` | DuckDB |
+| [PIB da Rússia (World Bank)](pib_russia.md) | `pib_russia` | DuckDB |
 | [Macroeconomia (Dólar, Selic)](macroeconomia.md) | `dolar_cotacao`, `selic_taxa` | DuckDB |
 | [Commodities e Energia (Alpha Vantage)](commodities.md) | `commodity`, `commodity_cotacao` | DuckDB |
 | [Salário Mínimo e Cesta Básica (DIEESE)](salario_minimo.md) | `salario_minimo` | DuckDB |

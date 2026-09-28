@@ -71,6 +71,8 @@ nav:
       - Dólar Comercial (BCB/Olinda): fontes/dolar.md
       - Taxa SELIC (BCB/SGS): fontes/selic.md
       - PIB da China (World Bank): fontes/pib_china.md
+      - PIB dos EUA (World Bank): fontes/pib_usa.md
+      - PIB da Rússia (World Bank): fontes/pib_russia.md
       - Salário Mínimo (DIEESE): fontes/salario_minimo.md
       - Dados do Clima (INMET): fontes/clima.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
@@ -89,6 +91,8 @@ nav:
     - Macroeconomia (BCB): dicionario/macroeconomia.md
     - PIB e Setores (SIDRA 1846): dicionario/pib.md
     - PIB da China (World Bank): dicionario/pib_china.md
+    - PIB dos EUA (World Bank): dicionario/pib_usa.md
+    - PIB da Rússia (World Bank): dicionario/pib_russia.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
   - Visualização: visualizacao/visualizacao.md
