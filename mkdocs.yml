@@ -77,10 +77,8 @@ nav:
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
   - Pipeline de Dados:
-    - SIDRA (IPCA/INPC): pipeline/pipelineDados.md
-    - Macroeconomia: pipeline/pipelineMacro.md
-    - Salário Mínimo (DIEESE): pipeline/pipelineSalarioMinimo.md
-    - Dados do Clima (INMET): pipeline/pipelineClima.md
+    - Orquestração (Dagster): pipeline/orquestracao.md
+    - Contrato das Etapas: pipeline/contratoEtapas.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
