@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/Logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -267,17 +267,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../pipeline/pipelineDados/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../../pipeline/orquestracao/" class="md-tabs__link">
+          
+  
   
   Pipeline de Dados
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -306,36 +307,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../visualizacao/visualizacao/" class="md-tabs__link">
-        
-  
-  
     
-  
-  Visualização
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../evidencias/evidencias/" class="md-tabs__link">
-        
-  
-  
     
+      <li class="md-tabs__item">
+        <a href="../../evidencias/uso_ia/" class="md-tabs__link">
+          
   
-  Evidencias
+  
+  Evidências
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -395,8 +378,6 @@
     
       
       
-        
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -452,6 +433,34 @@
     
   
     Sobre
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visaoGeral/consultas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consultas do Sistema
   
 
     
@@ -544,8 +553,6 @@
         
         
       
-      
-        
       
     
     
@@ -736,10 +743,159 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ipca-inpc-sidra" class="md-nav__link">
+  <a href="#clientes-de-origem-python" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IPCA / INPC (SIDRA)
+        Clientes de origem (Python)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingestores-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingestores (Python)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#camada-raw-arquivos-comprimidos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camada Raw (arquivos comprimidos)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#camada-bronze-parquet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camada Bronze (Parquet)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbt-data-build-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dbt (Data Build Tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#duckdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DuckDB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PostgreSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quando-usar-duckdb-vs-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quando usar DuckDB vs PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dagster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dagster
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jupyter-notebooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Jupyter Notebooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#streamlit-plotly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streamlit + Plotly
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mkdocs-material" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MkDocs Material
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#just-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        just + uv
       
     </span>
   </a>
@@ -751,17 +907,6 @@
     <span class="md-ellipsis">
       
         Configuração
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#commodities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Commodities
       
     </span>
   </a>
@@ -783,6 +928,58 @@
   
   
   
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonte Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Fonte Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../fonteDados/" class="md-nav__link">
         
@@ -791,7 +988,7 @@
   <span class="md-ellipsis">
     
   
-    Fonte Dados
+    Tabela fontes
   
 
     
@@ -819,7 +1016,7 @@
   <span class="md-ellipsis">
     
   
-    SIDRA (IPCA/INPC)
+    IPCA/INPC (SIDRA)
   
 
     
@@ -868,6 +1065,182 @@
   
   
     <li class="md-nav__item">
+      <a href="../../fontes/dolar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dólar Comercial (BCB/Olinda)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/selic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxa SELIC (BCB/SGS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../" class="md-nav__link">
         
   
@@ -876,6 +1249,62 @@
     
   
     ADR 0001 (Modelagem da origem)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0002-duckdb-unico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 (DuckDB único)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0003-bcb-macro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0003 (Séries macro diárias)
   
 
     
@@ -902,9 +1331,25 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../pipeline/pipelineDados/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
         
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -918,7 +1363,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Pipeline de Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/orquestracao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orquestração (Dagster)
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/contratoEtapas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contrato das Etapas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -934,8 +1451,6 @@
     
     
       
-      
-        
       
     
     
@@ -1019,7 +1534,7 @@
   <span class="md-ellipsis">
     
   
-    SIDRA (IPCA/INPC)
+    IPCA/INPC (SIDRA)
   
 
     
@@ -1061,6 +1576,174 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/commodities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commodities e Energia (Alpha Vantage)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/macroeconomia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macroeconomia (Dólar e Selic)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1074,15 +1757,67 @@
   
   
   
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidências
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evidências
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../../visualizacao/visualizacao/" class="md-nav__link">
+      <a href="../../evidencias/uso_ia/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Visualização
+    Uso de IA
   
 
     
@@ -1094,30 +1829,11 @@
     </li>
   
 
-    
+              
+            
+          </ul>
+        </nav>
       
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../evidencias/evidencias/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Evidencias
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1149,10 +1865,159 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ipca-inpc-sidra" class="md-nav__link">
+  <a href="#clientes-de-origem-python" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IPCA / INPC (SIDRA)
+        Clientes de origem (Python)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingestores-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingestores (Python)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#camada-raw-arquivos-comprimidos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camada Raw (arquivos comprimidos)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#camada-bronze-parquet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camada Bronze (Parquet)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dbt-data-build-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dbt (Data Build Tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#duckdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DuckDB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PostgreSQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quando-usar-duckdb-vs-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quando usar DuckDB vs PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dagster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dagster
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jupyter-notebooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Jupyter Notebooks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#streamlit-plotly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Streamlit + Plotly
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mkdocs-material" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MkDocs Material
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#just-uv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        just + uv
       
     </span>
   </a>
@@ -1164,17 +2029,6 @@
     <span class="md-ellipsis">
       
         Configuração
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#commodities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Commodities
       
     </span>
   </a>
@@ -1202,92 +2056,625 @@
 
 
 <h1 id="componentes">Componentes</h1>
-<h2 id="ipca-inpc-sidra">IPCA / INPC (SIDRA)</h2>
+<p>As peças da plataforma, na ordem em que o dado as atravessa. Cada componente traz o seu papel, a ficha técnica e as responsabilidades que assume.</p>
+<p>A linha <code>Status</code> distingue o que já roda no repositório do que está decidido e ainda não implementado. As camadas que esses componentes materializam estão em <a href="../arquiteturaMedallion/">Arquitetura Medallion</a>; o percurso do dado, em <a href="../fluxoDados/">Fluxo de Dados</a>.</p>
+<h2 id="clientes-de-origem-python">Clientes de origem (Python)</h2>
+<p><strong>Papel</strong>: Extração — falar com cada origem e devolver o payload sem interpretá-lo.</p>
 <table>
 <thead>
 <tr>
-<th>Componente</th>
-<th>Arquivo</th>
-<th>Responsabilidade</th>
+<th>Aspecto</th>
+<th>Detalhe</th>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Módulos</td>
+<td><code>src/inflatrack/&lt;origem&gt;.py</code> (<code>sidra</code>, <code>alphavantage</code>, <code>dolar_olinda</code>, <code>selic_sgs</code>, <code>pib</code>, <code>dieese</code>, <code>inmet</code>)</td>
+</tr>
+<tr>
+<td>Bibliotecas</td>
+<td><code>httpx</code>, <code>requests</code></td>
+</tr>
+<tr>
+<td>Origens</td>
+<td>6 provedores, 8 conjuntos de dados</td>
+</tr>
+<tr>
+<td>Autenticação</td>
+<td>Só Alpha Vantage (chave gratuita com cota diária)</td>
+</tr>
+<tr>
+<td>Resiliência</td>
+<td>Timeout explícito e retry com backoff</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Montar URL, autenticação e paginação de uma origem só</li>
+<li>Traduzir o payload em <code>DataFrame</code>, sem gravar em disco nem em banco</li>
+<li>Falhar com exceção própria (<code>SidraError</code>, <code>InmetError</code>, …) em payload inesperado</li>
+<li>Isolar o resto do sistema do formato da origem</li>
+</ul>
+<h2 id="ingestores-python">Ingestores (Python)</h2>
+<p><strong>Papel</strong>: Aterrissagem — gravar a camada Raw e materializar a Bronze.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Módulos</td>
+<td><code>src/inflatrack/ingest_&lt;fonte&gt;.py</code></td>
+</tr>
+<tr>
+<td>Bibliotecas</td>
+<td><code>pandas</code>, <code>pyarrow</code></td>
+</tr>
+<tr>
+<td>Entrada</td>
+<td>Payload do cliente de origem</td>
+</tr>
+<tr>
+<td>Saída</td>
+<td><code>data/raw/&lt;fonte&gt;/*.json.gz</code> e <code>data/parquet/&lt;fonte&gt;/*.parquet</code></td>
+</tr>
+<tr>
+<td>Interface</td>
+<td>CLI com janela (<code>--de</code>, <code>--ate</code>) e caminhos sobrescrevíveis</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Gravar a resposta crua comprimida <strong>antes</strong> de qualquer transformação</li>
+<li>Converter o payload em Parquet, acrescentando a data de ingestão e a procedência</li>
+<li>Expor janela de tempo, para permitir backfill</li>
+<li>Encerrar com código diferente de zero quando a origem falhar</li>
+</ul>
+<h2 id="camada-raw-arquivos-comprimidos">Camada Raw (arquivos comprimidos)</h2>
+<p><strong>Papel</strong>: Aterrissagem imutável — a origem exatamente como veio.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Formato</td>
+<td><code>.json.gz</code> nas APIs, <code>.html.gz</code> no DIEESE</td>
+</tr>
+<tr>
+<td>Caminho</td>
+<td><code>data/raw/&lt;fonte&gt;/</code></td>
+</tr>
+<tr>
+<td>Compressão</td>
+<td>gzip (~18× no SIDRA)</td>
+</tr>
+<tr>
+<td>Escrita</td>
+<td>Uma vez, nunca reescrita</td>
+</tr>
+<tr>
+<td>Versionamento</td>
+<td>Fora do Git</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Guardar a prova do que a origem devolveu, para auditoria</li>
+<li>Permitir reprocessar a Bronze sem nova chamada de rede</li>
+<li>Preservar o HTML do DIEESE, cuja extração depende do layout e quebra sozinha</li>
+<li>Sustentar a retenção permanente que as fontes exigem</li>
+</ul>
+<h2 id="camada-bronze-parquet">Camada Bronze (Parquet)</h2>
+<p><strong>Papel</strong>: Primeira materialização estruturada, ainda por fonte.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Formato</td>
+<td>Parquet (colunar, comprimido)</td>
+</tr>
+<tr>
+<td>Caminho</td>
+<td><code>data/parquet/&lt;fonte&gt;/</code></td>
+</tr>
+<tr>
+<td>Transformação</td>
+<td>Só parsing e tipagem — nenhuma regra de negócio</td>
+</tr>
+<tr>
+<td>Interface</td>
+<td>Lida pelo dbt como <em>source</em>, via <code>read_parquet()</code></td>
+</tr>
+<tr>
+<td>Volumetria</td>
+<td>6,4 mi de linhas do IPCA ocupam ~39 MB</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Oferecer ao dbt um contrato estável, independente do formato da origem</li>
+<li>Recarregar o banco analítico sem tráfego de rede</li>
+<li>Isolar uma subpasta por fonte, para que esquemas diferentes não se misturem</li>
+<li>Levar a procedência de cada linha até a Silver</li>
+</ul>
+<h2 id="dbt-data-build-tool">dbt (Data Build Tool)</h2>
+<p><strong>Papel</strong>: Transformação de dados — modelar e tratar a camada Silver.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Versão</td>
+<td>dbt-core</td>
+</tr>
+<tr>
+<td>Adapter</td>
+<td><code>dbt-duckdb</code></td>
+</tr>
+<tr>
+<td>Models</td>
+<td><code>models/staging/</code> (Silver), <code>models/marts/</code> (Gold)</td>
+</tr>
+<tr>
+<td>Sources</td>
+<td>Parquet da Bronze, via <code>read_parquet()</code></td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>Esquema, unicidade, integridade referencial, volume e distribuição</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td><code>dbt docs generate</code> (grafo de linhagem)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Planejado</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Limpar, tipar e deduplicar cada fonte (Silver)</li>
+<li>Construir fato, dimensão e métricas (Gold)</li>
+<li>Testar qualidade dentro da transformação, não como etapa separada</li>
+<li>Documentar a linhagem entre camadas, em código versionado</li>
+</ul>
+<h2 id="duckdb">DuckDB</h2>
+<p><strong>Papel</strong>: Banco analítico embarcado — Silver e Gold.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deploy</td>
+<td>Embarcado, arquivo único</td>
+</tr>
+<tr>
+<td>Caminho</td>
+<td><code>data/duckdb/inflatrack.duckdb</code></td>
+</tr>
+<tr>
+<td>Schemas</td>
+<td><code>silver</code>, <code>gold</code></td>
+</tr>
+<tr>
+<td>Conexão</td>
+<td>dbt, Dagster, notebooks, Streamlit</td>
+</tr>
+<tr>
+<td>Concorrência</td>
+<td><strong>Um escritor por arquivo, por vez</strong></td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Materializar os modelos que o dbt declara</li>
+<li>Servir consulta analítica sobre as 8 fontes no mesmo <code>JOIN</code></li>
+<li>Entregar a matriz de treino aos modelos preditivos</li>
+<li>Manter as tabelas da Gold como recorte pronto para consumo</li>
+</ul>
+<h2 id="postgresql">PostgreSQL</h2>
+<p><strong>Papel</strong>: Banco transacional — o lado com escrita de verdade.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Versão</td>
+<td>PostgreSQL 16.4</td>
+</tr>
+<tr>
+<td>Deploy</td>
+<td>Docker Compose (<code>docker-compose.yml</code>), limite de 2 GB</td>
+</tr>
+<tr>
+<td>Schemas</td>
+<td>Referência do IPCA e transacional do lojista</td>
+</tr>
+<tr>
+<td>Migrations</td>
+<td><code>migrations/*.sql</code>, aplicadas em ordem na primeira subida</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>Adminer em <code>http://localhost:8080</code> (perfil <code>tools</code>)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Garantir A, C e I ao aplicar um reajuste</li>
+<li>Sustentar as FKs de <code>produto</code> e <code>lojista</code> para a cesta e a localidade do IPCA</li>
+<li>Guardar a dimensão de variação lenta <code>classificacao_versao</code>, com vigência</li>
+<li>Servir de alvo do <code>EXPLAIN (ANALYZE, BUFFERS)</code> na otimização de consulta</li>
+</ul>
+<h3 id="quando-usar-duckdb-vs-postgresql">Quando usar DuckDB vs PostgreSQL</h3>
+<table>
+<thead>
+<tr>
+<th>Situação</th>
+<th>Banco</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aplicar reajuste, cadastrar produto ou lojista</td>
+<td>PostgreSQL — precisa de transação</td>
+</tr>
+<tr>
+<td>Consulta analítica cruzando fontes</td>
+<td>DuckDB — colunar, tudo num arquivo</td>
+</tr>
+<tr>
+<td>Treino de modelo preditivo</td>
+<td>DuckDB — o alvo e as features moram juntos</td>
+</tr>
+<tr>
+<td>Plano de execução com <code>BUFFERS</code></td>
+<td>PostgreSQL — o DuckDB não implementa essa opção</td>
+</tr>
+<tr>
+<td>Escrita concorrente de vários usuários</td>
+<td>PostgreSQL — o DuckDB aceita um escritor por vez</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dagster">Dagster</h2>
+<p><strong>Papel</strong>: Orquestração orientada a ativo de dado.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deploy</td>
+<td>Local (<code>dagster dev</code>)</td>
+</tr>
+<tr>
+<td>Integração</td>
+<td><code>dagster-dbt</code> — cada modelo dbt vira um asset</td>
+</tr>
+<tr>
+<td>Partições</td>
+<td>Mensais, acompanhando a divulgação do IPCA</td>
+</tr>
+<tr>
+<td>Confiabilidade</td>
+<td>Retry por asset e backfill por partição</td>
+</tr>
+<tr>
+<td>Concorrência</td>
+<td>Limitada a um escritor no DuckDB</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Planejado</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Executar ingestores e <code>dbt build</code> num grafo de dependência único</li>
+<li>Repetir o que falhou sem reprocessar o que já passou</li>
+<li>Rodar backfill de janela histórica, por partição</li>
+<li>Expor freshness e o estado de cada ativo de dado</li>
+</ul>
+<h2 id="jupyter-notebooks">Jupyter Notebooks</h2>
+<p><strong>Papel</strong>: Experimentação — testar e visualizar as modelagens.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linguagem</td>
+<td>Python 3.12</td>
+</tr>
+<tr>
+<td>Entrada</td>
+<td>Tabelas da Gold no DuckDB</td>
+</tr>
+<tr>
+<td>Bibliotecas</td>
+<td><code>pandas</code>, <code>duckdb</code>, <code>scikit-learn</code></td>
+</tr>
+<tr>
+<td>Conexão</td>
+<td>DuckDB em modo leitura</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Planejado</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Explorar a matriz de treino e a relação entre features e IPCA</li>
+<li>Treinar e comparar modelos candidatos</li>
+<li>Registrar cada execução no MLflow</li>
+<li>Documentar a escolha do modelo com evidência</li>
+</ul>
+<h2 id="mlflow">MLflow</h2>
+<p><strong>Papel</strong>: Rastreamento de experimentos de aprendizado de máquina.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deploy</td>
+<td>Local (<code>mlflow ui</code>)</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Arquivo local</td>
+</tr>
+<tr>
+<td>Registra</td>
+<td>Parâmetros, métricas, artefatos e versão do modelo</td>
+</tr>
+<tr>
+<td>Integração</td>
+<td>Chamado dos notebooks</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Planejado</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Guardar parâmetros e métricas de cada treino</li>
+<li>Permitir comparar execuções sem planilha à parte</li>
+<li>Versionar o modelo escolhido</li>
+<li>Ligar o resultado à janela de dado que o gerou</li>
+</ul>
+<h2 id="streamlit-plotly">Streamlit + Plotly</h2>
+<p><strong>Papel</strong>: Painel analítico — a resposta ao lojista.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td>Streamlit</td>
+</tr>
+<tr>
+<td>Gráficos</td>
+<td>Plotly</td>
+</tr>
+<tr>
+<td>Entrada</td>
+<td>Cópia publicada da Gold, em leitura</td>
+</tr>
+<tr>
+<td>Escopo</td>
+<td>As 5 perguntas de gestão declaradas na E1</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Planejado</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Responder às perguntas declaradas, e não exibir os gráficos disponíveis</li>
+<li>Ler uma cópia publicada, para não disputar o escritor do DuckDB</li>
+<li>Mostrar o reajuste sugerido e o dado que o sustenta</li>
+<li>Declarar em tela a data do último dado carregado</li>
+</ul>
+<h2 id="mkdocs-material">MkDocs Material</h2>
+<p><strong>Papel</strong>: Documentação do projeto.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tema</td>
+<td>Material for MkDocs</td>
+</tr>
+<tr>
+<td>Configuração</td>
+<td><code>mkdocs.yml</code></td>
+</tr>
+<tr>
+<td>Build</td>
+<td><code>just docs-build</code> (<code>mkdocs build --strict</code>)</td>
+</tr>
+<tr>
+<td>Servidor local</td>
+<td><code>just docs</code></td>
+</tr>
+<tr>
+<td>Publicação</td>
+<td>GitHub Pages (<code>.github/workflows/docs.yml</code>)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Publicar arquitetura, fontes, pipelines e dicionário de dados</li>
+<li>Falhar a build em link quebrado (<code>--strict</code>)</li>
+<li>Guardar os ADRs junto do código que eles decidem</li>
+<li>Registrar o uso de IA em <code>AI-USAGE.md</code></li>
+</ul>
+<h2 id="just-uv">just + uv</h2>
+<p><strong>Papel</strong>: Automação e ambiente reprodutível.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Receitas</td>
+<td><code>justfile</code> (<code>just --list</code> é a lista viva)</td>
+</tr>
+<tr>
+<td>Ambiente</td>
+<td><code>uv</code>, a partir de <code>pyproject.toml</code></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.12</td>
+</tr>
+<tr>
+<td>Qualidade</td>
+<td><code>just check</code> = <code>ruff format</code> + <code>ruff check</code> + <code>pytest</code></td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Em uso</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Dar um comando canônico para cada etapa do pipeline</li>
+<li>Fixar as versões das dependências entre as máquinas da Squad</li>
+<li>Rodar o gate de qualidade antes de dizer "pronto"</li>
+<li>Subir e derrubar o ambiente (<code>up</code>, <code>down</code>, <code>reset</code>)</li>
+</ul>
+<h2 id="configuracao">Configuração</h2>
+<p><strong>Papel</strong>: Parametrização por ambiente, sem segredo no repositório.</p>
+<table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arquivo</td>
+<td><code>.env</code>, carregado pelo <code>just</code> e pelo <code>python-dotenv</code></td>
+</tr>
 <tr>
 <td>Banco</td>
-<td><code>docker-compose.yml</code></td>
-<td>PostgreSQL 16.4; aplica <code>migrations/</code> em ordem na primeira subida</td>
+<td><code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code>, <code>POSTGRES_HOST</code>, <code>POSTGRES_PORT</code>, <code>POSTGRES_DB</code></td>
 </tr>
 <tr>
-<td>Esquema da referência</td>
-<td><code>migrations/0001_referencia_ipca.sql</code></td>
-<td>Cesta com vigência, localidades, variáveis e a tabela de fato <code>observacao</code></td>
+<td>Interface</td>
+<td><code>ADMINER_PORT</code> (<code>8080</code>)</td>
 </tr>
 <tr>
-<td>Esquema transacional</td>
-<td><code>migrations/0002_lojista.sql</code></td>
-<td><code>lojista</code>, <code>produto</code>, <code>reajuste</code> e a view <code>produto_preco_atual</code></td>
+<td>Chaves de API</td>
+<td>Só onde a origem exige (hoje, a Alpha Vantage)</td>
 </tr>
 <tr>
-<td>Semente</td>
-<td><code>migrations/0003_seed_referencia.sql</code></td>
-<td>5 agregados, 11 variáveis, 17 localidades</td>
-</tr>
-<tr>
-<td>Cliente da API</td>
-<td><code>src/inflatrack/sidra.py</code></td>
-<td>Requisição mensal em formato compacto, retry com backoff, leitura dos metadados</td>
-</tr>
-<tr>
-<td>Carga</td>
-<td><code>src/inflatrack/ingest.py</code></td>
-<td>Grava a raw, sincroniza a cesta e insere em <code>observacao</code></td>
-</tr>
-<tr>
-<td>Verificação</td>
-<td><code>sql/verificar_carga.sql</code></td>
-<td>Volume por fonte e meses faltando</td>
-</tr>
-<tr>
-<td>Comandos</td>
-<td><code>justfile</code></td>
-<td><code>up</code>, <code>reset</code>, <code>seed</code>, <code>seed-amostra</code>, <code>verificar-carga</code>, <code>psql</code></td>
+<td>Status</td>
+<td>Em uso</td>
 </tr>
 </tbody>
 </table>
-<h2 id="configuracao">Configuração</h2>
-<p>Lida do <code>.env</code> (valores padrão entre parênteses):</p>
-<table>
-<thead>
-<tr>
-<th>Variável</th>
-<th>Uso</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>POSTGRES_USER</code> (<code>inflatrack</code>)</td>
-<td>Usuário do banco</td>
-</tr>
-<tr>
-<td><code>POSTGRES_PASSWORD</code> (<code>inflatrack</code>)</td>
-<td>Senha</td>
-</tr>
-<tr>
-<td><code>POSTGRES_HOST</code> (<code>localhost</code>)</td>
-<td>Host usado pela ingestão</td>
-</tr>
-<tr>
-<td><code>POSTGRES_PORT</code> (<code>5432</code>)</td>
-<td>Porta exposta pelo Compose</td>
-</tr>
-<tr>
-<td><code>POSTGRES_DB</code> (<code>inflatrack</code>)</td>
-<td>Nome do banco</td>
-</tr>
-</tbody>
-</table>
-<h2 id="commodities">Commodities</h2>
-<p>Cliente <code>src/inflatrack/alphavantage.py</code>, ingestão <code>ingest_commodities.py</code> e carga <code>load_commodities.py</code> no DuckDB; ver <a href="../../fontes/commodities/">Commodities e Energia</a>.</p>
+<p><strong>Responsabilidades</strong>:</p>
+<ul>
+<li>Manter credencial fora do controle de versão</li>
+<li>Permitir que cada integrante rode com porta e host próprios</li>
+<li>Dar valor padrão a tudo que não é segredo</li>
+<li>Ser a única fonte de configuração dos ingestores e do Compose</li>
+</ul>
 
 
 
@@ -1343,10 +2730,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "mais 1 nesta p\u00e1gina", "search.result.more.other": "# mais nesta p\u00e1gina", "search.result.none": "Nenhum documento encontrado", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.expand", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "mais 1 nesta p\u00e1gina", "search.result.more.other": "# mais nesta p\u00e1gina", "search.result.none": "Nenhum documento encontrado", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -10,28 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://bappoz.github.io/inflatrack/visualizacao/visualizacao/">
+        <link rel="canonical" href="https://bappoz.github.io/inflatrack/adr/0002-duckdb-unico/">
       
       
-        <link rel="prev" href="../../dicionario/transacional/">
+        <link rel="prev" href="../../arquitetura/">
       
       
-        <link rel="next" href="../../evidencias/evidencias/">
+        <link rel="next" href="../0003-bcb-macro/">
       
       
         
       
       
       <link rel="icon" href="../../assets/Logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Visualização - InflaTrack</title>
+        <title>ADR 0002 (DuckDB único) - InflaTrack</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -79,6 +79,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#0002-um-unico-arquivo-duckdb-para-todas-as-fontes-analiticas" class="md-skip">
+          Pular para conteúdo
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -108,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Visualização
+              ADR 0002 (DuckDB único)
             
           </span>
         </div>
@@ -239,10 +244,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../../arquitetura/visaoGeral/" class="md-tabs__link">
           
   
@@ -260,17 +267,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../pipeline/pipelineDados/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../../pipeline/orquestracao/" class="md-tabs__link">
+          
+  
   
   Pipeline de Dados
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -298,39 +306,19 @@
   
   
   
-    
-  
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
-        
-  
   
     
-  
-  Visualização
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../evidencias/evidencias/" class="md-tabs__link">
-        
-  
-  
     
+      <li class="md-tabs__item">
+        <a href="../../evidencias/uso_ia/" class="md-tabs__link">
+          
   
-  Evidencias
+  
+  Evidências
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -390,8 +378,6 @@
     
       
       
-        
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -447,6 +433,34 @@
     
   
     Sobre
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visaoGeral/consultas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consultas do Sistema
   
 
     
@@ -527,28 +541,29 @@
       
   
   
+    
   
   
+  
     
     
     
     
-      
       
         
+        
+      
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -566,7 +581,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -695,6 +710,58 @@
   
   
   
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonte Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Fonte Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../arquitetura/fonteDados/" class="md-nav__link">
         
@@ -703,7 +770,7 @@
   <span class="md-ellipsis">
     
   
-    Fonte Dados
+    Tabela fontes
   
 
     
@@ -731,7 +798,7 @@
   <span class="md-ellipsis">
     
   
-    SIDRA (IPCA/INPC)
+    IPCA/INPC (SIDRA)
   
 
     
@@ -780,6 +847,182 @@
   
   
     <li class="md-nav__item">
+      <a href="../../fontes/dolar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dólar Comercial (BCB/Olinda)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/selic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxa SELIC (BCB/SGS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../arquitetura/" class="md-nav__link">
         
   
@@ -788,6 +1031,153 @@
     
   
     ADR 0001 (Modelagem da origem)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 (DuckDB único)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 (DuckDB único)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#contexto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contexto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternativas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternativas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequências
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0003-bcb-macro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0003 (Séries macro diárias)
   
 
     
@@ -814,9 +1204,25 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../pipeline/pipelineDados/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
         
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -830,7 +1236,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Pipeline de Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/orquestracao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orquestração (Dagster)
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/contratoEtapas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contrato das Etapas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -846,8 +1324,6 @@
     
     
       
-      
-        
       
     
     
@@ -931,7 +1407,7 @@
   <span class="md-ellipsis">
     
   
-    SIDRA (IPCA/INPC)
+    IPCA/INPC (SIDRA)
   
 
     
@@ -973,6 +1449,174 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/commodities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commodities e Energia (Alpha Vantage)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/macroeconomia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macroeconomia (Dólar e Selic)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -984,24 +1628,33 @@
       
   
   
+  
+  
     
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+    
+    
+    
       
       
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
       
-      <a href="./" class="md-nav__link md-nav__link--active">
         
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
     
   
-    Visualização
+    Evidências
   
 
     
@@ -1009,27 +1662,35 @@
   
   
 
-      </a>
-      
-    </li>
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evidências
   
 
-    
-      
-      
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../../evidencias/evidencias/" class="md-nav__link">
+      <a href="../../evidencias/uso_ia/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Evidencias
+    Uso de IA
   
 
     
@@ -1038,6 +1699,14 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1059,6 +1728,60 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#contexto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contexto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternativas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternativas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequências
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1078,9 +1801,88 @@
   
 
 
-  <h1>Visualização</h1>
-
-
+<h1 id="0002-um-unico-arquivo-duckdb-para-todas-as-fontes-analiticas">0002 — Um único arquivo DuckDB para todas as fontes analíticas</h1>
+<ul>
+<li><strong>Status:</strong> proposto</li>
+<li><strong>Data:</strong> 2026-09-25</li>
+<li><strong>Decisores:</strong> <em>(a definir pela Squad)</em></li>
+</ul>
+<h2 id="contexto">Contexto</h2>
+<p>Com a entrada das Contas Nacionais Trimestrais (<a href="../../fontes/pib/">SIDRA 1846</a>)
+ao lado das commodities da Alpha Vantage, a camada analítica passou a ter mais
+de uma fonte. A pergunta que apareceu: <strong>um DuckDB por fonte, ou um só?</strong></p>
+<p>Números medidos em 2026-09-25:</p>
+<table>
+<thead>
+<tr>
+<th>Fonte</th>
+<th>Observações</th>
+<th>Tamanho na camada servida</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commodities (Alpha Vantage)</td>
+<td>26.781</td>
+<td>9 séries</td>
+</tr>
+<tr>
+<td>Contas Nacionais (SIDRA 1846)</td>
+<td>2.806</td>
+<td>23 setores</td>
+</tr>
+</tbody>
+</table>
+<p>Duas ordens de grandeza abaixo do que justificaria particionar por arquivo. O
+transacional do lojista e o histórico do IPCA continuam no Postgres — este ADR
+trata só da camada analítica.</p>
+<h2 id="alternativas">Alternativas</h2>
+<p><strong>A. Um arquivo por fonte</strong> (<code>commodities.duckdb</code>, <code>pib.duckdb</code>).</p>
+<ul>
+<li>✅ Isola falha de carga: corromper um não derruba o outro.</li>
+<li>✅ Cada fonte tem seu ciclo de reprocessamento.</li>
+<li>❌ Todo cruzamento exige <code>ATTACH</code> explícito <strong>em cada sessão</strong>. A consulta
+  deixa de ser portátil: quem abrir o arquivo errado vê metade do mundo.</li>
+<li>❌ Não há integridade referencial entre bancos anexados no DuckDB. <code>pib_valor</code>
+  não poderia referenciar <code>pib_setor</code> se estivessem separados por fonte.</li>
+<li>❌ Multiplica artefato: cada nova fonte vira mais um arquivo a versionar,
+  distribuir e documentar.</li>
+</ul>
+<p><strong>B. Um arquivo único, tabelas e views por fonte.</strong> <em>(escolhida)</em></p>
+<ul>
+<li>✅ Cruzar fontes é <code>JOIN</code>, não <code>ATTACH</code>. E cruzar é o produto: <em>"o comércio
+  encareceu porque o frete subiu, ou porque a agropecuária caiu?"</em> só se
+  responde com PIB setorial e commodities na mesma consulta.</li>
+<li>✅ FK real dentro de cada fonte (<code>pib_valor</code> → <code>pib_setor</code>).</li>
+<li>✅ Um artefato para distribuir para a Squad.</li>
+<li>⚠️ O isolamento passa a ser por <strong>prefixo de tabela e por view</strong>, não por
+  arquivo. Exige disciplina de nomenclatura (<code>pib_*</code>, <code>commodity_*</code>).</li>
+<li>⚠️ DuckDB permite um único processo escritor por arquivo. Com as cargas
+  rodando em sequência (<code>just pib</code>, depois as commodities) isso não morde; se
+  virarem paralelas, morde.</li>
+</ul>
+<h2 id="decisao">Decisão</h2>
+<p><strong>Alternativa B.</strong> O critério é o padrão de acesso, não o volume: a pergunta de
+gestão do InflaTrack é intrinsecamente multifonte, e o custo de B aparece só num
+volume que este projeto não tem.</p>
+<p>Regras que tornam B sustentável:</p>
+<ol>
+<li><strong>Prefixo por fonte</strong> em toda tabela: <code>commodity_*</code>, <code>pib_*</code>.</li>
+<li><strong>Um Parquet por fonte em subpasta própria</strong> (<code>data/parquet/pib/</code>). O glob
+   raso <code>data/parquet/*.parquet</code> da carga de commodities pressupõe o esquema
+   <code>(symbol, data_referencia, preco)</code> — misturar esquemas na mesma pasta quebra
+   a carga da outra fonte. Esta foi a única armadilha concreta encontrada.</li>
+<li><strong>Cargas em sequência</strong>, nunca em paralelo, enquanto o escritor for único.</li>
+</ol>
+<h2 id="consequencias">Consequências</h2>
+<ul>
+<li>Uma nova fonte analítica entra com: um <code>setup_duckdb_&lt;fonte&gt;.sql</code>, uma
+  subpasta em <code>data/parquet/</code>, um módulo <code>ingest_&lt;fonte&gt;.py</code> e um
+  <code>load_&lt;fonte&gt;.py</code>. Nenhum arquivo novo de banco.</li>
+<li>Se alguma fonte futura passar da casa das dezenas de milhões de linhas, ou se
+  as cargas precisarem rodar em paralelo, o ponto 4 deixa de valer e este ADR
+  deve ser revisitado.</li>
+</ul>
 
 
 
@@ -1136,10 +1938,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.expand", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "mais 1 nesta p\u00e1gina", "search.result.more.other": "# mais nesta p\u00e1gina", "search.result.none": "Nenhum documento encontrado", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.expand", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "mais 1 nesta p\u00e1gina", "search.result.more.other": "# mais nesta p\u00e1gina", "search.result.none": "Nenhum documento encontrado", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

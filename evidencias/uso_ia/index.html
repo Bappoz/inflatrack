@@ -1,0 +1,2717 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Plataforma de dados para reajuste inflacionário do pequeno e médio lojista">
+      
+      
+      
+        <link rel="canonical" href="https://bappoz.github.io/inflatrack/evidencias/uso_ia/">
+      
+      
+        <link rel="prev" href="../../dicionario/clima/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/Logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Uso de IA - InflaTrack</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#registro-de-uso-de-ia" class="md-skip">
+          Pular para conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href="../.." title="InflaTrack" class="md-header__button md-logo" aria-label="InflaTrack" data-md-component="logo">
+      
+  <img src="../../assets/Logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            InflaTrack
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Uso de IA
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando busca
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Bappoz/inflatrack" title="Ir para repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Bappoz/inflatrack
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  
+  Visão Geral
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../arquitetura/visaoGeral/" class="md-tabs__link">
+          
+  
+  
+  Arquitetura
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../pipeline/orquestracao/" class="md-tabs__link">
+          
+  
+  
+  Pipeline de Dados
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../dicionario/dicionario/" class="md-tabs__link">
+          
+  
+  
+  Dicionário de Dados
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Evidências
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="InflaTrack" class="md-nav__button md-logo" aria-label="InflaTrack" data-md-component="logo">
+      
+  <img src="../../assets/Logo.svg" alt="logo">
+
+    </a>
+    InflaTrack
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Bappoz/inflatrack" title="Ir para repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Bappoz/inflatrack
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visão Geral
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Visão Geral
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sobre
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visaoGeral/consultas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consultas do Sistema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visaoGeral/onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Onboarding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../visaoGeral/cronograma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cronograma
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Arquitetura
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/visaoGeral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visão Geral
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/fluxoDados/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fluxo de Dados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/arquiteturaMedallion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura Medallion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/componentes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonte Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Fonte Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/fonteDados/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tabela fontes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/sidra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IPCA/INPC (SIDRA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/commodities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commodities e Energia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/dolar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dólar Comercial (BCB/Olinda)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/selic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Taxa SELIC (BCB/SGS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../fontes/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 (Modelagem da origem)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0002-duckdb-unico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 (DuckDB único)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/0003-bcb-macro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0003 (Séries macro diárias)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline de Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Pipeline de Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/orquestracao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orquestração (Dagster)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../pipeline/contratoEtapas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contrato das Etapas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dicionário de Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dicionário de Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/dicionario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visão Geral
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/sidra/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IPCA/INPC (SIDRA)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/transacional/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transacional (Lojista)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/commodities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commodities e Energia (Alpha Vantage)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/macroeconomia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macroeconomia (Dólar e Selic)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB e Setores (SIDRA 1846)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/pib_china/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PIB da China (World Bank)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/salario_minimo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Salário Mínimo (DIEESE)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dicionario/clima/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados do Clima (INMET)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidências
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evidências
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-08-claude-code-opus-5-levantamento-das-fontes-e-esqueleto-do-repositorio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-08 — Claude Code (Opus 5) — levantamento das fontes e esqueleto do repositório
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-14-claude-code-sonnet-5-primeira-subida-do-banco-e-correcao-de-bugs-na-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-14 — Claude Code (Sonnet 5) — primeira subida do banco e correção de bugs na ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-22-antigravity-gemini-31-pro-ingestao-de-commodities-e-energia-via-alpha-vantage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-24-claude-code-opus-55-documentacao-da-fonte-ipcainpc-no-mkdocs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-claude-code-opus-5-realinhamento-dos-caminhos-de-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de data/
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-antigravity-gemini-36-flash-caracterizacao-e-documentacao-do-pib-da-china" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-antigravity-gemini-31-pro-ingestao-banco-central-dolar-comercial-e-selic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-fase-2-antigravity-gemini-31-pro-finalizacao-do-modulo-de-macroeconomia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-claude-code-opus-5-ingestao-das-contas-nacionais-trimestrais-sidra-1846" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-26-codex-revisao-do-pr-de-dolar-e-selic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-26 — Codex — revisão do PR de Dólar e Selic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-claude-code-opus-5-documentacao-da-fonte-taxa-selic-bcbsgs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-fase-2-claude-code-opus-5-documentacao-do-dolar-comercial-e-remocao-do-bcbmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do bcb.md
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-fase-3-claude-code-opus-5-generalizacao-das-paginas-de-arquitetura" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-antigravity-gemini-38-flash-documentacao-pipeline-e-dicionario-de-dados-do-salario-minimo-dieese-e-clima-diario-inmet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-atualizacao-da-secao-de-arquitetura-para-as-fontes-novas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-discussao-migrar-o-ipca-para-o-duckdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-arquitetura-da-e3-dbt-dagster-mlflow-e-streamlit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-08-claude-code-opus-5-levantamento-das-fontes-e-esqueleto-do-repositorio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-08 — Claude Code (Opus 5) — levantamento das fontes e esqueleto do repositório
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-14-claude-code-sonnet-5-primeira-subida-do-banco-e-correcao-de-bugs-na-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-14 — Claude Code (Sonnet 5) — primeira subida do banco e correção de bugs na ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-22-antigravity-gemini-31-pro-ingestao-de-commodities-e-energia-via-alpha-vantage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-24-claude-code-opus-55-documentacao-da-fonte-ipcainpc-no-mkdocs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-claude-code-opus-5-realinhamento-dos-caminhos-de-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de data/
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-antigravity-gemini-36-flash-caracterizacao-e-documentacao-do-pib-da-china" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-antigravity-gemini-31-pro-ingestao-banco-central-dolar-comercial-e-selic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-fase-2-antigravity-gemini-31-pro-finalizacao-do-modulo-de-macroeconomia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-25-claude-code-opus-5-ingestao-das-contas-nacionais-trimestrais-sidra-1846" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-26-codex-revisao-do-pr-de-dolar-e-selic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-26 — Codex — revisão do PR de Dólar e Selic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-claude-code-opus-5-documentacao-da-fonte-taxa-selic-bcbsgs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-fase-2-claude-code-opus-5-documentacao-do-dolar-comercial-e-remocao-do-bcbmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do bcb.md
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-27-fase-3-claude-code-opus-5-generalizacao-das-paginas-de-arquitetura" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-antigravity-gemini-38-flash-documentacao-pipeline-e-dicionario-de-dados-do-salario-minimo-dieese-e-clima-diario-inmet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-atualizacao-da-secao-de-arquitetura-para-as-fontes-novas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-discussao-migrar-o-ipca-para-o-duckdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2026-09-28-claude-code-opus-5-arquitetura-da-e3-dbt-dagster-mlflow-e-streamlit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="registro-de-uso-de-ia">Registro de uso de IA</h1>
+<p>Exigido pela <a href="https://unb-bd2.github.io/PlanoEnsino/">Política de Uso de IA</a> da
+disciplina. Uma entrada por sessão em que assistente ou agente participou.
+Ferramenta, o que fez, o que a Squad conferiu depois.</p>
+<h2 id="2026-09-08-claude-code-opus-5-levantamento-das-fontes-e-esqueleto-do-repositorio">2026-09-08 — Claude Code (Opus 5) — levantamento das fontes e esqueleto do repositório</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Consultou a API de metadados do IBGE (<code>servicodados.ibge.gov.br/api/v3/agregados</code>)
+  e a API de valores (<code>apisidra.ibge.gov.br</code>) para caracterizar os agregados
+  2938, 1419, 7060, 7063 e 1737: períodos, variáveis, categorias, localidades.
+- Mediu, com requisição real: linhas com valor por mês de cada agregado, tamanho
+  e tempo de resposta, teto de 50.000 valores por requisição, ganho do formato
+  compacto <code>/f/c/h/n</code> e razão de compressão gzip.
+- Comparou as listas de categorias das três tabelas de IPCA e levantou as
+  renomeações de subitem com código estável (43), entradas (103) e saídas (111).
+- Escreveu o esqueleto deste repositório: migrations, cliente da API, CLI de
+  ingestão, justfile, README e o rascunho de <code>docs/adr/0001</code>.
+- Preencheu parte da planilha de acompanhamento da disciplina.</p>
+<p><strong>O que foi verificado e como</strong>
+- Sintaxe de todo o SQL de <code>migrations/</code> e <code>sql/</code> conferida com <code>pglast</code>
+  (libpg_query, o parser do próprio PostgreSQL).
+- <code>ruff check</code> e <code>ruff format</code> passam em <code>src/</code>.
+- Os números de volume vieram de requisição real; os totais por agregado são
+  <strong>extrapolação</strong> de um mês amostrado vezes o número de meses, e estão
+  marcados como estimativa onde aparecem.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- O <code>docker compose up</code> não foi executado (daemon do Docker indisponível na
+  máquina em que a sessão rodou). O esquema nunca foi aplicado num Postgres real
+  e a ingestão nunca escreveu no banco. Isso é o primeiro passo da Squad.
+- Nenhum benchmark de consulta foi rodado. O ADR ainda não tem medição.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- A escolha registrada em <code>docs/adr/0001</code> (insert-only x CRUD, normalização,
+  carimbo de tempo) e as alternativas consideradas.
+- O recorte de fontes: manter INPC e número-índice, ou cortar.</p>
+<h2 id="2026-09-14-claude-code-sonnet-5-primeira-subida-do-banco-e-correcao-de-bugs-na-ingestao">2026-09-14 — Claude Code (Sonnet 5) — primeira subida do banco e correção de bugs na ingestão</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Subiu o Postgres pela primeira vez (<code>just up</code>), aplicando <code>migrations/</code> do
+  zero num volume novo; conferiu as 9 tabelas criadas.
+- Ao rodar <code>just seed</code> (agregado 2938), encontrou e corrigiu um bug em
+  <code>ingest.py::carregar_periodo</code>: <code>create temp table carga (like observacao
+  including defaults)</code> não copia a propriedade <code>generated always as identity</code>
+  da coluna <code>id</code> — faltava <code>including identity</code>, o que quebrava todo <code>COPY</code>
+  com violação de not-null.
+- Ao rodar <code>just seed-amostra</code> (agregado 7060) com o primeiro bug corrigido,
+  encontrou um segundo bug, mais sério: os valores do SIDRA (<code>/values</code>)
+  identificam a categoria por <code>D4C</code>, que é o <strong>id interno</strong> da categoria
+  (7169, 7170, 7171...), não pelo código natural (<code>1</code>, <code>11</code>, <code>1101002</code>...)
+  que <code>sidra.categorias()</code> extrai do rótulo e que <code>classificacao.codigo</code> usa
+  como chave. Os dois só coincidiam por acaso no índice geral (<code>7169</code>),
+  quebrando a FK a partir da segunda categoria em diante. Corrigido
+  construindo, em <code>sincronizar_cesta</code>, um mapa <code>id_sidra -&gt; codigo</code> a partir
+  dos metadados, e traduzindo <code>D4C</code> por esse mapa em <code>carregar_periodo</code>.
+- Tratou o caso do agregado 1737 (série do índice geral desde 1979, sem
+  dimensão de classificação — payload não tem <code>D4C</code>): mapeado para o
+  sentinela <code>7169</code> (índice geral) em vez de estourar <code>KeyError</code>. Não foi
+  possível confirmar em carga real porque <code>just seed</code> ainda não chegou a esse
+  agregado nesta sessão.
+- Corrigiu <code>nivel_do_codigo("7169")</code>, que classificava o índice geral como
+  <code>"item"</code> por comprimento de string; agora reconhece o código sentinela e
+  devolve <code>"geral"</code>. Como já havia uma linha gravada com o valor antigo (em
+  <code>classificacao</code>, tabela de referência — não <code>observacao</code>/<code>reajuste</code>),
+  corrigida com <code>UPDATE</code> pontual.
+- Rodou <code>just seed-amostra</code> (agregado 7060, mai–jul/2026) com as correções:
+  64.860 linhas inseridas, sem erro.
+- Explicou ao usuário, ao longo da sessão, a leitura de <code>sql/verificar_carga.sql</code>
+  (por que a segunda consulta fica vazia com o banco vazio) e escreveu
+  consultas SQL ad-hoc para listar categorias da cesta.</p>
+<p><strong>O que foi verificado e como</strong>
+- <code>just check</code> (ruff format + ruff check) passa em <code>src/</code> após as correções.
+- A carga de amostra (7060, 3 meses) rodou de ponta a ponta contra o Postgres
+  real, com <code>SELECT</code> manual conferindo que os valores gravados (variação
+  mensal, acumulada em 12 meses, índice) batem com o que a API do SIDRA
+  devolve para o mesmo período.
+- <code>git diff</code> revisado manualmente antes de sugerir mensagem de commit;
+  nenhum commit foi feito (pedido explícito do usuário).</p>
+<p><strong>O que NÃO foi verificado</strong>
+- <code>just seed</code> completo (2938, 1419, 7060, 7063, 1737) não foi rodado nesta
+  sessão — só a amostra do 7060. O agregado 1737 (índice geral sem
+  classificação) não teve o caminho de código exercitado contra a API real.
+- <code>pytest</code> não roda nada (<code>no tests ran</code>) — o projeto ainda não tem testes
+  automatizados para <code>ingest.py</code>/<code>sidra.py</code>; a correção foi validada só por
+  execução manual e inspeção do payload da API.
+- <code>verificar-carga</code> não foi checado contra a série completa, só contra a
+  amostra parcial de uma fonte.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Adicionar teste automatizado que cubra a tradução <code>D4C -&gt; codigo</code> e a
+  criação da tabela <code>carga</code>, para não depender de execução manual contra a
+  API real a cada regressão.</p>
+<h2 id="2026-09-22-antigravity-gemini-31-pro-ingestao-de-commodities-e-energia-via-alpha-vantage">2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Escreveu o script de inicialização do banco analítico local <code>scripts/setup_duckdb.sql</code> (e o utilitário Python <code>scripts/init_db.py</code>).
+- Ajustou o <code>PIVOT</code> da view DuckDB <code>vw_commodities_features</code> listando explicitamente as cotações na cláusula <code>IN (...)</code>, devido à limitação nativa do DuckDB de não suportar views com criação dinâmica de colunas a partir de dados.
+- Implementou o client da API <code>src/inflatrack/alphavantage.py</code> tratando o rate limiting explícito do plano free da Alpha Vantage (pausas de ~13s).
+- Desenvolveu as CLIs de ingestão <code>src/inflatrack/ingest_commodities.py</code> (download via API e armazenamento em formato apache parquet na camada <em>raw</em>) e carga <code>src/inflatrack/load_commodities.py</code> (leitura dos parquets e <code>UPSERT</code> direto no banco DuckDB).
+- Adicionou as dependências de ambiente com o gerenciador <code>uv</code>: <code>duckdb</code>, <code>pandas</code>, <code>pyarrow</code>, <code>requests</code> e <code>python-dotenv</code>.
+- Documentou a execução do novo pipeline de commodities em <code>docs/fontes/como_rodar.md</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- A inicialização do banco rodou de forma funcional na máquina, confirmando a criação das tabelas corretas.
+- O script de carga (<code>load_commodities.py</code>) foi verificado via geração de arquivos <em>mock</em> artificiais localmente usando pandas/pyarrow, provando a eficácia e tolerância a falhas na leitura dos arquivos em lote <code>data/commodities_raw/*.parquet</code> nativamente.
+- O formato Wide Format para Machine Learning da View via <code>PIVOT</code> foi testado com sucesso conectando ao arquivo e usando <code>.df()</code> para inspecionar os tipos e colunas (9 features geradas + data da medição).</p>
+<p><strong>O que NÃO foi verificado</strong>
+- O download real dos dados (requisições de rede à API Alpha Vantage) durante o processo, pois o <code>.env</code> estava propositalmente sem a chave de uso diário definida (<code>ALPHAVANTAGE_API_KEY=</code>).</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Preencher a chave <code>ALPHAVANTAGE_API_KEY</code> na configuração <code>.env</code>.
+- Executar o download ponta-a-ponta para validar os schemas do JSON real retornado pela API e se os mesmos se encaixam no esperado.</p>
+<h2 id="2026-09-24-claude-code-opus-55-documentacao-da-fonte-ipcainpc-no-mkdocs">2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Levou para o site as linhas do IPCA/INPC da planilha de acompanhamento,
+  conferindo cada afirmação contra <code>migrations/</code>, <code>sidra.py</code> e <code>ingest.py</code>:
+  seção 2 e leitura do armazenamento em <code>fontes/sidra.md</code>, dicionário
+  <code>dicionario/sidra.md</code> e a seção do IPCA em <code>pipeline/pipelineDados.md</code>.
+- Corrigiu links quebrados (<code>carga.md</code> removido, link para <code>src/</code>) que faziam
+  <code>mkdocs build --strict</code> falhar.</p>
+<p><strong>O que foi verificado e como</strong>
+- <code>just docs-build</code> (<code>mkdocs build --strict</code>) passa sem warning.
+- Os dois exemplos SQL do dicionário foram validados só sintaticamente com
+  <code>pglast</code>; não rodaram contra o banco (Docker indisponível na sessão).</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
+  foi medido de novo.</p>
+<h2 id="2026-09-25-claude-code-opus-5-realinhamento-dos-caminhos-de-data">2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de <code>data/</code></h2>
+<p><strong>O que a ferramenta fez</strong>
+- Atualizou os scripts para a nova hierarquia de <code>data/</code> criada pela Squad:
+  cru do IPCA em <code>data/raw/ipca-inpc/</code> (default do <code>--raw-dir</code> em <code>ingest.py</code>),
+  cru das commodities em <code>data/raw/commodities_raw/</code>, Parquet em
+  <code>data/parquet/</code> e banco em <code>data/duckdb/inflatrack.duckdb</code>
+  (<code>load_commodities.py</code>, <code>scripts/init_db.py</code>, <code>src/dados_duck.py</code>).
+- Tornou a ingestão de commodities de fato ELT: <code>ingest_commodities.py</code> agora
+  grava a resposta da Alpha Vantage em JSON gzip na camada crua e só depois
+  relê esse arquivo para gerar o Parquet — antes o Parquet nascia da resposta
+  em memória e a camada crua não existia para essa fonte.</p>
+<p><strong>O que foi verificado e como</strong>
+- Round-trip raw → Parquet de <code>ingest_commodities.py</code> exercitado primeiro com
+  payload sintético (sem gastar cota da API), incluindo o descarte de valores
+  <code>"."</code>.
+- <strong>Pipeline completo rodado do zero</strong>, com <code>data/</code> renomeado para <code>data_old/</code>
+  e a árvore reconstruída do nada: <code>scripts/init_db.py</code> criou
+  <code>data/duckdb/inflatrack.duckdb</code>; <code>ingest_commodities --commodity ALL --modo
+  historico</code> gerou os 9 <code>.json.gz</code> em <code>data/raw/commodities_raw/</code> e os 9
+  <code>.parquet</code> em <code>data/parquet/</code>; <code>load_commodities</code> carregou 26.781 registros
+  no DuckDB. As views foram inspecionadas com <code>src/dados_duck.py</code>
+  (<code>vw_features_daily</code> até 2026-09-22, <code>vw_features_monthly</code> até 2026-07-01).
+- <strong>Conexão real com a Alpha Vantage:</strong> 9 requisições HTTP bem-sucedidas
+  (WTI, BRENT, NATURAL_GAS, WHEAT, CORN, COTTON, SUGAR, COFFEE,
+  ALL_COMMODITIES), com o rate limiting de ~12 s entre chamadas funcionando.
+  O schema do JSON real bate com o esperado por <code>process_response</code>. O total
+  ficou 13 linhas acima do backup — os pregões novos das séries diárias.
+- <strong>Conexão real com o SIDRA:</strong> <code>just up</code> subiu o Postgres e
+  <code>ingest --agregado 7060 --de 2026-05 --ate 2026-07</code> fez 1 requisição à API
+  de metadados (457 categorias sincronizadas) e 3 à API de valores, gravando
+  <code>7060-202605/06/07.json.gz</code> em <code>data/raw/ipca-inpc/</code>. As três retornaram
+  "0 linhas novas", o que confirma a idempotência: o volume <code>pgdata</code> sobreviveu
+  e esses meses já estavam carregados. <code>observacao</code> segue com 5,9 mi de linhas
+  nos cinco agregados.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- A inserção de linhas novas em <code>observacao</code>: como o volume <code>pgdata</code> não foi
+  derrubado, a carga do IPCA só exercitou o caminho idempotente. Para ver o
+  <code>COPY</code> inserindo de fato é preciso <code>just reset</code> antes.
+- A carga histórica completa do IPCA (<code>just seed</code>, ~880 requisições ao SIDRA)
+  não foi refeita — o histórico veio do backup em disco.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Apagar ou manter <code>data_old/</code> (49 MB), que ficou no disco como backup.</p>
+<h2 id="2026-09-25-antigravity-gemini-36-flash-caracterizacao-e-documentacao-do-pib-da-china">2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Mapeou os arquivos de contexto da pasta <code>Bancos 2/Planilha inicial</code> para auxiliar o integrante da squad na caracterização dos dados para a Primeira Entrega da disciplina.
+- Auxiliou na escolha e justificativa técnica da inclusão do <strong>PIB da China (World Bank API)</strong> como variável macroeconômica explicativa da demanda por commodities.
+- Preencheu tecnicamente os 5 blocos da planilha da disciplina (Fontes, Formatos, Modelos, Cargas/Engines e Pipeline) para o PIB da China.
+- Criou o documento <code>docs/fontes/pib_china.md</code> no padrão MkDocs do repositório, detalhando volumetria, retenção, pureza e restrições da API do Banco Mundial.
+- Atualizou o índice da arquitetura em <code>docs/arquitetura/fonteDados.md</code> e o menu de navegação em <code>mkdocs.yml</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- Verificada a conformidade do formato de documentação comparando com <code>docs/fontes/commodities.md</code> e <code>docs/fontes/sidra.md</code>.
+- Criada a migration <code>migrations/0004_pib_china.sql</code> e aplicada ao banco de dados PostgreSQL.
+- Criado o script <code>src/inflatrack/ingest_pib_china.py</code> com padrão ELT (salva JSON em <code>data/raw/pib_china/</code> e faz UPSERT no banco).
+- <strong>Execução e validação real</strong>: Ingestão ponta-a-ponta executada contra a API do Banco Mundial (<code>api.worldbank.org</code>), processando 66 anos de dados históricos (1960-2025) salvos na tabela <code>pib_china</code> do PostgreSQL.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.</p>
+<h2 id="2026-09-25-antigravity-gemini-31-pro-ingestao-banco-central-dolar-comercial-e-selic">2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Analisou o cliente de API <code>src/inflatrack/bcb.py</code> focado no SGS (Sistema Gerenciador de Séries Temporais) do Banco Central do Brasil para buscar os códigos 1 (Dólar Venda Diário) e 11 (Taxa Selic Efetiva Diária).
+- Verificou o script de ingestão CLI <code>src/inflatrack/ingest_bcb.py</code> que converte a saída JSON da API para tabelas Pandas e salva localmente em blocos Parquet (<code>dolar.parquet</code> e <code>selic.parquet</code>).</p>
+<p><strong>O que foi verificado e como</strong>
+- A análise dos arquivos da squad confirmou que o formato em <code>ingest_bcb.py</code> é exatamente o padrão adotado na <code>ingest_commodities.py</code> previamente feita pelo time (Silver -&gt; Parquet, CLI com argparse, etc.).
+- Conferida a existência do <code>docker-compose.yml</code> base para PostgreSQL (<code>inflatrack</code>) e checagem da estrutura de diretórios (<code>migrations/</code>, <code>sql/</code>, <code>scripts/</code>).</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Não foi feita a conexão direta de rede para a API do BCB por dentro do ambiente sandbox de execução.
+- O script <code>load_bcb.py</code> não foi escrito ainda, o que transportaria os arquivos parquet recém baixados para o DuckDB ou PostgreSQL do projeto.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Definir como juntar todos esses dados na tabela fato final (DuckDB/dbt) e estruturar o pipeline de agendamento usando o orquestrador (Dagster) prometido no fluxo.</p>
+<h2 id="2026-09-25-fase-2-antigravity-gemini-31-pro-finalizacao-do-modulo-de-macroeconomia">2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (<code>dolar_olinda.py</code>, <code>ingest_dolar.py</code>, <code>load_dolar.py</code>) e Selic (<code>selic_sgs.py</code>, <code>ingest_selic.py</code>, <code>load_selic.py</code>).
+- Criou os arquivos de teste automatizado na pasta <code>tests/</code> (<code>test_dolar_olinda.py</code> e <code>test_selic_sgs.py</code>), inaugurando a cobertura de testes do projeto via <code>pytest</code> e <em>Mocks</em>.
+- Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas <code>pipelineMacro.md</code>, <code>evidencias_macro.md</code>, <code>dicionario/macroeconomia.md</code> e o <code>adr_0002_macro.md</code>.</p>
+<hr />
+<h2 id="2026-09-25-claude-code-opus-5-ingestao-das-contas-nacionais-trimestrais-sidra-1846">2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)</h2>
+<p><strong>Prompt da Squad</strong>
+Implementar a tabela <a href="https://sidra.ibge.gov.br/tabela/1846">1846 do SIDRA</a> na
+trilha existente: baixar pela API os indicadores que afetam o preço ao
+consumidor (agropecuária, eletricidade e gás, serviços, comércio, transporte,
+atividades financeiras, impostos sobre produtos, PIB, despesas de consumo,
+exportação e importação), gravar o cru em <code>json.gz</code>, organizar em Parquet no
+padrão do projeto e levar ao DuckDB — ponderando se atualizar o banco existente
+ou criar um por fonte.</p>
+<p><strong>O que a ferramenta fez</strong>
+- <code>src/inflatrack/pib.py</code>: catálogo da tabela 1846 — as 23 categorias da
+  classificação <code>c11255</code>, a marcação de <code>grupo</code> (atividade / demanda /
+  agregado) e o recorte de 12 indicadores do <strong>núcleo</strong> pedido pela Squad.
+  Os nomes vêm dos metadados da API, não hardcoded; renomeação na origem se
+  propaga sozinha.
+- <code>src/inflatrack/ingest_pib.py</code>: CLI de ingestão ELT, um <code>json.gz</code> por ano em
+  <code>data/raw/pib_raw/</code>, Parquet em <code>data/parquet/pib/</code>.
+- <code>scripts/setup_duckdb_pib.sql</code> + <code>src/inflatrack/load_pib.py</code>: tabelas
+  <code>pib_setor</code> / <code>pib_valor</code> e três views (<code>vw_pib_setor_trimestral</code>,
+  <code>vw_pib_nucleo</code>, <code>vw_features_pib_trimestral</code>), com UPSERT idempotente.
+- <code>scripts/init_db.py</code> passou a aplicar <strong>todos</strong> os <code>setup_duckdb*.sql</code>, não
+  só o das commodities.
+- Receitas <code>just pib-ingest</code>, <code>just pib-load</code> e <code>just pib</code>.
+- Docs: <code>docs/fontes/pib.md</code> e <code>docs/adr/0002-duckdb-unico.md</code>, mais entradas
+  na nav do MkDocs e nas tabelas de fontes e estrutura do README.
+- Em pedidos seguintes da Squad na mesma sessão: linha da nova fonte na tabela
+  de <code>docs/arquitetura/fonteDados.md</code> (ao lado de SIDRA e Alpha Vantage) e o
+  grupo <strong>Fonte Dados</strong> da nav do MkDocs tornado retrátil — bastou remover
+  <code>navigation.sections</code> das <code>features</code> do tema. Essa flag marca o grupo com a
+  classe <code>md-nav__item--section</code>, que o CSS do Material renderiza como rótulo
+  fixo e sem seta; sem ela o item vira <code>md-nav__item--nested</code>, com checkbox de
+  toggle. <code>navigation.expand</code> foi mantida, então os grupos abrem expandidos e
+  podem ser recolhidos — verificado no HTML gerado em <code>site/</code>.</p>
+<p><strong>Decisão ponderada: um DuckDB ou um por fonte</strong>
+Optou-se por <strong>manter o <code>inflatrack.duckdb</code> único</strong>, com prefixo de tabela por
+fonte. O critério foi o padrão de acesso, não o volume: a pergunta de gestão do
+projeto é multifonte ("o comércio encareceu porque o frete subiu?"), e num
+arquivo isso é <code>JOIN</code>, enquanto entre arquivos exige <code>ATTACH</code> em toda sessão e
+impede FK entre as metades. O raciocínio completo, com as alternativas e as
+quatro regras que tornam a escolha sustentável, está no ADR 0002.</p>
+<p><strong>Armadilha concreta encontrada</strong>
+<code>inflatrack.load_commodities</code> lê <code>data/parquet/*.parquet</code> com glob raso e
+pressupõe o esquema <code>(symbol, data_referencia, preco)</code>. Um Parquet de PIB solto
+nessa pasta quebraria a carga das commodities — daí a subpasta
+<code>data/parquet/pib/</code>. Também foi preciso guarda explícita em
+<code>pib.trimestre_para_data</code>: o período da 1846 é <code>AAAATT</code> e não <code>AAAAMM</code>, e
+reaproveitar <code>ingest.mes_para_data</code> transformaria o 3º trimestre em março sem
+erro nenhum.</p>
+<p><strong>O que foi verificado e como</strong>
+- <strong>Conexão real com o SIDRA:</strong> 1 requisição de metadados + 31 de valores (uma
+  por ano, 1996–2026), todas HTTP 200, em ~9 s. Gerou 31 <code>json.gz</code> (22,5 KB) em
+  <code>data/raw/pib_raw/</code> e 31 <code>.parquet</code> (202 KB) em <code>data/parquet/pib/</code>,
+  totalizando 2.806 linhas — 2026 traz 46 (2 trimestres × 23), coerente com a
+  periodicidade declarada nos metadados (fim em <code>202602</code>).
+- <strong>Carga no DuckDB:</strong> 23 setores e 2.806 observações. <code>load_pib</code> rodado duas
+  vezes seguidas manteve 2.806 — idempotência do UPSERT confirmada.
+- <strong>Não regrediu as commodities:</strong> <code>commodity_cotacao</code> segue com 26.781 linhas
+  e <code>vw_features_daily</code>/<code>vw_features_monthly</code> continuam listadas após a carga.
+- Views inspecionadas com dado real: <code>vw_features_pib_trimestral</code> no 2T/2026
+  devolve PIB de R$ 3,43 tri e as 12 colunas do núcleo; <code>vw_pib_nucleo</code> no mesmo
+  trimestre mostra consumo das famílias em 61,68% do PIB e agropecuária com
+  −18,81% contra o mesmo trimestre do ano anterior.
+- <code>ruff check</code> e <code>ruff format --check</code> limpos nos três módulos novos;
+  <code>mkdocs build --strict</code> passou.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- A hipótese econômica por trás do recorte do <strong>núcleo</strong> (que esses 12
+  indicadores, e não outros, são os que mais pressionam o preço na prateleira) é
+  uma sugestão da ferramenta a partir da lista da Squad — não foi testada
+  estatisticamente contra a série do IPCA.
+- Não há teste automatizado: o projeto ainda não tem <code>tests/</code>, e <code>just test</code>
+  segue sem casos para esta fonte.
+- A série da 1846 é de <strong>valores correntes</strong>, que misturam variação de preço e
+  de quantidade. Para isolar preço seria preciso cruzar com a tabela de volume
+  (deflator implícito) — fora do escopo deste pedido.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- O caminho da camada crua ficou em <code>data/raw/pib_raw/</code> (e não <code>data/pib_raw/</code>)
+  para seguir a hierarquia criada no commit <code>adff981</code>. O flag <code>--raw-dir</code>
+  permite mudar; se a Squad preferir a raiz, é trocar o default.
+- Se vale trazer também a tabela de índices de volume da 1846 para separar
+  preço de quantidade.
+- Promover o ADR 0002 de "proposto" a "aceito".</p>
+<hr />
+<h2 id="2026-09-26-codex-revisao-do-pr-de-dolar-e-selic">2026-09-26 — Codex — revisão do PR de Dólar e Selic</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Revisou o PR #3, integrou a <code>main</code> e resolveu conflitos de documentação,
+  navegação e automação.
+- Alinhou Dólar e Selic ao DuckDB analítico único em
+  <code>data/duckdb/inflatrack.duckdb</code> e moveu o esquema para
+  <code>scripts/setup_duckdb_macro.sql</code>.
+- Corrigiu caminhos da camada raw, datas finais estáticas, ausência do comando
+  <code>seed-macro</code>, timeouts HTTP e propagação de falhas.
+- Corrigiu a semântica da série SGS 11 para taxa efetiva diária e adicionou a
+  coluna <code>observado</code> para distinguir publicações do BCB de valores preenchidos.
+- Ampliou os testes para transformação do calendário e UPSERT idempotente.</p>
+<p><strong>O que foi verificado e como</strong>
+- Oito testes automatizados passaram.
+- Uma carga real de 19–25/09/2026 consultou Olinda/PTAX e SGS, gerou sete dias
+  por tabela (cinco observados e dois preenchidos) e permitiu <code>JOIN</code> diário sem
+  lacunas no mesmo DuckDB.
+- A documentação foi compilada com <code>mkdocs build --strict</code>.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- A carga histórica completa desde 2020 e a Alpha Vantage não foram reexecutadas
+  para evitar consumo desnecessário de tempo e cota externa.</p>
+<h2 id="2026-09-27-claude-code-opus-5-documentacao-da-fonte-taxa-selic-bcbsgs">2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Iniciou a quebra de <code>docs/fontes/bcb.md</code> em dois documentos por indicador,
+  criando <code>docs/fontes/selic.md</code> na mesma estrutura de <code>docs/fontes/commodities.md</code>.
+- Escreveu as quatro seções do documento a partir da leitura do código
+  (<code>selic_sgs.py</code>, <code>ingest_selic.py</code>, <code>scripts/setup_duckdb_macro.sql</code>): série
+  coletada, Fonte de Origem, Conjunto de Dados/Armazenamento, Carga de trabalho
+  e Restrições da origem.
+- Registrou dois fatos que não estavam documentados: a Selic <strong>não tem camada
+  Parquet</strong> (a transformação é em memória entre o raw e o DuckDB), e cada rodada
+  faz <code>UPSERT</code> do calendário inteiro da janela (~2.460 linhas) para incorporar
+  1 dado novo, além de arquivar de novo o <code>.json.gz</code> da janela completa.
+- Adicionou a página ao <code>nav</code> do <code>mkdocs.yml</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- Todos os números de schema, formato de data, retentativa, timeout e semântica
+  de <code>observado</code> foram lidos diretamente dos arquivos-fonte citados.
+- A ausência de camada Parquet para a Selic foi confirmada por inspeção de
+  <code>data/parquet/</code> (só commodities e PIB) e do fluxo de <code>ingest_selic.py</code>.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Os tamanhos do raw (~15 KB por arquivo, ~4 MB/ano) são <strong>estimativa</strong>:
+  <code>data/raw/bcb/</code> não existe nesta máquina, a carga da Selic nunca rodou aqui.
+- "Frequência de leitura: alta" descreve o uso pretendido em notebooks de treino;
+  não há notebooks no repositório para confirmar.
+- <code>mkdocs build --strict</code> não foi executado após a edição do <code>nav</code>.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- ~~Se <code>docs/fontes/bcb.md</code> deve perder a parte da Selic~~ — resolvido na Fase 2
+  abaixo: a Squad pediu a remoção do <code>bcb.md</code>.
+- Se vale particionar o raw do BCB por ano para eliminar a redundância apontada.</p>
+<h2 id="2026-09-27-fase-2-claude-code-opus-5-documentacao-do-dolar-comercial-e-remocao-do-bcbmd">2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do <code>bcb.md</code></h2>
+<p><strong>O que a ferramenta fez</strong>
+- Criou <code>docs/fontes/dolar.md</code> na mesma estrutura das demais fontes, com as
+  quatro seções preenchidas a partir de <code>dolar_olinda.py</code> e <code>ingest_dolar.py</code>.
+- Registrou o que é específico do Olinda/PTAX: múltiplos boletins por dia útil
+  (origem da deduplicação por <code>dataHoraCotacao</code>), data em <code>MM-DD-YYYY</code> entre
+  aspas simples no valor do parâmetro, payload embrulhado na chave <code>value</code>, e
+  carga anterior ao fechamento do câmbio gravando valor provisório.
+- Reaproveitou o aviso <code>!!! abstract "Decisão Arquitetural (ADR)"</code> do antigo
+  <code>bcb.md</code> na seção "Séries coletadas" do Dólar, e escreveu um equivalente para
+  a Selic (série 11 é efetiva diária, não a meta do Copom — série 432).
+- Substituiu a linha única de "Dólar e Selic" por duas linhas na tabela de
+  <code>docs/arquitetura/fonteDados.md</code>, ajustou o <code>nav</code> do <code>mkdocs.yml</code> e removeu
+  <code>docs/fontes/bcb.md</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- <code>uv run mkdocs build --strict</code> passou depois da remoção: nenhum link órfão
+  para <code>fontes/bcb.md</code> restou (conferido com busca no repositório).
+- Antes de remover o <code>bcb.md</code>, foi conferido que suas seções de fluxo de carga
+  já estavam duplicadas em <code>docs/pipeline/pipelineMacro.md</code>.
+- A afirmação de que a troca SGS→Olinda está em um ADR foi <strong>corrigida</strong>: o
+  ADR 0003 só cobre o calendário civil e a coluna <code>observado</code>. A página diz
+  agora que essa decisão ainda não tem ADR próprio.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Os tamanhos do raw do Dólar são estimativa; <code>data/raw/bcb/</code> não existe nesta
+  máquina e a carga não foi executada.
+- A contagem de boletins por dia útil devolvida pelo <code>CotacaoDolarPeriodo</code> não
+  foi medida com requisição real; está descrita qualitativamente.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Se a troca SGS→Olinda merece um ADR próprio ou uma seção no ADR 0003.
+- Se vale particionar o raw do BCB por ano para eliminar as janelas repetidas.</p>
+<h2 id="2026-09-27-fase-3-claude-code-opus-5-generalizacao-das-paginas-de-arquitetura">2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Reescreveu <code>docs/arquitetura/arquiteturaMedallion.md</code>, que descrevia apenas o
+  IPCA/SIDRA, para cobrir as seis fontes: tabela com o significado de cada
+  camada no repositório e tabela com a trilha Raw → Bronze → Silver → Gold de
+  cada fonte, com os caminhos e nomes de tabela reais.
+- Registrou os três padrões de bronze que o repositório tem hoje: Parquet nas
+  fontes analíticas, tabela temporária <code>carga</code> no IPCA e transformação apenas em
+  memória nas séries do Banco Central.
+- Atualizou <code>docs/arquitetura/visaoGeral.md</code>: nova seção de fontes com as seis
+  origens e seus destinos, stack com os dois bancos (Postgres e DuckDB único) e
+  as bibliotecas realmente usadas, e dois requisitos não funcionais que estavam
+  implícitos (idempotência da carga e resiliência a falha de origem).</p>
+<p><strong>O que foi verificado e como</strong>
+- Caminhos, nomes de tabela e de view foram lidos de <code>src/inflatrack/*.py</code> e
+  <code>scripts/setup_duckdb*.sql</code>; as bibliotecas, de <code>pyproject.toml</code> e dos imports.
+- <code>uv run --group docs mkdocs build --strict</code> passou após cada edição.
+- O status "proposto" dos ADRs 0002 e 0003 foi conferido nos próprios arquivos
+  antes de citá-los.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Os volumes herdados do texto anterior (~4,7 mi linhas de IPCA, ~2,2 GB de
+  carga) não foram remedidos nesta sessão.
+- Os requisitos de latência continuam metas de projeto, sem medição.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Se Dólar e Selic merecem uma view de gold própria no DuckDB (hoje o
+  cruzamento é feito no <code>join</code> de cada notebook).
+- Se o <code>verificar-carga</code> deve ganhar checagens equivalentes para as fontes que
+  moram no DuckDB.</p>
+<hr />
+<h2 id="2026-09-28-antigravity-gemini-38-flash-documentacao-pipeline-e-dicionario-de-dados-do-salario-minimo-dieese-e-clima-diario-inmet">2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Caracterizou e adicionou duas novas fontes de dados ao projeto: <strong>Salário Mínimo Nominal e Necessário (DIEESE)</strong> e <strong>Dados do Clima Diário (INMET)</strong>.
+- Elaborou os documentos de pipeline de dados em <code>docs/pipeline/pipelineSalarioMinimo.md</code> e <code>docs/pipeline/pipelineClima.md</code>, contendo diagramas conceituais Mermaid, fluxos ELT (Raw em gzip, Silver em Parquet e Gold no DuckDB compartilhado <code>inflatrack.duckdb</code>), garantias de idempotência e diagnóstico de falhas.
+- Desenvolveu os dicionários de dados físicos em <code>docs/dicionario/salario_minimo.md</code> (tabela <code>salario_minimo</code>) e <code>docs/dicionario/clima.md</code> (dimensão <code>estacao_meteorologica</code> e fato <code>clima_diario</code>), com diagramas entidade-relacionamento (Mermaid) e consultas analíticas de exemplo (cruzamentos de chuva/geada com cotações de milho/café e poder de compra com inflação).
+- Atualizou os índices e tabelas centrais do repositório: <code>docs/arquitetura/fonteDados.md</code>, <code>docs/dicionario/dicionario.md</code>, <code>mkdocs.yml</code> e <code>README.md</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- <code>uv run mkdocs build --strict</code> executado e aprovado com código 0, sem alertas ou links quebrados.
+- Testes reais de requisição HTTP realizados contra as origens durante a concepção:
+  - Inspeção do HTML e encoding <code>ISO-8859-1</code> da tabela de 420 linhas do DIEESE.
+  - Consulta ao endpoint de estações ativas do INMET (<code>https://apitempo.inmet.gov.br/estacoes/T</code>), confirmando o retorno de 673 estações com geolocalização e metadados.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- As CLIs de extração (<code>ingest_*.py</code>) e migrações SQL físicas para essas duas fontes não foram codificadas em disco nesta etapa, tendo sido documentadas arquiteturalmente conforme solicitado.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Definir se a ingestão do clima coletará a totalidade das 673 estações nacionais ou aplicará filtro geográfico prévio para os principais polos produtores de commodities agrícolas.
+- Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).</p>
+<hr />
+<h2 id="2026-09-28-claude-code-opus-5-atualizacao-da-secao-de-arquitetura-para-as-fontes-novas">2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Reescreveu as quatro páginas de <code>docs/arquitetura/</code>: <code>visaoGeral.md</code>, <code>fluxoDados.md</code>,
+  <code>arquiteturaMedallion.md</code> e <code>componentes.md</code>, que ainda descreviam seis fontes e
+  ignoravam Salário Mínimo (DIEESE) e Clima (INMET).
+- <strong>Visão Geral:</strong> passou a contar oito conjuntos de dados vindos de seis provedores,
+  registrou que o DIEESE é a primeira origem sem API (raspagem de HTML) e acrescentou
+  um requisito não funcional sobre acoplamento ao layout da origem.
+- <strong>Fluxo de Dados:</strong> redesenhou o diagrama Mermaid com as seis origens e as cinco
+  subpastas de raw, acrescentou a seção "Caminho das fontes analíticas" (o padrão
+  cliente → ingestor → carregador), completou a tabela de cadência com PIB, PIB da
+  China, DIEESE e INMET, e registrou a restrição de escritor único do DuckDB.
+- <strong>Medallion:</strong> acrescentou as duas fontes novas à trilha de camadas, documentou o
+  passo "texto para tabela" (HTML → DataFrame) na passagem raw → bronze, o reúso da
+  coluna <code>observado</code> no clima e a primeira dimensão do lado analítico
+  (<code>estacao_meteorologica</code>).
+- <strong>Componentes:</strong> reescrito por <strong>papel</strong> em vez de por fonte, como pedido. Descreve o
+  contrato dos três módulos (cliente da origem, ingestor, carregador), a assimetria
+  entre migrations no Postgres e esquema declarado e reaplicado no DuckDB, a
+  infraestrutura, a orquestração pelo <code>justfile</code> e a configuração por <code>.env</code>. A
+  amarração com o código específico ficou numa tabela "Mapa dos módulos" ao fim.</p>
+<p><strong>Avaliação pedida e recusada</strong>
+- A Squad pediu para avaliar se valia fundir <code>arquiteturaMedallion.md</code> e
+  <code>componentes.md</code> num arquivo só. A recomendação foi <strong>não fundir</strong>: as duas páginas
+  respondem perguntas diferentes (como o dado progride entre camadas × qual código
+  executa cada passagem), e a fusão produziria uma página longa sem público único.
+  O acoplamento entre elas foi resolvido com links cruzados.</p>
+<p><strong>O que foi verificado e como</strong>
+- Todo caminho, nome de tabela, de view, de receita do <code>just</code> e de variável de ambiente
+  foi lido do código antes de ser escrito: <code>src/inflatrack/*.py</code>,
+  <code>scripts/setup_duckdb*.sql</code>, <code>scripts/init_db.py</code>, <code>justfile</code>, <code>docker-compose.yml</code>,
+  <code>pyproject.toml</code> e <code>tests/</code>.
+- Confirmado no código, e não na documentação anterior, que Dólar e Selic não têm
+  <code>load_*.py</code>: o próprio <code>ingest_*.py</code> carrega. Isso virou uma nota explícita em
+  Componentes.
+- Confirmado que o DIEESE é parseado com <code>re</code> e <code>html</code> da biblioteca padrão, sem
+  BeautifulSoup — a stack foi corrigida para dizer isso.
+- <code>uv run --group docs mkdocs build --strict</code> passou, sem alerta novo.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Nenhuma carga foi executada nesta sessão; nada foi conferido contra banco real.
+- Os volumes herdados (~4,7 mi linhas de IPCA, ~2,2 GB) não foram remedidos.
+- <strong>Divergência encontrada e não corrigida:</strong> <code>docs/pipeline/pipelineClima.md</code> afirma que
+  a bronze do clima é Parquet particionado em <code>data/parquet/clima/ano=YYYY/mes=MM/</code>,
+  mas <code>src/inflatrack/ingest_clima.py</code> grava dois arquivos planos
+  (<code>estacoes.parquet</code> e <code>clima_diario.parquet</code>). As páginas de arquitetura seguem o
+  código; a página de pipeline continua divergente.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Resolver a divergência acima: ou o ingestor passa a particionar, ou a página de
+  pipeline é corrigida.
+- Se Salário Mínimo e Clima merecem views de gold próprias no DuckDB — hoje ambas
+  estão marcadas como planejadas na trilha do Medallion.
+- Se <code>just verificar-carga</code> deve ganhar checagens para as fontes que moram no DuckDB
+  (pergunta que já vinha aberta da sessão anterior e segue aberta).</p>
+<hr />
+<h2 id="2026-09-28-claude-code-opus-5-discussao-migrar-o-ipca-para-o-duckdb">2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB</h2>
+<p>Sessão de <strong>análise, sem alteração de código ou de esquema</strong>. A Squad perguntou se
+mover o IPCA para o DuckDB quebraria o fluxo atual.</p>
+<p><strong>O que a ferramenta fez</strong>
+- Reconstruiu o quadro a partir do código, e não da documentação: <code>migrations/0001</code>,
+  <code>migrations/0002</code>, <code>migrations/0003</code>, <code>src/inflatrack/ingest.py</code>,
+  <code>scripts/setup_duckdb*.sql</code>, <code>justfile</code> e os dois ADRs existentes. Registrou que a
+  "discussão anterior" citada pela Squad <strong>não está no repositório</strong> (nem em ADR, nem em
+  commit, nem neste arquivo).
+- Mediu, com DuckDB e 6,4 mi de linhas sintéticas no formato de <code>observacao</code>:
+  pergunta 1 (subitem+praça+variável, 24 meses) em <strong>14 ms</strong>, pergunta 3 (série inteira
+  agregada) em <strong>20 ms</strong>, tabela em Parquet comprimido em <strong>39,4 MB</strong>, e confirmou que
+  <code>ON CONFLICT DO NOTHING</code> funciona com o <code>UNIQUE</code> de 6 colunas que a carga usa hoje.
+  Conclusão: desempenho não é o obstáculo e a semântica insert-only sobrevive.
+- Confirmou que o DuckDB suporta FK dentro do arquivo (já em uso em
+  <code>pib_valor → pib_setor</code>) e que a extensão <code>postgres</code> instala e carrega, então <code>ATTACH</code>
+  de Postgres é possível.
+- Identificou o obstáculo real: as <strong>três FKs do transacional</strong> apontando para a
+  referência do IPCA (<code>lojista.codigo_localidade</code>, <code>lojista.codigo_grupo_ipca</code>,
+  <code>produto.codigo_subitem_ipca</code>). FK entre engines não existe, e o comentário da própria
+  migration diz que sem essa garantia "o painel calcula reajuste sobre a categoria
+  errada e nada acusa o erro".
+- Levantou os efeitos colaterais: pergunta 5 e pergunta 1 virariam cross-engine,
+  <code>just verificar-carga</code> precisaria de reescrita, e a carga mais longa do projeto
+  (<code>just seed</code>) passaria a bloquear as outras pela regra de escritor único do ADR 0002.
+- Depois de a Squad apontar que o IPCA é o <strong>alvo</strong> do modelo preditivo, revisou o peso
+  do argumento: todas as outras sete fontes estão documentadas como variáveis
+  explicativas, todas as views de feature estão no DuckDB e o alvo está no Postgres —
+  hoje não existe consulta única que monte a matriz de treino. Isso reforça mover o
+  <strong>fato</strong>, não as dimensões, já que o treino consome as colunas de <code>observacao</code> e não
+  os nomes de <code>classificacao_versao</code>.
+- Levantou duas armadilhas de gold que a migração expõe: (a) sendo insert-only, uma
+  revisão do IBGE deixa mais de uma linha por chave, e um <code>SELECT</code> de treino ingênuo
+  duplica o mês revisado sem erro — precisa desempatar por <code>ingerido_em</code>; (b)
+  granularidades diferentes (diária, mensal, trimestral, anual) exigem espinha mensal e
+  defasagem, porque o IPCA do mês M só é publicado entre os dias 9 e 12 de M+1 e usar
+  feature do próprio mês M vaza futuro. A variável 2265 (acumulado 12 meses) é função do
+  alvo e não pode entrar como feature.</p>
+<p><strong>Recomendação registrada</strong>
+- Mover só <code>observacao</code> para o DuckDB; dimensões ficam no Postgres e são replicadas
+  read-only para o DuckDB, preservando FK real nos dois lados. Entregável que fecha a
+  história: uma view <code>vw_treino_ipca_mensal</code>.</p>
+<p><strong>O que foi verificado e como</strong>
+- Os números acima vieram de execução real de DuckDB nesta sessão, com dado
+  <strong>sintético</strong> no formato do <code>observacao</code>.
+- As FKs, restrições e comentários citados foram lidos das migrations, não da
+  documentação.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- <strong>O benchmark não usou dado real do IPCA.</strong> A cardinalidade sintética aproxima a real
+  (460 subitens, 17 localidades, 5 fontes, 560 meses, 4 variáveis), mas não a reproduz;
+  os tempos devem ser refeitos sobre a série carregada antes de entrarem num ADR como
+  medição.
+- Nada foi medido no Postgres para comparação — a Medição do ADR 0001 continua pendente.
+- Nenhuma linha de código, esquema ou migration foi alterada.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Escolher entre mover só o fato, mover o IPCA inteiro, ou não mover antes de resolver a
+  Medição do ADR 0001.
+- Escrever o ADR 0004, que revisita o ADR 0002 (escopado explicitamente a "só a camada
+  analítica") e decide o destino da Medição pendente do ADR 0001, que compara CRUD ×
+  insert-only dentro do Postgres e perde o sentido como está escrita se o engine mudar.</p>
+<hr />
+<h2 id="2026-09-28-claude-code-opus-5-arquitetura-da-e3-dbt-dagster-mlflow-e-streamlit">2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit</h2>
+<p><strong>O que a ferramenta fez</strong>
+- Leu o checklist de aceite da E3 (<code>projeto-e3.md</code>) e da E4 e confrontou o plano da
+  Squad com ele. Constatou que "medallion" <strong>não aparece</strong> na documentação da
+  disciplina: o exigido é "transformações versionadas em ferramenta declarativa,
+  organizadas em camadas". Medallion é meio, não requisito.
+- Acessou <code>https://gov-hub.io/govhub/documentacao/arquitetura/componentes/</code> a pedido da
+  Squad e extraiu o gabarito da página: <code>## Componente</code> → <code>**Papel**:</code> → tabela
+  <code>Aspecto | Detalhe</code> → <code>**Responsabilidades**:</code>, com subseção extra do tipo
+  "Quando usar X vs Y" nos casos ambíguos.
+- Reescreveu <code>docs/arquitetura/componentes.md</code> nesse gabarito, com 14 componentes na
+  ordem em que o dado os atravessa, cada um com linha <code>Status</code> distinguindo "Em uso" de
+  "Planejado", e uma subseção "Quando usar DuckDB vs PostgreSQL".
+- Reescreveu <code>docs/arquitetura/arquiteturaMedallion.md</code> para as quatro camadas do plano
+  aprovado (Raw <code>.json.gz</code> → Bronze Parquet → Silver <code>dbt-duckdb</code> → Gold em tabelas do
+  DuckDB), com o PostgreSQL explicitamente <strong>em paralelo</strong> ao medallion, e acrescentou a
+  seção "Gold: o que a camada entrega" com o grão de cada tabela.
+- Reescreveu <code>docs/arquitetura/fluxoDados.md</code>: diagrama por camada em vez de por fonte,
+  percurso em seis etapas, e coluna de partição na tabela de cadência.
+- Atualizou a stack e os requisitos não funcionais de <code>docs/arquitetura/visaoGeral.md</code>,
+  trocou a coluna "Destino" da tabela de fontes por "Papel no modelo" (alvo × feature) e
+  registrou em nota que o ADR da E3 ainda não existe.</p>
+<p><strong>Medições feitas nesta sessão</strong>
+- <code>EXPLAIN ANALYZE</code> funciona no DuckDB, mas <code>EXPLAIN (ANALYZE, BUFFERS)</code> levanta
+  <code>NotImplementedException</code>. Como o checklist da E3 pede essa sintaxe, isso passou a ser
+  um motivo registrado para manter carga real no PostgreSQL.</p>
+<p><strong>Recomendações que a Squad ouviu e decidiu NÃO seguir</strong>
+- A ferramenta recomendou <strong>cortar ou adiar o MLflow</strong>, por adicionar um terceiro engine
+  de armazenamento sem que E3 ou E4 peçam rastreamento de experimento, sugerindo no
+  lugar uma tabela <code>ml_experimento</code> no próprio DuckDB.
+- A Squad decidiu manter o MLflow e o plano como está, com a justificativa explícita de
+  que <strong>o erro faz parte do processo de aprendizado</strong>. A documentação foi escrita
+  conforme a decisão da Squad, não conforme a recomendação.</p>
+<p><strong>O que foi verificado e como</strong>
+- <code>uv run --group docs mkdocs build --strict</code> termina com código 0.
+- Componentes marcados "Em uso" foram conferidos no repositório; os marcados "Planejado"
+  (dbt, Dagster, MLflow, Streamlit, notebooks) <strong>não existem em código</strong> — a página os
+  descreve como decisão registrada, e o campo <code>Status</code> diz isso em cada ficha.</p>
+<p><strong>O que NÃO foi verificado</strong>
+- Nenhuma linha de dbt, Dagster, MLflow ou Streamlit foi escrita ou executada. Os
+  campos de ficha técnica dessas peças (schemas, partições, backend) são intenção de
+  projeto, não configuração conferida.
+- A estrutura da página do GovHub foi lida por resumo automático do conteúdo publicado,
+  não pelo código-fonte do repositório deles.</p>
+<p><strong>Decisões que continuam sendo da Squad</strong>
+- Escrever o ADR da E3, comparando dbt × SQLMesh, Dagster × Airflow e ambos com a opção
+  nula (<code>cron</code> chamando SQL), que o enunciado manda levar a sério antes de descartar.
+- Decidir o destino da regra 2 do ADR 0002 (um <code>setup_duckdb_&lt;fonte&gt;.sql</code> por fonte), que
+  a adoção do dbt torna obsoleta.
+- Os quatro itens do checklist da E3 sobre os quais o plano ainda é silencioso:
+  granularidade declarada do fato, teste de distribuição, freshness com SLA e a consulta
+  otimizada com plano de execução antes e depois.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar para o topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.top", "navigation.expand", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "mais 1 nesta p\u00e1gina", "search.result.more.other": "# mais nesta p\u00e1gina", "search.result.none": "Nenhum documento encontrado", "search.result.one": "1 documento encontrado", "search.result.other": "# documentos encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
