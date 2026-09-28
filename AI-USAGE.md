@@ -411,3 +411,27 @@ erro nenhum.
 **Decisões que continuam sendo da Squad**
 - Se a troca SGS→Olinda merece um ADR próprio ou uma seção no ADR 0003.
 - Se vale particionar o raw do BCB por ano para eliminar as janelas repetidas.
+
+---
+
+## 2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)
+
+**O que a ferramenta fez**
+- Caracterizou e adicionou duas novas fontes de dados ao projeto: **Salário Mínimo Nominal e Necessário (DIEESE)** e **Dados do Clima Diário (INMET)**.
+- Elaborou os documentos de pipeline de dados em `docs/pipeline/pipelineSalarioMinimo.md` e `docs/pipeline/pipelineClima.md`, contendo diagramas conceituais Mermaid, fluxos ELT (Raw em gzip, Silver em Parquet e Gold no DuckDB compartilhado `inflatrack.duckdb`), garantias de idempotência e diagnóstico de falhas.
+- Desenvolveu os dicionários de dados físicos em `docs/dicionario/salario_minimo.md` (tabela `salario_minimo`) e `docs/dicionario/clima.md` (dimensão `estacao_meteorologica` e fato `clima_diario`), com diagramas entidade-relacionamento (Mermaid) e consultas analíticas de exemplo (cruzamentos de chuva/geada com cotações de milho/café e poder de compra com inflação).
+- Atualizou os índices e tabelas centrais do repositório: `docs/arquitetura/fonteDados.md`, `docs/dicionario/dicionario.md`, `mkdocs.yml` e `README.md`.
+
+**O que foi verificado e como**
+- `uv run mkdocs build --strict` executado e aprovado com código 0, sem alertas ou links quebrados.
+- Testes reais de requisição HTTP realizados contra as origens durante a concepção:
+  - Inspeção do HTML e encoding `ISO-8859-1` da tabela de 420 linhas do DIEESE.
+  - Consulta ao endpoint de estações ativas do INMET (`https://apitempo.inmet.gov.br/estacoes/T`), confirmando o retorno de 673 estações com geolocalização e metadados.
+
+**O que NÃO foi verificado**
+- As CLIs de extração (`ingest_*.py`) e migrações SQL físicas para essas duas fontes não foram codificadas em disco nesta etapa, tendo sido documentadas arquiteturalmente conforme solicitado.
+
+**Decisões que continuam sendo da Squad**
+- Definir se a ingestão do clima coletará a totalidade das 673 estações nacionais ou aplicará filtro geográfico prévio para os principais polos produtores de commodities agrícolas.
+- Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
+
