@@ -56,6 +56,7 @@ markdown_extensions:
 nav:
   - Visão Geral:
     - Sobre: index.md
+    - Consultas do Sistema: visaoGeral/consultas.md
     - Onboarding: visaoGeral/onboarding.md
     - Cronograma: visaoGeral/cronograma.md
   - Arquitetura: 
