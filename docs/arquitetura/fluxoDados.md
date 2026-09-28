@@ -1,6 +1,6 @@
 # Fluxo de Dados
 
-Da fonte até a tela do lojista. As camadas estão em [Arquitetura Medallion](arquiteturaMedallion.md), as peças em [Componentes](componentes.md) e o detalhe por fonte em [Pipeline de Dados](../pipeline/pipelineDados.md).
+Da fonte até a tela do lojista. As camadas estão em [Arquitetura Medallion](arquiteturaMedallion.md), as peças em [Componentes](componentes.md) e o detalhe de cada etapa em [Contrato das Etapas](../pipeline/contratoEtapas.md).
 
 ```mermaid
 flowchart TB
