@@ -91,10 +91,7 @@ nav:
     - PIB da China (World Bank): dicionario/pib_china.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
-  - Visualização: visualizacao/visualizacao.md
   - Evidências:
-    - SIDRA (IPCA): evidencias/evidencias.md
-    - Macroeconomia: evidencias/evidencias_macro.md
     - Uso de IA: evidencias/uso_ia.md
 
 extra_css:

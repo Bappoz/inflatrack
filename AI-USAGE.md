@@ -598,3 +598,64 @@ mover o IPCA para o DuckDB quebraria o fluxo atual.
 - Escrever o ADR 0004, que revisita o ADR 0002 (escopado explicitamente a "só a camada
   analítica") e decide o destino da Medição pendente do ADR 0001, que compara CRUD ×
   insert-only dentro do Postgres e perde o sentido como está escrita se o engine mudar.
+
+---
+
+## 2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit
+
+**O que a ferramenta fez**
+- Leu o checklist de aceite da E3 (`projeto-e3.md`) e da E4 e confrontou o plano da
+  Squad com ele. Constatou que "medallion" **não aparece** na documentação da
+  disciplina: o exigido é "transformações versionadas em ferramenta declarativa,
+  organizadas em camadas". Medallion é meio, não requisito.
+- Acessou `https://gov-hub.io/govhub/documentacao/arquitetura/componentes/` a pedido da
+  Squad e extraiu o gabarito da página: `## Componente` → `**Papel**:` → tabela
+  `Aspecto | Detalhe` → `**Responsabilidades**:`, com subseção extra do tipo
+  "Quando usar X vs Y" nos casos ambíguos.
+- Reescreveu `docs/arquitetura/componentes.md` nesse gabarito, com 14 componentes na
+  ordem em que o dado os atravessa, cada um com linha `Status` distinguindo "Em uso" de
+  "Planejado", e uma subseção "Quando usar DuckDB vs PostgreSQL".
+- Reescreveu `docs/arquitetura/arquiteturaMedallion.md` para as quatro camadas do plano
+  aprovado (Raw `.json.gz` → Bronze Parquet → Silver `dbt-duckdb` → Gold em tabelas do
+  DuckDB), com o PostgreSQL explicitamente **em paralelo** ao medallion, e acrescentou a
+  seção "Gold: o que a camada entrega" com o grão de cada tabela.
+- Reescreveu `docs/arquitetura/fluxoDados.md`: diagrama por camada em vez de por fonte,
+  percurso em seis etapas, e coluna de partição na tabela de cadência.
+- Atualizou a stack e os requisitos não funcionais de `docs/arquitetura/visaoGeral.md`,
+  trocou a coluna "Destino" da tabela de fontes por "Papel no modelo" (alvo × feature) e
+  registrou em nota que o ADR da E3 ainda não existe.
+
+**Medições feitas nesta sessão**
+- `EXPLAIN ANALYZE` funciona no DuckDB, mas `EXPLAIN (ANALYZE, BUFFERS)` levanta
+  `NotImplementedException`. Como o checklist da E3 pede essa sintaxe, isso passou a ser
+  um motivo registrado para manter carga real no PostgreSQL.
+
+**Recomendações que a Squad ouviu e decidiu NÃO seguir**
+- A ferramenta recomendou **cortar ou adiar o MLflow**, por adicionar um terceiro engine
+  de armazenamento sem que E3 ou E4 peçam rastreamento de experimento, sugerindo no
+  lugar uma tabela `ml_experimento` no próprio DuckDB.
+- A Squad decidiu manter o MLflow e o plano como está, com a justificativa explícita de
+  que **o erro faz parte do processo de aprendizado**. A documentação foi escrita
+  conforme a decisão da Squad, não conforme a recomendação.
+
+**O que foi verificado e como**
+- `uv run --group docs mkdocs build --strict` termina com código 0.
+- Componentes marcados "Em uso" foram conferidos no repositório; os marcados "Planejado"
+  (dbt, Dagster, MLflow, Streamlit, notebooks) **não existem em código** — a página os
+  descreve como decisão registrada, e o campo `Status` diz isso em cada ficha.
+
+**O que NÃO foi verificado**
+- Nenhuma linha de dbt, Dagster, MLflow ou Streamlit foi escrita ou executada. Os
+  campos de ficha técnica dessas peças (schemas, partições, backend) são intenção de
+  projeto, não configuração conferida.
+- A estrutura da página do GovHub foi lida por resumo automático do conteúdo publicado,
+  não pelo código-fonte do repositório deles.
+
+**Decisões que continuam sendo da Squad**
+- Escrever o ADR da E3, comparando dbt × SQLMesh, Dagster × Airflow e ambos com a opção
+  nula (`cron` chamando SQL), que o enunciado manda levar a sério antes de descartar.
+- Decidir o destino da regra 2 do ADR 0002 (um `setup_duckdb_<fonte>.sql` por fonte), que
+  a adoção do dbt torna obsoleta.
+- Os quatro itens do checklist da E3 sobre os quais o plano ainda é silencioso:
+  granularidade declarada do fato, teste de distribuição, freshness com SLA e a consulta
+  otimizada com plano de execução antes e depois.

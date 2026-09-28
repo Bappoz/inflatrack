@@ -1,57 +1,75 @@
 # Arquitetura Medallion
 
-Organização progressiva do dado: cada camada só lê da anterior, e a crua nunca é alterada. A regra vale para **todas** as fontes do repositório, do IPCA ao clima, mesmo quando o destino final e o número de camadas materializadas mudam.
+Organização progressiva do dado em quatro camadas: cada uma só lê da anterior, e a crua nunca é alterada. A regra vale para **todas** as fontes do repositório, do IPCA ao clima.
 
-## O que cada camada significa aqui
+O PostgreSQL roda **em paralelo** a essa trilha, e não dentro dela: ele guarda o lado transacional, que tem escrita de usuário e não é dado derivado de origem pública. Medallion descreve o pipeline analítico.
 
-| Camada | Papel | Como aparece neste repositório |
+## As quatro camadas
+
+| Camada | Tecnologia | Papel |
 |---|---|---|
-| **Raw** | Resposta da origem exatamente como veio, comprimida e nunca reescrita | Um `.gz` por requisição em `data/raw/<fonte>/` — JSON nas APIs, HTML no DIEESE |
-| **Bronze** | Primeira materialização controlada, já estruturada mas ainda por fonte | Parquet em `data/parquet/` nas fontes analíticas; tabela temporária `carga` dentro da transação no IPCA; **em memória** (DataFrame do Pandas) nas séries do Banco Central |
-| **Silver** | Dado tipado, sem ausências, sem duplicata, com chaves resolvidas | Tabelas do Postgres (IPCA/INPC) e tabelas do DuckDB único (demais fontes) |
-| **Gold** | Recorte pronto para consumo — modelo ou tela — já cruzando o que interessa | Views do DuckDB (`vw_features_*`, `vw_pib_*`); nas fontes mais novas e no IPCA ainda planejada |
+| **Raw** | `.json.gz` (e `.html.gz` no DIEESE) em `data/raw/<fonte>/` | Resposta da origem exatamente como veio, comprimida e nunca reescrita |
+| **Bronze** | Parquet em `data/parquet/<fonte>/` | Payload parseado e tipado, ainda por fonte, sem regra de negócio |
+| **Silver** | Modelos `dbt-duckdb` em `models/staging/` | Modelagem e tratamento: limpeza, deduplicação, chaves resolvidas |
+| **Gold** | Tabelas tratadas no DuckDB, a partir de `models/marts/` | Fato, dimensão e métricas — recorte pronto para painel e modelo |
+
+```mermaid
+flowchart LR
+    O[8 fontes públicas] --> R[(Raw<br/>json.gz)]
+    R --> B[(Bronze<br/>Parquet)]
+    B --> S[(Silver<br/>dbt-duckdb)]
+    S --> G[(Gold<br/>tabelas no DuckDB)]
+    G --> N[Notebooks + MLflow]
+    G --> P[Streamlit + Plotly]
+    PG[(PostgreSQL<br/>transacional)] -.paralelo.-> P
+    D{{Dagster}} -.orquestra.-> R & B & S & G
+```
 
 ## A trilha de cada fonte
 
-| Fonte | Raw | Bronze | Silver | Gold |
-|---|---|---|---|---|
-| [IPCA/INPC (SIDRA)](../fontes/sidra.md) | `data/raw/ipca-inpc/{agregado}-{AAAAMM}.json.gz` | Tabela temporária `carga`, viva só na transação do mês | Postgres: `observacao`, `classificacao`, `classificacao_versao`, `localidade`, `variavel`, `fonte_agregado` | View por (subitem, localidade, mês) — planejada |
-| [Commodities e Energia](../fontes/commodities.md) | `data/raw/commodities_raw/` | `data/parquet/*.parquet` | DuckDB: `commodity`, `commodity_cotacao` | `vw_features_daily`, `vw_features_monthly` (PIVOT) |
-| [Dólar Comercial](../fontes/dolar.md) | `data/raw/bcb/dolar_*.json.gz` | Em memória (deduplicação + `ffill`) | DuckDB: `dolar_cotacao` | Composta no `join` diário com as demais séries macro |
-| [Taxa SELIC](../fontes/selic.md) | `data/raw/bcb/selic_*.json.gz` | Em memória (`ffill` sobre o calendário civil) | DuckDB: `selic_taxa` | Composta no `join` diário com as demais séries macro |
-| [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | `data/raw/pib_raw/` (um JSON gzip por ano) | `data/parquet/pib/` | DuckDB: `pib_setor`, `pib_valor` | `vw_pib_setor_trimestral`, `vw_pib_nucleo`, `vw_features_pib_trimestral` |
-| [PIB da China](../fontes/pib_china.md) | `data/raw/pib_china/` | `data/parquet/pib_china/` | DuckDB: `pib_china` | Consumida direto da silver |
-| [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `data/raw/dieese/salario_minimo_*.html.gz` | `data/parquet/dieese/salario_minimo.parquet` | DuckDB: `salario_minimo` | Cruzamento com o IPCA para poder de compra — planejado |
-| [Dados do Clima (INMET)](../fontes/clima.md) | `data/raw/inmet/` (cadastro de estações e medições diárias) | `data/parquet/clima/estacoes.parquet` e `clima_diario.parquet` | DuckDB: `estacao_meteorologica`, `clima_diario` | Acumulados de chuva e anomalias de temperatura por polo agrícola — planejada |
+| Fonte | Raw | Bronze |
+|---|---|---|
+| [IPCA/INPC (SIDRA)](../fontes/sidra.md) | `data/raw/ipca-inpc/{agregado}-{AAAAMM}.json.gz` | `data/parquet/ipca-inpc/` |
+| [Commodities e Energia](../fontes/commodities.md) | `data/raw/commodities_raw/` | `data/parquet/*.parquet` |
+| [Dólar Comercial](../fontes/dolar.md) | `data/raw/bcb/dolar_*.json.gz` | `data/parquet/bcb/` |
+| [Taxa SELIC](../fontes/selic.md) | `data/raw/bcb/selic_*.json.gz` | `data/parquet/bcb/` |
+| [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | `data/raw/pib_raw/` (um JSON gzip por ano) | `data/parquet/pib/` |
+| [PIB da China](../fontes/pib_china.md) | `data/raw/pib_china/` | `data/parquet/pib_china/` |
+| [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `data/raw/dieese/salario_minimo_*.html.gz` | `data/parquet/dieese/` |
+| [Dados do Clima (INMET)](../fontes/clima.md) | `data/raw/inmet/` | `data/parquet/clima/` |
 
-!!! note "Por que a bronze não é sempre persistida"
-    A raw já guarda a origem intacta e reprocessável, então a bronze só se materializa quando alguém a lê. No IPCA, uma bronze persistida duplicaria ~4,7 mi linhas em texto sem nenhuma consulta que a leia. Nas fontes analíticas, o Parquet **é** a bronze e se paga: é o formato que o DuckDB lê direto e que permite recarregar o banco sem chamar a origem. Nas séries do Banco Central o payload é pequeno o bastante para a transformação inteira caber em memória, e gravar um Parquet intermediário só criaria um terceiro arquivo a versionar.
-
-## Dois destinos de silver, um por natureza de dado
-
-- **Postgres** guarda a referência do IPCA/INPC e o transacional do lojista: dado normalizado, com FKs e restrições, gravado por migrations em `migrations/`.
-- **DuckDB único** (`data/duckdb/inflatrack.duckdb`) guarda as séries analíticas. Um arquivo só, e não um por fonte, porque a pergunta do projeto cruza fontes — cruzar dentro de um arquivo é um `JOIN`, entre arquivos exigiria `ATTACH` em toda sessão. A decisão está no [ADR 0002](../adr/0002-duckdb-unico.md), e os esquemas em `scripts/setup_duckdb*.sql`.
-
-Nem toda silver é só fato: o clima trouxe a primeira **dimensão** do lado analítico (`estacao_meteorologica`, com nome, UF, coordenadas e altitude), lida em `join` pelo fato diário `clima_diario`.
+Da Bronze para cima a trilha deixa de ser por fonte: as oito entram como *sources* do dbt e saem como um modelo dimensional só.
 
 ## O que cada passagem faz
 
-**Raw → Bronze** — é onde mora a limpeza específica de cada origem:
+**Origem → Raw** — nenhuma transformação. O ingestor grava a resposta comprimida antes de olhar para o conteúdo. É o que permite reprocessar tudo sem chamar a API de novo, e é a única cópia do HTML do DIEESE, cuja extração depende do layout da página.
+
+**Raw → Bronze** — só parsing e tipagem: valor para numérico, período para data, cada origem com seu formato (`AAAAMM` no SIDRA, `DD/MM/YYYY` no SGS, `MM-DD-YYYY` no Olinda, ISO no resto; no DIEESE, a tabela HTML decodificada em `ISO-8859-1`). Cada linha sai com a data de ingestão e o arquivo de origem. Nenhuma regra de negócio entra aqui.
+
+**Bronze → Silver** — é onde o dbt trabalha. Um modelo de *staging* por fonte, que assume o tratamento:
 
 - **Marcadores de ausência:** o SIDRA usa `...`, `..`, `-` e `X`, e a Alpha Vantage usa `.`; todos são descartados, sem apagar valores negativos, que são deflação.
-- **Tipagem:** valor para numérico e período para data, cada origem com seu formato (`AAAAMM` no SIDRA, `DD/MM/YYYY` no SGS, `MM-DD-YYYY` no Olinda, ISO no resto).
-- **Texto para tabela:** no DIEESE não há JSON — a tabela HTML é lida do documento decodificado em `ISO-8859-1`, o mês em português vira número, o ano vem da linha de subtítulo e `R$ 1.621,00` vira `1621.00`.
 - **Deduplicação:** quando a origem devolve mais de um registro para a mesma data, fica o mais recente (no Olinda, o maior `dataHoraCotacao`).
-- **Calendário civil:** nas séries diárias do Banco Central, `ffill()` estica a última observação útil sobre fins de semana e feriados, e a coluna `observado` distingue publicação real de valor preenchido ([ADR 0003](../adr/0003-bcb-macro.md)). O clima reusa a mesma coluna `observado` para separar leitura de sensor de valor reconstruído.
-- **Atributos derivados:** razões que sempre acompanham o fato são calculadas aqui, não na consulta — é o caso de `multiplo_necessario_nominal` no salário mínimo.
+- **Calendário civil:** nas séries diárias, a última observação útil é esticada sobre fins de semana e feriados, e a coluna `observado` distingue publicação real de valor preenchido.
+- **Atributos derivados:** razões que sempre acompanham o fato, como `multiplo_necessario_nominal` no salário mínimo.
+- **Testes na própria transformação:** esquema, unicidade, integridade referencial, volume e ao menos um de distribuição.
 
-**Bronze → Silver** — carga idempotente, sempre reexecutável: `UPSERT` por chave natural de data (`ON CONFLICT DO UPDATE`) no DuckDB, índice único `observacao_versao_uk` no Postgres. A chave é o que a série tem de único — `ano_mes` no salário mínimo, o par `(estacao_id, data_referencia)` no clima. Rodar a mesma janela cem vezes converge para o mesmo estado.
+**Silver → Gold** — cruzamento e recorte, em tabelas materializadas no DuckDB: fato com granularidade declarada, dimensão de variação lenta para a cesta do IPCA, transposição para formato largo nas features e a matriz de treino dos modelos.
 
-**Silver → Gold** — cruzamento e recorte: transposição para formato largo (`PIVOT`) nas séries que alimentam o modelo, resolução de vigência de nome e escolha entre variável publicada e derivada no IPCA, razões e pesos setoriais no PIB.
+## Gold: o que a camada entrega
+
+| Tabela | Grão | Serve a |
+|---|---|---|
+| Fato do IPCA/INPC | uma linha por subitem, por localidade, por mês | painel e alvo do modelo |
+| Dimensão da cesta | uma linha por código, por vigência (variação lenta) | resolver o nome vigente sob renomeação |
+| Dimensão de localidade | uma linha por localidade medida pelo IPCA | recorte por praça |
+| Features macro | uma linha por mês, colunas por série | treino e explicação |
+| Matriz de treino | uma linha por mês, alvo + features defasadas | notebooks e MLflow |
 
 ## Qualidade
 
-- `just verificar-carga`: linhas, meses, localidades e categorias por fonte, contra o volume medido; lista meses faltando no meio da série (IPCA/INPC).
-- Restrições do banco na silver: FKs para cesta, localidade e variável no Postgres; PKs de data e FK `pib_valor → pib_setor` no DuckDB; PK composta `(estacao_id, data_referencia)` no clima; `mes_referencia` sempre no dia 1.
-- Falha explícita em vez de sucesso falso: payload inesperado, layout HTML alterado, resposta vazia, data inválida ou ausência de valor anterior para preencher o início da janela encerram a carga com código diferente de zero.
-- `just check` (formatação, lint e testes) cobre clientes HTTP, transformações e a idempotência do `UPSERT`.
+- **Testes do dbt** em cada camada, dentro da transformação: esquema, volume, unicidade, integridade referencial e distribuição. Substituem a verificação ad-hoc que hoje vive em `sql/verificar_carga.sql`.
+- **Linhagem** gerada por `dbt docs generate`: o grafo mostra de qual Parquet cada tabela da Gold descende.
+- **Freshness** declarada por *source*, com SLA para as tabelas de consumo.
+- **Falha explícita em vez de sucesso falso:** payload inesperado, layout HTML alterado, resposta vazia ou data inválida encerram a etapa com código diferente de zero, e o Dagster marca o ativo como não atualizado.
+- **Idempotência:** rodar a mesma janela cem vezes converge para o mesmo estado, na Raw (nome de arquivo por janela) e na Silver (modelo reconstruído a partir da Bronze).

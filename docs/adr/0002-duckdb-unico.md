@@ -56,14 +56,11 @@ volume que este projeto não tem.
 Regras que tornam B sustentável:
 
 1. **Prefixo por fonte** em toda tabela: `commodity_*`, `pib_*`.
-2. **Um `scripts/setup_duckdb*.sql` por fonte.** `scripts/init_db.py` aplica
-   todos em ordem; todos são idempotentes (`CREATE IF NOT EXISTS`,
-   `CREATE OR REPLACE VIEW`).
-3. **Um Parquet por fonte em subpasta própria** (`data/parquet/pib/`). O glob
+2. **Um Parquet por fonte em subpasta própria** (`data/parquet/pib/`). O glob
    raso `data/parquet/*.parquet` da carga de commodities pressupõe o esquema
    `(symbol, data_referencia, preco)` — misturar esquemas na mesma pasta quebra
    a carga da outra fonte. Esta foi a única armadilha concreta encontrada.
-4. **Cargas em sequência**, nunca em paralelo, enquanto o escritor for único.
+3. **Cargas em sequência**, nunca em paralelo, enquanto o escritor for único.
 
 ## Consequências
 
