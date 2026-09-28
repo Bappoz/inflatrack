@@ -99,3 +99,21 @@ seed-commodities:
 
 # Macroeconomia de ponta a ponta, em sequência por causa do escritor único do DuckDB.
 seed-macro: seed-dolar seed-selic seed-commodities
+
+# DIEESE: Salário Mínimo Nominal e Necessário
+salario-minimo-ingest:
+    uv run python -m inflatrack.ingest_salario_minimo
+
+salario-minimo-load:
+    uv run python -m inflatrack.load_salario_minimo
+
+salario-minimo: salario-minimo-ingest salario-minimo-load
+
+# INMET: Dados de Clima e Estações
+clima-ingest:
+    uv run python -m inflatrack.ingest_clima --apenas-estacoes
+
+clima-load:
+    uv run python -m inflatrack.load_clima
+
+clima: clima-ingest clima-load

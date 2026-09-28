@@ -80,6 +80,8 @@ Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
 |---|---|---|---|---|
 | [Alpha Vantage](https://www.alphavantage.co/) | Commodities e Energia | Séries históricas | Diária / Mensal | Cotações de petróleo, gás natural e commodities agrícolas |
 | [World Bank API](https://data.worldbank.org/country/china) | PIB da China | 1960 – 2025 | Anual | Indicador antecedente de demanda global por commodities |
+| [DIEESE](https://www.dieese.org.br/analisecestabasica/salarioMinimo.html) | Salário Mínimo Nominal e Necessário | 1994 – | Mensal | Paralelo entre poder de compra familiar e inflação de preços |
+| [INMET](https://portal.inmet.gov.br/) | Dados do Clima Diário | Histórico contínuo | Diária | Variável explicativa de choques climáticos sobre safras e preços agrícolas |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 
@@ -108,6 +110,8 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 | `sql/` | Consultas de verificação de carga |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/fontes/pib_china.md` | Caracterização completa da fonte do PIB da China |
+| `docs/fontes/salario_minimo.md` | Caracterização completa da fonte de Salário Mínimo (DIEESE) |
+| `docs/fontes/clima.md` | Caracterização completa da fonte de Dados do Clima Diário (INMET) |
 | `mkdocs.yml` | Configuração da documentação (Material for MkDocs) e GitHub Pages |
 
 ## Documentação
