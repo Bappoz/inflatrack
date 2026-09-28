@@ -10,35 +10,23 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 | Nº | Consulta em português | Quem pergunta | Frequência | Tipo | Onde aparece |
 |---|---|---|---|---|---|
-| **1** | Quantas bicicletas estão emprestadas agora? | Equipe de manutenção | ~200 / dia | Agregada | Painel da equipe de manutenção |
-| **2** | Qual foi a inflação acumulada do meu setor nos últimos 12 meses, para eu embasar o reajuste? | Lojista | ~5 / dia (por lojista) | Pontual | Tela inicial do lojista (card principal) |
-| **3** | Em quais meses do ano historicamente ocorrem os maiores picos de inflação nos produtos que eu comercializo? | Lojista | ~1 / dia | Agregada | Relatório de sazonalidade |
-| **4** | Como a inflação acumulada de 2006 até hoje impactou o poder de compra da categoria que eu vendo? | Lojista | < 1 / dia | Agregada | Relatório "Poder de Compra" |
-| **5** | Qual a diferença entre a inflação geral e a da minha região nos últimos 5 anos, para eu planejar expansão ou preço local? | Lojista | ~1 / dia | Agregada | Tela de comparação regional / mapa |
-| **6** | Qual taxa de reajuste mínima devo aplicar aos meus produtos para não perder margem em relação ao IPCA do último ano? | Lojista | ~10 / dia | Pontual (gera escrita) | Tela de sugestão de reajuste e botão "aplicar reajuste" |
-| **7** | Como a alta do Dólar no último semestre impactou a inflação (IPCA) dos produtos importados do meu setor? | Lojista / Analista | ~5 / dia | Agregada | Relatório "Impacto Cambial" |
-| **8** | Qual a relação entre meses de seca (baixa precipitação/clima extremo) e os picos de inflação nos produtos agrícolas que eu vendo? | Lojista (Setor Alimentício) | ~2 / dia | Agregada | Painel "Sazonalidade Climática" |
-| **9** | A inflação atual está ocorrendo num período de aquecimento econômico (PIB em alta) ou em recessão? | Planejamento Estratégico | < 1 / dia (trimestral) | Agregada | Relatório de Contexto Macroeconômico |
-| **10** | Com a Selic atual, compensa eu repassar a inflação agora para o cliente, ou o custo de oportunidade (juros) compensa absorver a margem temporariamente? | Lojista (Gestor Financeiro) | ~10 / dia | Pontual (cálculo rápido) | Ferramenta "Simulador de Repasse vs Rendimento" |
-| **11** | Qual é a correlação matemática entre os picos do Dólar (volatilidade intraday) e o encarecimento imediato da cesta de produtos importados que eu vendo? | Algoritmo / Lojista | ~1 / dia | Agregada | Ferramenta "Simulador de Repasse Cambial" |
-| **12** | Considerando o aperto monetário (alta da Selic) nos últimos 3 meses, as vendas do meu setor retraíram a ponto de eu ter que absorver parte da inflação em vez de repassar ao cliente? | Planejamento Estratégico | < 5 / mês | Agregada | Relatório de Contexto Macroeconômico |
+| **1** | Qual foi a inflação acumulada do meu setor nos últimos 12 meses, para eu embasar o reajuste? | Lojista | ~5 / dia (por lojista) | Pontual | Tela inicial do lojista (card principal) |
+| **2** | Em quais meses do ano historicamente ocorrem os maiores picos de inflação nos produtos que eu comercializo? | Lojista | ~1 / dia | Agregada | Relatório de sazonalidade |
+| **3** | Como a inflação acumulada de 2006 até hoje impactou o poder de compra da categoria que eu vendo? | Lojista | < 1 / dia | Agregada | Relatório "Poder de Compra" |
+| **4** | Qual a diferença entre a inflação geral e a da minha região nos últimos 5 anos, para eu planejar expansão ou preço local? | Lojista | ~1 / dia | Agregada | Tela de comparação regional / mapa |
+| **5** | Qual taxa de reajuste mínima devo aplicar aos meus produtos para não perder margem em relação ao IPCA do último ano? | Lojista | ~10 / dia | Pontual (gera escrita) | Tela de sugestão de reajuste e botão "aplicar reajuste" |
+| **6** | Como a alta do Dólar no último semestre impactou a inflação (IPCA) dos produtos importados do meu setor? | Lojista / Analista | ~5 / dia | Agregada | Relatório "Impacto Cambial" |
+| **7** | Qual a relação entre meses de seca (baixa precipitação/clima extremo) e os picos de inflação nos produtos agrícolas que eu vendo? | Lojista (Setor Alimentício) | ~2 / dia | Agregada | Painel "Sazonalidade Climática" |
+| **8** | A inflação atual está ocorrendo num período de aquecimento econômico (PIB em alta) ou em recessão? | Planejamento Estratégico | < 1 / dia(análise trimestral) | Agregada | Relatório de Contexto Macroeconômico |
+| **9** | Com a Selic atual, compensa eu repassar a inflação agora para o cliente, ou o custo de oportunidade (juros) compensa absorver a margem temporariamente? | Lojista (Gestor Financeiro) | ~10 / dia | Pontual (cálculo rápido) | Ferramenta "Simulador de Repasse vs Rendimento" |
+| **10** | Qual é a correlação matemática entre os picos do Dólar (volatilidade intraday) e o encarecimento imediato da cesta de produtos importados que eu vendo? | Algoritmo / Lojista | ~1 / dia | Agregada | Ferramenta "Simulador de Repasse Cambial" |
+| **11** | Considerando o aperto monetário (alta da Selic) nos últimos 3 meses, as vendas do meu setor retraíram a ponto de eu ter que absorver parte da inflação em vez de repassar ao cliente? | Planejamento Estratégico | < 5 / dia  (Acesso esporádico para planejamento mensal) | Agregada | Relatório de Contexto Macroeconômico |
 
 ---
 
 ## Detalhamento Técnico das Consultas
 
-### Consulta 1: Quantidade de empréstimos ativos
-* **Pergunta**: Quantas bicicletas estão emprestadas agora?
-* **Quem pergunta**: Equipe de manutenção (~200/dia)
-* **Tipo**: Agregada
-* **Modelo ideal**: Relacional *(sofrida em: Documento)*
-* **Por quê**: Exige contar registros com filtro — trivial com índice e SQL.
-* **Onde aparece**: Painel da equipe de manutenção
-* **Observações**: Precisa refletir o estado do momento.
-
----
-
-### Consulta 2: Inflação acumulada do setor (12 meses)
+### Consulta 1: Inflação acumulada do setor (12 meses)
 * **Pergunta**: Qual foi a inflação acumulada do meu setor nos últimos 12 meses, para eu embasar o reajuste?
 * **Quem pergunta**: Lojista (~5/dia por lojista)
 * **Tipo**: Pontual
@@ -49,7 +37,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 3: Picos históricos de inflação por produto
+### Consulta 2: Picos históricos de inflação por produto
 * **Pergunta**: Em quais meses do ano historicamente ocorrem os maiores picos de inflação nos produtos que eu comercializo?
 * **Quem pergunta**: Lojista (~1/dia)
 * **Tipo**: Agregada
@@ -60,7 +48,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 4: Impacto histórico acumulado no poder de compra (desde 2006)
+### Consulta 3: Impacto histórico acumulado no poder de compra (desde 2006)
 * **Pergunta**: Como a inflação acumulada de 2006 até hoje impactou o poder de compra da categoria que eu vendo?
 * **Quem pergunta**: Lojista (< 1/dia)
 * **Tipo**: Agregada
@@ -71,7 +59,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 5: Comparação Regional vs. Inflação Geral
+### Consulta 4: Comparação Regional vs. Inflação Geral
 * **Pergunta**: Qual a diferença entre a inflação geral e a da minha região nos últimos 5 anos, para eu planejar expansão ou preço local?
 * **Quem pergunta**: Lojista (~1/dia)
 * **Tipo**: Agregada
@@ -82,7 +70,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 6: Sugestão de Taxa de Reajuste Mínima
+### Consulta 5: Sugestão de Taxa de Reajuste Mínima
 * **Pergunta**: Qual taxa de reajuste mínima devo aplicar aos meus produtos para não perder margem em relação ao IPCA do último ano?
 * **Quem pergunta**: Lojista (~10/dia — ação principal)
 * **Tipo**: Pontual (gera escrita)
@@ -93,7 +81,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 7: Impacto Cambial (Dólar vs. IPCA de Importados)
+### Consulta 6: Impacto Cambial (Dólar vs. IPCA de Importados)
 * **Pergunta**: Como a alta do Dólar no último semestre impactou a inflação (IPCA) dos produtos importados do meu setor?
 * **Quem pergunta**: Lojista / Analista (~5/dia)
 * **Tipo**: Agregada
@@ -104,7 +92,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 8: Sazonalidade Climática vs. Inflação Agrícola
+### Consulta 7: Sazonalidade Climática vs. Inflação Agrícola
 * **Pergunta**: Qual a relação entre meses de seca (baixa precipitação/clima extremo) e os picos de inflação nos produtos agrícolas que eu vendo?
 * **Quem pergunta**: Lojista - Setor Alimentício (~2/dia)
 * **Tipo**: Agregada
@@ -115,7 +103,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 9: Contexto Macroeconômico (Inflação vs. PIB)
+### Consulta 8: Contexto Macroeconômico (Inflação vs. PIB)
 * **Pergunta**: A inflação atual está ocorrendo num período de aquecimento econômico (PIB em alta) ou em recessão?
 * **Quem pergunta**: Planejamento Estratégico (< 1/dia - trimestral)
 * **Tipo**: Agregada
@@ -126,7 +114,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 10: Custos de Oportunidade (Selic vs. Repasse de Margem)
+### Consulta 9: Custos de Oportunidade (Selic vs. Repasse de Margem)
 * **Pergunta**: Com a Selic atual, compensa eu repassar a inflação agora para o cliente, ou o custo de oportunidade (juros) compensa absorver a margem temporariamente?
 * **Quem pergunta**: Lojista / Gestor Financeiro (~10/dia)
 * **Tipo**: Pontual (cálculo rápido)
@@ -137,7 +125,7 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 11: Correlação de Volatilidade Cambial Intraday
+### Consulta 10: Correlação de Volatilidade Cambial Intraday
 * **Pergunta**: Qual é a correlação matemática entre os picos do Dólar (volatilidade intraday) e o encarecimento imediato da cesta de produtos importados que eu vendo?
 * **Quem pergunta**: Algoritmo de Previsão de Preços / Lojista (~1/dia)
 * **Tipo**: Agregada
@@ -148,9 +136,9 @@ Esta página documenta o catálogo de perguntas de negócio que o **InflaTrack**
 
 ---
 
-### Consulta 12: Análise de Aperto Monetário e Vendas do Setor
+### Consulta 11: Análise de Aperto Monetário e Vendas do Setor
 * **Pergunta**: Considerando o aperto monetário (alta da Selic) nos últimos 3 meses, as vendas do meu setor retraíram a ponto de eu ter que absorver parte da inflação em vez de repassar ao cliente?
-* **Quem pergunta**: Planejamento Estratégico / Gestor Financeiro (< 5/mês)
+* **Quem pergunta**: Planejamento Estratégico / Gestor Financeiro (< 5/dia)
 * **Tipo**: Agregada
 * **Modelo ideal**: Série temporal *(sofrida em: Chave-Valor)*
 * **Por quê**: Analisar "alta ao longo de 3 meses" requer varredura de intervalo (Range Scan). Séries temporais fatiam intervalos de 90 dias com um único comando matemático.
