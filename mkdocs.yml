@@ -67,9 +67,9 @@ nav:
       - Tabela fontes: arquitetura/fonteDados.md
       - IPCA/INPC (SIDRA): fontes/sidra.md
       - Commodities e Energia: fontes/commodities.md
-      - PIB e Setores (SIDRA 1846): fontes/pib.md
       - Dólar Comercial (BCB/Olinda): fontes/dolar.md
       - Taxa SELIC (BCB/SGS): fontes/selic.md
+      - PIB e Setores (SIDRA 1846): fontes/pib.md
       - PIB da China (World Bank): fontes/pib_china.md
       - Salário Mínimo (DIEESE): fontes/salario_minimo.md
       - Dados do Clima (INMET): fontes/clima.md
@@ -86,7 +86,7 @@ nav:
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
     - Commodities e Energia (Alpha Vantage): dicionario/commodities.md
-    - Macroeconomia (BCB): dicionario/macroeconomia.md
+    - Macroeconomia (Dólar e Selic): dicionario/macroeconomia.md
     - PIB e Setores (SIDRA 1846): dicionario/pib.md
     - PIB da China (World Bank): dicionario/pib_china.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
@@ -95,6 +95,7 @@ nav:
   - Evidências:
     - SIDRA (IPCA): evidencias/evidencias.md
     - Macroeconomia: evidencias/evidencias_macro.md
+    - Uso de IA: evidencias/uso_ia.md
 
 extra_css:
   - stylesheets/extra.css

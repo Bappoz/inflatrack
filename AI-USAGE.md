@@ -468,3 +468,133 @@ erro nenhum.
 - Definir se a ingestão do clima coletará a totalidade das 673 estações nacionais ou aplicará filtro geográfico prévio para os principais polos produtores de commodities agrícolas.
 - Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
 
+
+---
+
+## 2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas
+
+**O que a ferramenta fez**
+- Reescreveu as quatro páginas de `docs/arquitetura/`: `visaoGeral.md`, `fluxoDados.md`,
+  `arquiteturaMedallion.md` e `componentes.md`, que ainda descreviam seis fontes e
+  ignoravam Salário Mínimo (DIEESE) e Clima (INMET).
+- **Visão Geral:** passou a contar oito conjuntos de dados vindos de seis provedores,
+  registrou que o DIEESE é a primeira origem sem API (raspagem de HTML) e acrescentou
+  um requisito não funcional sobre acoplamento ao layout da origem.
+- **Fluxo de Dados:** redesenhou o diagrama Mermaid com as seis origens e as cinco
+  subpastas de raw, acrescentou a seção "Caminho das fontes analíticas" (o padrão
+  cliente → ingestor → carregador), completou a tabela de cadência com PIB, PIB da
+  China, DIEESE e INMET, e registrou a restrição de escritor único do DuckDB.
+- **Medallion:** acrescentou as duas fontes novas à trilha de camadas, documentou o
+  passo "texto para tabela" (HTML → DataFrame) na passagem raw → bronze, o reúso da
+  coluna `observado` no clima e a primeira dimensão do lado analítico
+  (`estacao_meteorologica`).
+- **Componentes:** reescrito por **papel** em vez de por fonte, como pedido. Descreve o
+  contrato dos três módulos (cliente da origem, ingestor, carregador), a assimetria
+  entre migrations no Postgres e esquema declarado e reaplicado no DuckDB, a
+  infraestrutura, a orquestração pelo `justfile` e a configuração por `.env`. A
+  amarração com o código específico ficou numa tabela "Mapa dos módulos" ao fim.
+
+**Avaliação pedida e recusada**
+- A Squad pediu para avaliar se valia fundir `arquiteturaMedallion.md` e
+  `componentes.md` num arquivo só. A recomendação foi **não fundir**: as duas páginas
+  respondem perguntas diferentes (como o dado progride entre camadas × qual código
+  executa cada passagem), e a fusão produziria uma página longa sem público único.
+  O acoplamento entre elas foi resolvido com links cruzados.
+
+**O que foi verificado e como**
+- Todo caminho, nome de tabela, de view, de receita do `just` e de variável de ambiente
+  foi lido do código antes de ser escrito: `src/inflatrack/*.py`,
+  `scripts/setup_duckdb*.sql`, `scripts/init_db.py`, `justfile`, `docker-compose.yml`,
+  `pyproject.toml` e `tests/`.
+- Confirmado no código, e não na documentação anterior, que Dólar e Selic não têm
+  `load_*.py`: o próprio `ingest_*.py` carrega. Isso virou uma nota explícita em
+  Componentes.
+- Confirmado que o DIEESE é parseado com `re` e `html` da biblioteca padrão, sem
+  BeautifulSoup — a stack foi corrigida para dizer isso.
+- `uv run --group docs mkdocs build --strict` passou, sem alerta novo.
+
+**O que NÃO foi verificado**
+- Nenhuma carga foi executada nesta sessão; nada foi conferido contra banco real.
+- Os volumes herdados (~4,7 mi linhas de IPCA, ~2,2 GB) não foram remedidos.
+- **Divergência encontrada e não corrigida:** `docs/pipeline/pipelineClima.md` afirma que
+  a bronze do clima é Parquet particionado em `data/parquet/clima/ano=YYYY/mes=MM/`,
+  mas `src/inflatrack/ingest_clima.py` grava dois arquivos planos
+  (`estacoes.parquet` e `clima_diario.parquet`). As páginas de arquitetura seguem o
+  código; a página de pipeline continua divergente.
+
+**Decisões que continuam sendo da Squad**
+- Resolver a divergência acima: ou o ingestor passa a particionar, ou a página de
+  pipeline é corrigida.
+- Se Salário Mínimo e Clima merecem views de gold próprias no DuckDB — hoje ambas
+  estão marcadas como planejadas na trilha do Medallion.
+- Se `just verificar-carga` deve ganhar checagens para as fontes que moram no DuckDB
+  (pergunta que já vinha aberta da sessão anterior e segue aberta).
+
+---
+
+## 2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB
+
+Sessão de **análise, sem alteração de código ou de esquema**. A Squad perguntou se
+mover o IPCA para o DuckDB quebraria o fluxo atual.
+
+**O que a ferramenta fez**
+- Reconstruiu o quadro a partir do código, e não da documentação: `migrations/0001`,
+  `migrations/0002`, `migrations/0003`, `src/inflatrack/ingest.py`,
+  `scripts/setup_duckdb*.sql`, `justfile` e os dois ADRs existentes. Registrou que a
+  "discussão anterior" citada pela Squad **não está no repositório** (nem em ADR, nem em
+  commit, nem neste arquivo).
+- Mediu, com DuckDB e 6,4 mi de linhas sintéticas no formato de `observacao`:
+  pergunta 1 (subitem+praça+variável, 24 meses) em **14 ms**, pergunta 3 (série inteira
+  agregada) em **20 ms**, tabela em Parquet comprimido em **39,4 MB**, e confirmou que
+  `ON CONFLICT DO NOTHING` funciona com o `UNIQUE` de 6 colunas que a carga usa hoje.
+  Conclusão: desempenho não é o obstáculo e a semântica insert-only sobrevive.
+- Confirmou que o DuckDB suporta FK dentro do arquivo (já em uso em
+  `pib_valor → pib_setor`) e que a extensão `postgres` instala e carrega, então `ATTACH`
+  de Postgres é possível.
+- Identificou o obstáculo real: as **três FKs do transacional** apontando para a
+  referência do IPCA (`lojista.codigo_localidade`, `lojista.codigo_grupo_ipca`,
+  `produto.codigo_subitem_ipca`). FK entre engines não existe, e o comentário da própria
+  migration diz que sem essa garantia "o painel calcula reajuste sobre a categoria
+  errada e nada acusa o erro".
+- Levantou os efeitos colaterais: pergunta 5 e pergunta 1 virariam cross-engine,
+  `just verificar-carga` precisaria de reescrita, e a carga mais longa do projeto
+  (`just seed`) passaria a bloquear as outras pela regra de escritor único do ADR 0002.
+- Depois de a Squad apontar que o IPCA é o **alvo** do modelo preditivo, revisou o peso
+  do argumento: todas as outras sete fontes estão documentadas como variáveis
+  explicativas, todas as views de feature estão no DuckDB e o alvo está no Postgres —
+  hoje não existe consulta única que monte a matriz de treino. Isso reforça mover o
+  **fato**, não as dimensões, já que o treino consome as colunas de `observacao` e não
+  os nomes de `classificacao_versao`.
+- Levantou duas armadilhas de gold que a migração expõe: (a) sendo insert-only, uma
+  revisão do IBGE deixa mais de uma linha por chave, e um `SELECT` de treino ingênuo
+  duplica o mês revisado sem erro — precisa desempatar por `ingerido_em`; (b)
+  granularidades diferentes (diária, mensal, trimestral, anual) exigem espinha mensal e
+  defasagem, porque o IPCA do mês M só é publicado entre os dias 9 e 12 de M+1 e usar
+  feature do próprio mês M vaza futuro. A variável 2265 (acumulado 12 meses) é função do
+  alvo e não pode entrar como feature.
+
+**Recomendação registrada**
+- Mover só `observacao` para o DuckDB; dimensões ficam no Postgres e são replicadas
+  read-only para o DuckDB, preservando FK real nos dois lados. Entregável que fecha a
+  história: uma view `vw_treino_ipca_mensal`.
+
+**O que foi verificado e como**
+- Os números acima vieram de execução real de DuckDB nesta sessão, com dado
+  **sintético** no formato do `observacao`.
+- As FKs, restrições e comentários citados foram lidos das migrations, não da
+  documentação.
+
+**O que NÃO foi verificado**
+- **O benchmark não usou dado real do IPCA.** A cardinalidade sintética aproxima a real
+  (460 subitens, 17 localidades, 5 fontes, 560 meses, 4 variáveis), mas não a reproduz;
+  os tempos devem ser refeitos sobre a série carregada antes de entrarem num ADR como
+  medição.
+- Nada foi medido no Postgres para comparação — a Medição do ADR 0001 continua pendente.
+- Nenhuma linha de código, esquema ou migration foi alterada.
+
+**Decisões que continuam sendo da Squad**
+- Escolher entre mover só o fato, mover o IPCA inteiro, ou não mover antes de resolver a
+  Medição do ADR 0001.
+- Escrever o ADR 0004, que revisita o ADR 0002 (escopado explicitamente a "só a camada
+  analítica") e decide o destino da Medição pendente do ADR 0001, que compara CRUD ×
+  insert-only dentro do Postgres e perde o sentido como está escrita se o engine mudar.

@@ -1,4 +1,4 @@
-# Macroeconomia (BCB) — Dicionário de Dados
+# Macroeconomia (Dólar e Selic) — Dicionário de Dados
 
 ## Contexto
 

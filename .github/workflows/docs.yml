@@ -7,6 +7,7 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "AI-USAGE.md"
       - "pyproject.toml"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
