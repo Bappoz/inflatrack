@@ -412,6 +412,39 @@ erro nenhum.
 - Se a troca SGS→Olinda merece um ADR próprio ou uma seção no ADR 0003.
 - Se vale particionar o raw do BCB por ano para eliminar as janelas repetidas.
 
+## 2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura
+
+**O que a ferramenta fez**
+- Reescreveu `docs/arquitetura/arquiteturaMedallion.md`, que descrevia apenas o
+  IPCA/SIDRA, para cobrir as seis fontes: tabela com o significado de cada
+  camada no repositório e tabela com a trilha Raw → Bronze → Silver → Gold de
+  cada fonte, com os caminhos e nomes de tabela reais.
+- Registrou os três padrões de bronze que o repositório tem hoje: Parquet nas
+  fontes analíticas, tabela temporária `carga` no IPCA e transformação apenas em
+  memória nas séries do Banco Central.
+- Atualizou `docs/arquitetura/visaoGeral.md`: nova seção de fontes com as seis
+  origens e seus destinos, stack com os dois bancos (Postgres e DuckDB único) e
+  as bibliotecas realmente usadas, e dois requisitos não funcionais que estavam
+  implícitos (idempotência da carga e resiliência a falha de origem).
+
+**O que foi verificado e como**
+- Caminhos, nomes de tabela e de view foram lidos de `src/inflatrack/*.py` e
+  `scripts/setup_duckdb*.sql`; as bibliotecas, de `pyproject.toml` e dos imports.
+- `uv run --group docs mkdocs build --strict` passou após cada edição.
+- O status "proposto" dos ADRs 0002 e 0003 foi conferido nos próprios arquivos
+  antes de citá-los.
+
+**O que NÃO foi verificado**
+- Os volumes herdados do texto anterior (~4,7 mi linhas de IPCA, ~2,2 GB de
+  carga) não foram remedidos nesta sessão.
+- Os requisitos de latência continuam metas de projeto, sem medição.
+
+**Decisões que continuam sendo da Squad**
+- Se Dólar e Selic merecem uma view de gold própria no DuckDB (hoje o
+  cruzamento é feito no `join` de cada notebook).
+- Se o `verificar-carga` deve ganhar checagens equivalentes para as fontes que
+  moram no DuckDB.
+
 ---
 
 ## 2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)

@@ -85,8 +85,10 @@ nav:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
-    - Macroeconomia: dicionario/macroeconomia.md
+    - Commodities e Energia (Alpha Vantage): dicionario/commodities.md
+    - Macroeconomia (BCB): dicionario/macroeconomia.md
     - PIB e Setores (SIDRA 1846): dicionario/pib.md
+    - PIB da China (World Bank): dicionario/pib_china.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
   - Visualização: visualizacao/visualizacao.md

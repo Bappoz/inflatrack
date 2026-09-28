@@ -54,6 +54,8 @@ O cliente ([selic_sgs.py](https://github.com/Bappoz/inflatrack/blob/main/src/inf
 | **Justificativa da escolha** | A série tem uma única métrica numérica por dia, então não há ganho em inserir uma camada Parquet entre o raw e o banco: o payload cabe em memória e a transformação é um `ffill()` sobre um `date_range`. O DuckDB embarcado dá SQL analítico e `UPSERT` idempotente por `data_referencia` sem servidor, e o `.json.gz` preserva a resposta original do BCB para auditoria e reprocessamento — a Squad consegue reconstruir a tabela do zero sem chamar a API de novo. |
 | **Ganho esperado** *(se houver troca)* | Não há troca de formato prevista. O ganho disponível é operacional: gravar o raw em arquivos particionados por ano (ou sobrescrever um único arquivo canônico) elimina a redundância dos ~4 MB/ano de janelas repetidas. |
 
+Detalhamento campo a campo das tabelas: [Dicionário de Dados — Macroeconomia (BCB)](../dicionario/macroeconomia.md).
+
 ---
 
 ## 3. Carga de trabalho

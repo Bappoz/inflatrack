@@ -54,6 +54,8 @@ Essa troca de API não tem ADR próprio ainda; o [ADR 0003](../adr/0003-bcb-macr
 | **Justificativa da escolha** | São duas métricas numéricas por dia; o payload cabe em memória e a transformação é uma deduplicação mais um `ffill()` sobre um `date_range`, então uma camada Parquet entre o raw e o banco não pagaria seu custo. O DuckDB embarcado dá SQL analítico e `UPSERT` idempotente por `data_referencia` sem servidor, e o `.json.gz` preserva a resposta original do BCB — inclusive os boletins intradiários descartados, o que permite auditar a escolha do fechamento e reprocessar sem chamar a API de novo. |
 | **Ganho esperado** *(se houver troca)* | Não há troca de formato prevista. O ganho disponível é operacional: particionar o raw por ano (ou manter um arquivo canônico sobrescrito) elimina a redundância das janelas repetidas, que aqui pesa mais que na Selic porque o arquivo guarda todos os boletins do período. |
 
+Detalhamento campo a campo das tabelas: [Dicionário de Dados — Macroeconomia (BCB)](../dicionario/macroeconomia.md).
+
 ---
 
 ## 3. Carga de trabalho

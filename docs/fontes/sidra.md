@@ -53,6 +53,8 @@ O dado passa por duas camadas com natureza diferente (ELT: grava a resposta crua
 | **Justificativa da escolha** | Existe para reprocessar sem chamar a API e provar de onde veio o número. Converter destruiria a auditoria; gzip porque o JSON repete as chaves em cada objeto | O valor da consulta está no JOIN com a hierarquia da cesta e com o produto do lojista (FK do subitem). Colunar trocaria a escrita transacional barata por leitura analítica, que só as perguntas 2 e 3 precisam |
 | **Ganho esperado** | 18× menos disco (10,4 MB → 0,6 MB por mês, medido) | Na E1, nenhuma troca de formato |
 
+Detalhamento campo a campo das tabelas: [Dicionário de Dados — SIDRA/IBGE](../dicionario/sidra.md).
+
 ---
 
 ## 3. Carga de trabalho

@@ -50,6 +50,8 @@ Todas as séries são obtidas diretamente da API do Banco Mundial (`api.worldban
 | **Justificativa da escolha** | O DuckDB único segue o [ADR 0002](../adr/0002-duckdb-unico.md) e permite junções temporais diretas com `commodity_cotacao`, conectando o crescimento chinês aos preços de commodities. |
 | **Ganho esperado** *(se houver troca)* | Zero custo adicional de infraestrutura e latência imperceptível em consultas OLAP. |
 
+Detalhamento campo a campo das tabelas: [Dicionário de Dados — PIB da China](../dicionario/pib_china.md).
+
 ---
 
 ## 3. Carga de trabalho

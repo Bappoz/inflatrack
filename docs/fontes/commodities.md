@@ -57,6 +57,8 @@ Todas as séries são obtidas diretamente da API da Alpha Vantage (`www.alphavan
 | **Justificativa da escolha** | A tabela principal `commodity_cotacao` segue o formato longo (Tall), permitindo adição fácil de novas commodities sem quebrar schemas (flexibilidade típica de Data Engineering). Ao mesmo tempo, a modelagem via DuckDB fornece o processamento OLAP super-rápido para transpor os dados (Wide format) diretamente em Views locais (`vw_features_daily` e `vw_features_monthly`), poupando os Cientistas de Dados do esforço inicial de pivotamento manual. |
 | **Ganho esperado** *(se houver troca)* | Agrega a flexibilidade e escalabilidade do modelo dimensional (sem necessidade de um DW pesado em nuvem) com o ecossistema Python local, suportando imputações (`.ffill()`) nativas no Pandas em milissegundos a partir da conexão direta DuckDB -> Pandas DataFrame. |
 
+Detalhamento campo a campo das tabelas e views: [Dicionário de Dados — Commodities e Energia](../dicionario/commodities.md).
+
 ---
 
 ## 3. Carga de trabalho

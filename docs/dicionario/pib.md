@@ -4,7 +4,7 @@
 
 Tabelas que recebem as Contas Nacionais Trimestrais do IBGE (agregado 1846, variável 585, classificação `c11255`). Esquema definido em `scripts/setup_duckdb_pib.sql` e aplicado por `scripts/init_db.py`; as linhas vêm de `src/inflatrack/load_pib.py`, a partir do Parquet gerado por `src/inflatrack/ingest_pib.py`.
 
-Esta é a **única fonte do projeto que não vive no PostgreSQL**. Fica no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo das commodities — ver [ADR 0002](../adr/0002-duckdb-unico.md). O critério não foi volume (2.806 linhas), e sim padrão de acesso: a pergunta do InflaTrack cruza fontes, e num arquivo só isso é `JOIN`.
+Esta é uma das fontes **analíticas**, que não vivem no PostgreSQL. Fica no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo das [commodities](commodities.md), das [séries do BCB](macroeconomia.md) e do [PIB da China](pib_china.md) — ver [ADR 0002](../adr/0002-duckdb-unico.md). O critério não foi volume (2.806 linhas), e sim padrão de acesso: a pergunta do InflaTrack cruza fontes, e num arquivo só isso é `JOIN`.
 
 Três decisões moldam o esquema:
 
