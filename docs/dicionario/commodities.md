@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Tabelas que recebem as séries de preço de energia e agrícolas da Alpha Vantage. Esquema definido em `scripts/setup_duckdb.sql`; as linhas vêm de `src/inflatrack/load_commodities.py`, a partir dos Parquet gerados por `src/inflatrack/ingest_commodities.py`.
+Tabelas que recebem as séries de preço de energia e agrícolas da Alpha Vantage. Esquema definido em `scripts/setup_duckdb.sql` e aplicado pela própria carga; as linhas vêm de `src/inflatrack/load_commodities.py`, a partir dos Parquet gerados por `src/inflatrack/ingest_commodities.py`.
 
 Vive no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo do PIB e das séries do Banco Central — ver [ADR 0002](../adr/0002-duckdb-unico.md).
 

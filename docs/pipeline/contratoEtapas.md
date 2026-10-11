@@ -6,8 +6,8 @@ São sete etapas. Elas estão desenhadas em [Fluxo de Dados](../arquitetura/flux
 
 | # | Etapa | Status |
 |---|---|---|
-| **E1** | Extração e aterrissagem (Raw) | Em uso |
-| **E2** | Materialização Bronze (Parquet) | Em uso |
+| **E1** | Extração e aterrissagem (Raw) | Em uso (Dagster) |
+| **E2** | Materialização Bronze (Parquet) | Em uso (Dagster) |
 | **E3** | Silver (dbt) | Planejado |
 | **E4** | Gold (dbt marts) | Planejado |
 | **E5** | Matriz de treino e modelos | Planejado |

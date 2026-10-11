@@ -15,14 +15,13 @@ ALPHAVANTAGE_API_KEY=sua_chave_aqui
 
 ## 2. Inicialização do Banco de Dados
 
-O primeiro passo é garantir que o arquivo do DuckDB (`data/duckdb/inflatrack.duckdb`), as suas tabelas base e suas visualizações (views) existam. 
-Para inicializar o banco pela primeira vez (ou recriar suas estruturas), execute a partir da raiz do projeto:
+Não há passo manual: a carga (`load_commodities`, etapa 4) aplica `scripts/setup_duckdb.sql` antes de gravar, e cria o arquivo `data/duckdb/inflatrack.duckdb`, as tabelas `commodity` (dimensão) e `commodity_cotacao` (fatos) e as views `vw_features_daily` e `vw_features_monthly` se ainda não existirem. O script é idempotente, então rodar de novo não apaga dado.
+
+Para preparar todas as fontes do DuckDB de uma vez, sem carregar dados, ainda é possível rodar:
 
 ```bash
 uv run python scripts/init_db.py
 ```
-
-Isso criará as tabelas `commodity` (dimensão), `commodity_cotacao` (fatos) e a view em formato colunar `vw_commodities_features`.
 
 ## 3. Ingestão dos Dados (Raw / Parquet)
 
@@ -57,6 +56,6 @@ Caso deseje testar a visualização dos dados via Python, você pode rodar o seg
 ```python
 import duckdb
 conn = duckdb.connect("data/duckdb/inflatrack.duckdb")
-df = conn.execute("SELECT * FROM vw_commodities_features ORDER BY data_referencia DESC LIMIT 5").df()
+df = conn.execute("SELECT * FROM vw_features_daily ORDER BY data_referencia DESC LIMIT 5").df()
 print(df)
 ```

@@ -30,6 +30,10 @@ from inflatrack import sidra
 
 logger = logging.getLogger("inflatrack.ingest")
 
+# Sem limite, uma conexão a um Postgres fora do ar fica minutos pendurada no Windows. O
+# valor vale por endereço: `localhost` tenta ::1 e 127.0.0.1, então a falha leva ~2x isso.
+TIMEOUT_CONEXAO_S = 5
+
 COLUNAS_OBSERVACAO = (
     "id_fonte",
     "codigo_classificacao",
@@ -146,7 +150,10 @@ def executar(args: argparse.Namespace) -> int:
     destino_bruto = Path(args.raw_dir)
     total = 0
 
-    with httpx.Client() as cliente, psycopg.connect(args.dsn) as conexao:
+    with (
+        httpx.Client() as cliente,
+        psycopg.connect(args.dsn, connect_timeout=TIMEOUT_CONEXAO_S) as conexao,
+    ):
         metadados = sidra.buscar_metadados(cliente, args.agregado)
         mapa_classificacao: dict[str, str] | None = None
         if args.agregado != 1737:
@@ -166,6 +173,10 @@ def executar(args: argparse.Namespace) -> int:
                 niveis="n1/all" if args.agregado == 1737 else "n1/all/n6/all/n7/all",
                 classificacao=None if args.agregado == 1737 else "315",
             )
+            if not payload:
+                # Mês ainda não divulgado vem como 200 + lista vazia. Falhar (sem gravar Raw)
+                # mantém a partição pendente no Dagster, e o agendamento tenta no dia seguinte.
+                raise sidra.SidraError(f"{args.agregado}/{periodo}: sem dados publicados")
             gravar_bruto(destino_bruto, args.agregado, periodo, payload)
             inseridas = carregar_periodo(
                 conexao, args.agregado, periodo, payload, mapa_classificacao

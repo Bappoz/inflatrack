@@ -1,9 +1,9 @@
 # Orquestração (Dagster)
 
-O **Dagster** é o orquestrador do InflaTrack: é ele que decide *quando* cada pedaço do dado é produzido, *em que ordem* e *o que refazer* quando algo falha. Hoje cada etapa roda à mão, por uma receita do `justfile`; o Dagster substitui esse disparo manual sem mudar o código de ingestão.
+O **Dagster** é o orquestrador do InflaTrack: é ele que decide *quando* cada pedaço do dado é produzido, *em que ordem* e *o que refazer* quando algo falha. Ele substitui o disparo manual das receitas do `justfile` sem mudar o código de ingestão — as receitas continuam existindo como caminho manual de emergência.
 
-!!! info "Status: planejado"
-    Nenhum código Dagster está no repositório ainda. Esta página é o contrato do que será implementado — a divisão de responsabilidades já está decidida e sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
+!!! info "Status: em uso nos ingestores"
+    O código está em `orchestration/` e cobre as etapas E1, E2 e E7 (Raw, Bronze e a referência do IPCA no Postgres). Os assets dbt (E3/E4) e o de publicação (E6) entram quando o projeto dbt existir. A divisão de responsabilidades sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
 
 ## Por que Dagster e não Airflow
 
@@ -51,21 +51,35 @@ flowchart LR
 
 Cada caixa é um **ativo**: uma coisa que precisa existir e estar atualizada. O Dagster não pergunta "essa tarefa rodou?", e sim "esse dado está lá e está fresco?".
 
-## Organização prevista do código
+### Ativos implementados hoje
+
+| Grupo | Ativos | Destino | Módulo chamado |
+|---|---|---|---|
+| `sidra` | `ipca`, `inpc`, `ipca_numero_indice` | PostgreSQL | `ingest` (o agregado é escolhido pelo mês da partição: 2938, 1419 ou 7060) |
+| `macro` | `dolar`, `selic` | DuckDB | `ingest_dolar`, `ingest_selic` |
+| `commodities` | `commodities_parquet` → `commodities_duckdb` | Parquet → DuckDB | `ingest_commodities`, `load_commodities` |
+| `pib` | `pib_parquet` → `pib_duckdb` | Parquet → DuckDB | `ingest_pib`, `load_pib` |
+| `pib_china` | `pib_china_parquet` → `pib_china_duckdb` | Parquet → DuckDB | `ingest_pib_china`, `load_pib_china` |
+| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Parquet → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
+| `clima` | `clima_parquet` → `clima_duckdb` | Parquet → DuckDB | `ingest_clima`, `load_clima` |
+
+## Organização do código
 
 ```
 orchestration/
-├── definitions.py          # Definitions: assets, schedules, sensors, resources
+├── definitions.py          # Definitions: assets, jobs e schedules
 ├── assets/
-│   ├── ingestao.py         # um asset por fonte, chamando src/inflatrack/ingest_*.py
-│   ├── dbt.py              # @dbt_assets — carrega o manifest do projeto dbt
-│   └── publicacao.py       # cópia da Gold lida pelo Streamlit
-├── partitions.py           # mensal (IPCA), diária (macro/clima), trimestral (PIB), anual (China)
-├── schedules.py            # agendamentos por grupo de partição
-└── resources.py            # conexões DuckDB e Postgres, caminhos de data/
+│   ├── ingestao.py         # um asset por etapa, chamando src/inflatrack/ingest_*.py e load_*.py
+│   ├── dbt.py              # (planejado) @dbt_assets — carrega o manifest do projeto dbt
+│   └── publicacao.py       # (planejado) cópia da Gold lida pelo Streamlit
+├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado
+└── schedules.py            # um job e um agendamento por grupo de ativos
+.dagster/dagster.yaml       # instância local: pool duckdb_writer com limite 1
 ```
 
-A lógica de negócio **não muda de lugar**: os assets chamam os módulos de `src/inflatrack/` que já existem. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
+A lógica de negócio **não muda de lugar**: cada asset chama o mesmo `main(argv)` que a receita do `justfile` chama e transforma código de saída ≠ 0 em falha. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
+
+Só o IPCA/INPC é particionado. As demais fontes já baixam a janela inteira e fazem *upsert*; particioná-las por dia multiplicaria chamadas de API sem ganho, porque o reprocesso já é idempotente.
 
 ## Partições e agendamento
 
@@ -84,23 +98,30 @@ Fontes com calendário irregular (o IBGE às vezes antecipa, o DIEESE não tem d
 
 ## Confiabilidade
 
-* **Retry por asset** — 3 tentativas com backoff exponencial para falha de rede; erro de esquema não é repetido, falha na hora.
-* **Concorrência** — tag `duckdb_writer` com limite 1: qualquer asset que escreva no arquivo entra na fila.
+* **Retry por asset** — até 2 novas tentativas com backoff exponencial, esperando 30 s e depois 90 s. A exceção são as commodities: sem retry, porque cada tentativa gasta 9 das 25 requisições diárias da Alpha Vantage.
+* **Concorrência** — pool `duckdb_writer` com limite 1 (`.dagster/dagster.yaml`): qualquer asset que escreva no arquivo entra na fila.
 * **Idempotência** — garantida pelo próprio código de ingestão (`ON CONFLICT DO UPDATE` e Raw imutável), não pelo orquestrador. Rodar duas vezes a mesma partição não duplica linha.
 * **Testes de qualidade** — ficam nos `dbt tests`, dentro da transformação; o Dagster apenas propaga a falha e interrompe o *downstream*.
 
 ## Execução local
 
 ```bash
-dagster dev                 # interface em http://localhost:3000
+just orquestrador           # interface em http://localhost:3000, histórico em .dagster/
+just materializar macro_job # roda um job sem abrir a interface
 ```
 
-A partir da interface: materializar um ativo, selecionar um intervalo de partições para backfill, ou inspecionar a última execução de cada ativo.
+A partir da interface: materializar um ativo, selecionar um intervalo de partições para backfill (um intervalo do IPCA vira uma única execução, quebrada por agregado), ou inspecionar a última execução de cada ativo.
 
-## O que falta para sair do papel
+!!! warning "Agendamentos nascem desligados"
+    Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
 
-1. Adicionar `dagster`, `dagster-webserver` e `dagster-dbt` ao `pyproject.toml`.
-2. Criar o projeto dbt (`models/staging/` e `models/marts/`) — pré-requisito dos assets dbt.
-3. Escrever um asset de ingestão por fonte, envolvendo os módulos `ingest_*.py` existentes.
-4. Declarar as partições e ligar os agendamentos.
-5. Manter as receitas do `justfile` como caminho manual de emergência.
+Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13 e pulam quando a partição do mês anterior já está materializada.
+
+Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia e a execução do dia **falha de propósito** (`sem dados publicados`), sem gravar nada no Raw. Uma execução vermelha nesses dias é esperada: ela mantém a partição pendente para o agendamento tentar de novo no dia seguinte. Se o mês fosse marcado como carregado, os dias seguintes seriam pulados e o mês nunca entraria.
+
+## O que falta
+
+1. Criar o projeto dbt (`models/staging/` e `models/marts/`) e adicionar `dagster-dbt` — pré-requisito dos assets das etapas E3 e E4.
+2. Asset de publicação da Gold para o Streamlit (E6).
+3. *Freshness checks* por ativo, com o SLA de cada fonte.
+4. Erros de esquema ainda são repetidos pelo retry: os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.

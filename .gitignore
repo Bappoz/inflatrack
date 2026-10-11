@@ -9,6 +9,11 @@ venv/
 # Ambiente
 .env
 
+# Instância local do Dagster: só a configuração é versionada
+.dagster/*
+!.dagster/dagster.yaml
+.tmp_dagster_home_*/
+
 # Dados brutos e derivados — nunca versionar (ver docs/carga.md)
 data/
 *.json.gz

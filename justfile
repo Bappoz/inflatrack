@@ -1,5 +1,15 @@
 set dotenv-load := true
 
+# No Windows as receitas rodam no PowerShell (não exige `sh` no PATH); no Linux/macOS, em `sh`.
+# Por isso as receitas evitam sintaxe de shell: variáveis vêm de env() do just, não de ${...}.
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
+
+# Instância local do Dagster: histórico de execuções e estado dos agendamentos.
+export DAGSTER_HOME := justfile_directory() / ".dagster"
+
+PG_USER := env("POSTGRES_USER", "inflatrack")
+PG_DB := env("POSTGRES_DB", "inflatrack")
+
 _default:
     @just --list
 
@@ -16,7 +26,7 @@ reset:
     docker compose up -d --wait
 
 psql:
-    docker compose exec db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}"
+    docker compose exec db psql -U {{PG_USER}} -d {{PG_DB}}
 
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
@@ -50,11 +60,11 @@ seed:
 
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:
-    docker compose exec -T db psql -U "${POSTGRES_USER:-inflatrack}" -d "${POSTGRES_DB:-inflatrack}" \
-        -f /dev/stdin < sql/verificar_carga.sql
+    docker compose cp sql/verificar_carga.sql db:/tmp/verificar_carga.sql
+    docker compose exec -T db psql -U {{PG_USER}} -d {{PG_DB}} -f /tmp/verificar_carga.sql
 
 # Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
-pib-ingest de="1996" ate="2026":
+pib-ingest de="1996" ate=datetime("%Y"):
     uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
 
 # Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
@@ -65,10 +75,10 @@ pib-load:
 pib: pib-ingest pib-load
 
 fmt:
-    uv run ruff format src/
+    uv run ruff format src/ orchestration/
 
 lint:
-    uv run ruff check src/
+    uv run ruff check src/ orchestration/
 
 test:
     uv run pytest
@@ -117,3 +127,11 @@ clima-load:
     uv run python -m inflatrack.load_clima
 
 clima: clima-ingest clima-load
+
+# Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
+orquestrador:
+    uv run dagster dev
+
+# Materializa um job sem subir a interface. Ex.: just materializar macro_job
+materializar job:
+    uv run dagster job execute -m orchestration.definitions -j {{job}}

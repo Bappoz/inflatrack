@@ -1,0 +1,11 @@
+# Instância local do Dagster. `just orquestrador` aponta DAGSTER_HOME para esta pasta,
+# então o histórico de execuções e o estado dos agendamentos ficam aqui (fora do git).
+
+concurrency:
+  pools:
+    # DuckDB aceita um escritor por arquivo: todo ativo do pool `duckdb_writer` entra na fila.
+    default_limit: 1
+    granularity: op
+
+telemetry:
+  enabled: false

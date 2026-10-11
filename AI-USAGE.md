@@ -659,3 +659,117 @@ mover o IPCA para o DuckDB quebraria o fluxo atual.
 - Os quatro itens do checklist da E3 sobre os quais o plano ainda é silencioso:
   granularidade declarada do fato, teste de distribuição, freshness com SLA e a consulta
   otimizada com plano de execução antes e depois.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — Dagster como orquestrador
+
+**Pedido:** "Coloque o dagster como o orquestrador desse repositório."
+
+**O que a ferramenta fez**
+- Seguiu o contrato já escrito em `docs/pipeline/orquestracao.md` (status "planejado") e
+  criou `orchestration/`: um asset por etapa de ingestão/carga, chamando o mesmo `main(argv)`
+  dos módulos de `src/inflatrack/` — nenhuma lógica de negócio mudou de lugar.
+- Partição mensal só no IPCA/INPC; o asset `ipca` escolhe o agregado (2938, 1419, 7060)
+  pelo mês, e um backfill vira uma execução única quebrada por agregado.
+- Pool `duckdb_writer` com limite 1 em `.dagster/dagster.yaml`, retry 3× com backoff
+  exponencial (exceto commodities, por causa da cota de 25 req./dia), jobs e agendamentos
+  por grupo — todos nascem desligados.
+- Receitas `just orquestrador` e `just materializar <job>`; `dagster` como dependência,
+  `dagster-webserver` no grupo `dev`.
+
+**O que foi verificado e como**
+- `dagster definitions validate`, `pytest` (22 testes, 3 novos) e `mkdocs build --strict`.
+- `pib_china_job` executado de ponta a ponta: o Banco Mundial deu timeout duas vezes e o
+  retry recuperou na terceira tentativa.
+- `macro_job`: o log mostra `selic` bloqueado pelo pool `duckdb_writer` até `dolar` terminar.
+- `dagster dev` subiu e respondeu em `/server_info`.
+
+**O que NÃO foi verificado**
+- Os jobs do SIDRA (exigem Postgres no ar), commodities (gastariam cota), PIB, DIEESE e
+  clima não foram executados pelo Dagster nesta sessão.
+- Nenhum agendamento foi ligado nem observado disparando.
+
+**Decisões que continuam sendo da Squad**
+- Ligar os agendamentos e ajustar as cadências.
+- Integração `dagster-dbt` e asset de publicação, quando o projeto dbt existir.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — `just` sem `sh` no Windows
+
+**Pedido:** `just orquestrador` falhou no PowerShell com "could not find the shell `sh`".
+
+**Diagnóstico:** no Windows o `just` roda toda receita em `sh` por padrão; o teste anterior
+passou porque a ferramenta usa Git Bash, não o PowerShell de quem desenvolve. Todas as
+receitas do `justfile` estavam quebradas nesse ambiente, não só a do Dagster.
+
+**O que a ferramenta fez**
+- `set windows-shell` para PowerShell (Linux/macOS seguem em `sh`).
+- Tirou a sintaxe exclusiva de `sh`: `${VAR:-padrão}` virou `env()` do próprio `just`;
+  `-f /dev/stdin < arquivo` em `verificar-carga` virou `docker compose cp` + `psql -f`.
+- `DAGSTER_HOME` passou a ser `export` do `justfile`, valendo em qualquer shell.
+
+**O que foi verificado e como**
+- No PowerShell, com o Git removido do PATH (`sh` ausente), `just orquestrador` subiu a
+  interface e `/server_info` respondeu.
+- `just --dry-run` de `psql` e `verificar-carga` expande os comandos esperados.
+
+**O que NÃO foi verificado**
+- `just psql` e `just verificar-carga` não foram executados (Postgres não estava no ar).
+
+## 2026-10-11 — Claude Code (Opus 5.5) — lacunas da extração, commodities e testes do Dagster
+
+**Pedidos:** (1) listar o que falta no pipeline inicial de extração, sem escrever código;
+(2) opinião sobre manter `json.gz` e Parquet dos mesmos dados; (3) corrigir a carga das
+commodities que não criava as próprias tabelas; (4) testar o projeto com o Dagster em busca
+de falhas, com autorização para rodar os comandos.
+
+**O que a ferramenta fez**
+- Levantamento: medições diárias do INMET nunca são baixadas (`clima_diario` vazio); a
+  carga das commodities dependia de `init_db.py` manual; o IPCA não chega à camada
+  analítica; faltam job de carga inicial, asset checks e freshness.
+- Opinião registrada: manter Raw e Parquet; a redundância real são as tabelas dos
+  `load_*`, que viram cópia do Parquet quando o dbt existir. A decisão ficou com a Squad.
+- `load_commodities` passou a aplicar `scripts/setup_duckdb.sql`, como as outras cargas;
+  2 testes novos (banco vazio e idempotência). Corrigiu na doc uma consulta para a view
+  `vw_commodities_features`, que não existe mais.
+- Testes do Dagster contra APIs e bancos reais: backfill do IPCA cruzando a troca de
+  agregado (1419 → 7060), INPC, número-índice, macro, PIB, PIB da China, DIEESE, clima,
+  dois jobs simultâneos no DuckDB, avaliação dos agendamentos e falha com Postgres parado.
+
+**Falhas encontradas (não corrigidas nesta sessão)**
+- Mês ainda não publicado: o SIDRA responde 200 com lista vazia, `ingest.py` sai com 0 e
+  grava um Raw vazio; o Dagster marca a partição como materializada e o agendamento pula
+  os dias seguintes — o mês nunca é carregado sozinho.
+- `ingest_pib` tem `--ate 2026` fixo e o asset usa o padrão: a partir de 2027 não baixa o ano novo.
+- `psycopg.connect` sem `connect_timeout`: com o Postgres fora, cada tentativa leva ~4 min
+  no Windows; com 3 retries, ~20 min até a falha aparecer.
+- O backoff real é 30 s, 90 s, 210 s, e não 30/60/120 como a documentação diz.
+
+**Efeito colateral corrigido**
+- Carregar set/2026 de INPC e número-índice abriu um buraco em ago/2026, apontado por
+  `just verificar-carga`; o backfill de ago/2026 pelo Dagster fechou o buraco.
+
+**O que NÃO foi verificado**
+- Ingestão das commodities (gastaria 9 das 25 requisições diárias).
+- Nenhum agendamento foi ligado; a lógica foi avaliada com `build_schedule_context`.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — correção: timeout do Postgres e ano fixo do PIB
+
+**Pedido:** corrigir duas das falhas achadas nos testes do Dagster.
+
+**O que a ferramenta fez**
+- `ingest.py`: `connect_timeout=5` no `psycopg.connect` (constante `TIMEOUT_CONEXAO_S`).
+- `ingest_pib.py`: `--ate` passou de `2026` fixo para `date.today().year`; a receita
+  `pib-ingest` do `justfile` também (`ate=datetime("%Y")`).
+- Testes escritos antes da correção, vistos falhando pelo motivo certo
+  (`tests/test_ingest_conexao.py`). O do PIB simula 2027, porque hoje o valor fixo coincide
+  com o ano corrente e o teste passaria sem a correção.
+
+**O que foi verificado e como**
+- Postgres parado: o ingestor desiste em 11 s (antes, 4min20s). Pelo Dagster, as 4
+  tentativas falham em ~10 s cada e a execução termina em `RUN_FAILURE` em 6min29s (antes, ~20 min).
+- Postgres de volta: o mesmo asset roda com sucesso, sem duplicar linhas.
+- PIB pelo Dagster: mesmas 2.806 observações. Um ano sem dados (2027) na API real é
+  ignorado, sem gravar arquivo, com código de saída 0.
+- `pytest`: 26 testes passam.
+
+**Pendente, por decisão de quem pediu**
+- Mês não publicado pelo SIDRA tratado como sucesso (falha 1) e backoff errado na doc (falha 4).

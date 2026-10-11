@@ -161,12 +161,13 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 | Aspecto | Detalhe |
 |---|---|
-| Deploy | Local (`dagster dev`) |
-| Integração | `dagster-dbt` — cada modelo dbt vira um asset |
-| Partições | Mensais, acompanhando a divulgação do IPCA |
+| Deploy | Local (`just orquestrador`, que roda `dagster dev`) |
+| Código | `orchestration/` — um asset por etapa, chamando `src/inflatrack/` |
+| Integração | `dagster-dbt` — cada modelo dbt vira um asset (quando o dbt existir) |
+| Partições | Mensais no IPCA/INPC, acompanhando a divulgação do IBGE |
 | Confiabilidade | Retry por asset e backfill por partição |
-| Concorrência | Limitada a um escritor no DuckDB |
-| Status | Planejado |
+| Concorrência | Pool `duckdb_writer` com limite 1 |
+| Status | Em uso nos ingestores · Planejado na integração com dbt |
 
 **Responsabilidades**:
 

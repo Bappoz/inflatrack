@@ -18,6 +18,8 @@ COMMODITY_CONFIGS = {
     "ALL_COMMODITIES": {"category": "Geral", "unit": "index (2016=100)", "name": "Índice Global"}
 }
 
+SCHEMA_SQL = Path(__file__).resolve().parents[2] / "scripts" / "setup_duckdb.sql"
+
 def get_db_path():
     base_dir = Path(os.getcwd())
     db_dir = base_dir / "data" / "duckdb"
@@ -34,7 +36,11 @@ def load_data():
     
     logger.info(f"Conectando ao banco de dados: {db_path}")
     conn = duckdb.connect(str(db_path))
-    
+
+    # Esquema idempotente (CREATE ... IF NOT EXISTS), como nas cargas das outras fontes:
+    # o banco não precisa ter sido preparado por scripts/init_db.py.
+    conn.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
+
     # Atualizar a tabela de dimensões (commodity)
     logger.info("Atualizando tabela 'commodity'...")
     for symbol, config in COMMODITY_CONFIGS.items():

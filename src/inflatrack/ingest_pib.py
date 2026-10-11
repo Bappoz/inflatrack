@@ -26,6 +26,7 @@ import gzip
 import json
 import logging
 import sys
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -147,7 +148,9 @@ def executar(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--de", type=int, default=1996, metavar="AAAA", help="ano inicial")
-    parser.add_argument("--ate", type=int, default=2026, metavar="AAAA", help="ano final")
+    parser.add_argument(
+        "--ate", type=int, default=date.today().year, metavar="AAAA", help="ano final"
+    )
     parser.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO))
     parser.add_argument("--parquet-dir", default=str(PARQUET_DIR_PADRAO))
     args = parser.parse_args(argv)
