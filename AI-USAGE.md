@@ -773,3 +773,111 @@ de falhas, com autorização para rodar os comandos.
 
 **Pendente, por decisão de quem pediu**
 - Mês não publicado pelo SIDRA tratado como sucesso (falha 1) e backoff errado na doc (falha 4).
+
+## 2026-10-11 — Claude Code (Opus 5.5) — plano de preparação da Bronze por base
+
+**Pedido:** separar as tarefas por base de dados, com a decisão da Squad de remover a camada
+Raw e gravar direto em Parquet (Bronze) com tratamento leve; detalhar o que falta em cada
+base para a próxima fase, num arquivo `.md`.
+
+**O que a ferramenta fez**
+- Criou `docs/pipeline/preparacao_bronze.md` (no menu, em Pipeline de Dados): o padrão
+  comum que define "pronto" (o que é tratamento leve, contrato do arquivo, metadados,
+  testes), um quadro do estado atual das 8 bases, as atividades e decisões de cada uma,
+  as atividades comuns, os riscos de remover o Raw e uma ordem sugerida.
+- O levantamento saiu do código e das execuções reais pelo Dagster desta sessão.
+
+**Posição registrada**
+- Antes, a ferramenta tinha recomendado manter o Raw. A Squad decidiu removê-lo; o plano
+  segue a decisão e lista na seção 5 o que se perde e como reduzir.
+
+**O que foi verificado e como**
+- Cada afirmação sobre o código foi conferida por leitura; uma suposição errada (de onde
+  vem `multiplo_necessario_nominal`) foi corrigida antes de publicar: é calculado em
+  `dieese.py:123`.
+- `mkdocs build --strict` passa e as âncoras da página batem com os links.
+
+**O que NÃO foi verificado**
+- API de medições do INMET: duas tentativas em 2026-10-11 terminaram com o servidor
+  fechando a conexão (o endpoint de estações também falhou na segunda). Não se sabe se exige
+  token nem qual é o formato real; o plano marca isso como primeira tarefa do Clima.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — revisão do plano da Bronze contra o padrão e contra toda a documentação
+
+**Pedidos:** (1) recriar o plano, que tinha sumido do disco depois do commit `993a2f3`;
+(2) revisar o plano para o padrão Parquet → DuckDB, com dbt-duckdb no tratamento, Dagster na
+orquestração e tudo separado por base; (3) ler toda a documentação e completar o plano.
+
+**O que a ferramenta fez**
+- Recriou `docs/pipeline/preparacao_bronze.md`.
+- Revisão 1: carga para `bronze.<base>_*` dentro da fase, bloco "Vai para o dbt" por base,
+  um id único por base em todos os artefatos (aponta o `macro` que junta Dólar e Selic).
+- Revisão 2: três subagentes leram em paralelo as orientações da disciplina, a arquitetura
+  e as páginas de fontes/dicionários. A ferramenta conferiu no texto original e no código os
+  achados antes de usá-los. Entrou no plano: encaixe nas Entregas (E2 em 13/10, E3 em 03/11),
+  dois modos de carga (o IPCA é *insert-only* pelo ADR 0001), `valor_bruto`, testes dbt
+  mínimos por base (incluindo distribuição), SLA de freshness por base, medições para os
+  ADRs, política de dado atrasado, Postgres/CDC como obrigatórios, lacunas das consultas.
+
+**Erros do próprio plano corrigidos com a verificação**
+- Volume do IPCA: ~31 mil linhas/mês, não 21 mil (esse era o número após o descarte).
+- Marcadores de ausente do SIDRA: quatro (`...`, `..`, `-`, `X`), não dois.
+- PIB da China: o ingestor pivota os indicadores — há regra a levar ao dbt.
+- `lastupdated` do Banco Mundial tinha sido afirmado sem verificação; virou item a conferir.
+- Afirmação de um subagente descartada: o CLAUDE.md não está vazio.
+
+**Bug encontrado**
+- `inmet.py` transforma 0 °C em nulo pela cadeia de `or` (testado: `TEM_MIN = 0.0` → `None`).
+  Registrado no plano, não corrigido.
+
+**Alerta registrado**
+- A E2 (13/10/2026) cobra CDC a partir do OLTP, tabela Iceberg/Delta, ADR do mecanismo de
+  ingestão e diário de bordo, e nada disso existe no repositório. O plano não cabe no prazo.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — E2 no plano e divisão de tarefas por pessoa
+
+**Pedidos:** (1) ler o enunciado da E2 no site da disciplina e completar o plano;
+(2) dividir as atividades por base, uma pessoa por base, com carga parecida;
+(3) conferir se o plano cobre toda a E2.
+
+**O que a ferramenta fez**
+- Leu `unb-bd2.github.io/PlanoEnsino/projeto/e2/` (idêntico à cópia local) e trocou a seção 5
+  do plano por um roteiro por item do checklist. Conferiu no Postgres do projeto que os
+  plugins `test_decoding`/`pgoutput` existem e que falta `wal_level=logical`.
+- Criou `docs/pipeline/divisao_tarefas.md`: 8 pacotes (um por base), pontos de esforço
+  relativo, tarefas comuns dadas às bases leves (todos entre 11 e 13 pontos), corte E2/E3,
+  pares de revisão e dependências. Os pontos são estimativa da ferramenta, não medição.
+- Na conferência da E2 contra o checklist e os critérios de avaliação (`avaliacao.md`),
+  apontou lacunas: reprodutibilidade (30% da nota) só prevista para a E3, lote do IPCA fora
+  do formato aberto, política de dado atrasado só para 2 bases, serialização do fluxo de CDC.
+
+**Observação**
+- O plano foi reformatado por um formatador do editor (provavelmente Prettier): as caixas
+  `!!!` ficaram vazias e 40 listas aninhadas foram achatadas na página renderizada. A
+  ferramenta apontou e não desfez, porque a mudança veio de quem edita.
+
+## 2026-10-11 — Claude Code (Opus 5.5) — Delta, fonte que some e tabela de respostas na Bronze
+
+**Pedidos:** (1) o Parquet já não faz o papel do Delta?; (2) Parquet + Delta basta se a fonte
+sumir para sempre?; (3) melhor jeito de guardar o valor bruto; (4) atualizar plano e divisão
+de tarefas nessa linha.
+
+**O que a ferramenta fez**
+- Demonstrou a diferença Parquet × Delta com o Parquet real do PIB da China, numa pasta
+  temporária e com `deltalake` só para a demonstração: duas versões, `_delta_log/`, leitura da
+  versão anterior a uma "revisão" e leitura pelo DuckDB com `delta_scan`. Nada foi instalado no
+  projeto.
+- Respondeu (sem código) que Parquet + Delta basta se a Bronze guardar tudo o que a fonte
+  devolveu, com os metadados, e se houver cópia fora da máquina (`data/` está no `.gitignore`).
+- Recomendou, e a Squad aceitou: uma tabela de respostas por base (corpo inteiro, hash para não
+  repetir respostas iguais, só acrescenta, sem `VACUUM`) ao lado da tabela extraída;
+  `valor_bruto` só no IPCA e no PIB.
+- Atualizou `preparacao_bronze.md` (decisões, seção 2.2 nova, carga, medições, cada base,
+  ADR 0005 com tabela de alternativas, importação de todo o Raw, cópia de segurança, seção 7)
+  e `divisao_tarefas.md` (regras comuns, helper do P4, IPCA, ADR 0005 e HTML do P7).
+- As duas caixas `!!!` quebradas pelo formatador do editor viraram citações (`>`), que o
+  formatador não quebra. As listas aninhadas achatadas no resto do plano continuam como estavam.
+
+**O que NÃO foi verificado**
+- O tamanho da tabela de respostas com zstd em relação ao `.json.gz` é expectativa; o plano
+  deixa a medição como tarefa (2.6).
