@@ -58,6 +58,18 @@ seed:
     uv run python -m inflatrack.ingest --agregado 7063 --de 2020-01 --ate 2026-07
     uv run python -m inflatrack.ingest --agregado 1737 --de 1979-12 --ate 2026-07
 
+# Bronze do IPCA em Delta (data/parquet/ipca/): um intervalo de meses de um agregado.
+bronze-ipca de ate agregado="7060":
+    uv run python -m inflatrack.ingest --agregado {{agregado}} --de {{de}} --ate {{ate}}
+
+# Leva os .json.gz antigos de data/raw/ipca-inpc/ para as tabelas Delta. Reexecutável.
+bronze-ipca-importar:
+    uv run python -m inflatrack.bronze_ipca importar
+
+# Volume, meses faltando e revisões de ipca_observacao. Sai com erro se houver buraco.
+bronze-ipca-checar:
+    uv run python -m inflatrack.bronze_ipca checar
+
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:
     docker compose cp sql/verificar_carga.sql db:/tmp/verificar_carga.sql

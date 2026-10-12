@@ -5,6 +5,7 @@ description = "Ingestão do IPCA/INPC do SIDRA para o banco transacional do Infl
 requires-python = ">=3.12"
 dependencies = [
     "dagster>=1.13.26",
+    "deltalake>=1.6.6",
     "duckdb>=1.5.5",
     "httpx>=0.27",
     "pandas>=3.0.6",

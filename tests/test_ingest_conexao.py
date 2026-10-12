@@ -41,14 +41,18 @@ def test_ingest_falha_em_mes_nao_publicado(monkeypatch: pytest.MonkeyPatch, tmp_
     """
     monkeypatch.setattr(ingest.psycopg, "connect", lambda *a, **k: _ConexaoFalsa())
     monkeypatch.setattr(ingest.sidra, "buscar_metadados", lambda cliente, agregado: {})
-    monkeypatch.setattr(ingest.sidra, "buscar_valores", lambda *a, **k: [])
+    vazia = ingest.sidra.Resposta("https://sidra.invalid", 200, "application/json", "[]")
+    monkeypatch.setattr(ingest.sidra, "buscar_resposta", lambda *a, **k: vazia)
 
+    raw, bronze = tmp_path / "raw", tmp_path / "bronze"
     codigo = ingest.main(
-        ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10", "--raw-dir", str(tmp_path)]
+        ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10"]
+        + ["--raw-dir", str(raw), "--parquet-dir", str(bronze)]
     )
 
     assert codigo == 1
-    assert list(tmp_path.iterdir()) == []  # Raw vazio não é gravado
+    assert not raw.exists()  # Raw vazio não é gravado
+    assert not bronze.exists()  # nem a Bronze
 
 
 def test_ingest_pib_vai_ate_o_ano_corrente_por_padrao(monkeypatch: pytest.MonkeyPatch) -> None:
