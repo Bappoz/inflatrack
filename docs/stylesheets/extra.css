@@ -871,7 +871,6 @@ body,
     border-radius: 0 8px 8px 0;
     padding: 0.55rem 0.85rem;
     color: var(--md-default-fg-color);
-    font-style: italic;
     font-family: var(--inflatrack-font-body) !important;
 }
 
@@ -974,4 +973,41 @@ body,
     .md-typeset .diagrama svg {
         max-width: none;
     }
+}
+
+/* =====================================================
+   LEGIBILIDADE DE TABELAS E LISTAS DE TAREFAS
+   ===================================================== */
+
+/* Caminho ou identificador partido no meio ("setup_duckdb_ipca.s" / "ql") não dá
+   para ler nem copiar: o código fica inteiro e a tabela rola se não couber. */
+.md-typeset table:not([class]) code {
+    white-space: nowrap;
+}
+
+.md-typeset table:not([class]) th {
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.md-typeset table:not([class]) td {
+    vertical-align: top;
+}
+
+/* Listas "- [ ]" e "- [x]" dos planos de trabalho. */
+.md-typeset .task-list-item {
+    margin-bottom: 0.3em;
+}
+
+/* Pendente bem claro, concluído na cor da marca: o estado se lê de relance. */
+.md-typeset .task-list-indicator::before {
+    background-color: var(--dg-rule);
+}
+
+.md-typeset [type="checkbox"]:checked + .task-list-indicator::before {
+    background-color: var(--brand-primary);
+}
+
+.md-typeset .task-list-item:has([type="checkbox"]:checked) {
+    color: var(--dg-muted);
 }
