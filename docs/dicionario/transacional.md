@@ -11,13 +11,11 @@ A ponte entre este lado e a referência pública é a FK `produto.codigo_subitem
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    lojista ||--o{ produto : "vende"
-    produto ||--o{ reajuste : "tem histórico de"
-    classificacao ||--o{ produto : "é o subitem de"
-    localidade ||--o{ lojista : "compara-se a"
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-transacional.svg"
+</div>
+
+Em coral, as duas chaves que apagam em cascata: remover um lojista remove seus produtos, e remover um produto remove seus reajustes. `localidade` e `classificacao` são as tabelas de referência do IPCA, mostradas só com a chave.
 
 ## Entidades
 

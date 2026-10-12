@@ -19,20 +19,9 @@ Duas decisões moldam o esquema, e são as mesmas nas duas tabelas:
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    dolar_cotacao {
-        DATE data_referencia PK
-        DOUBLE cotacao_compra
-        DOUBLE cotacao_venda
-        BOOLEAN observado
-    }
-    selic_taxa {
-        DATE data_referencia PK
-        DOUBLE taxa_dia_pct
-        BOOLEAN observado
-    }
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-macroeconomia.svg"
+</div>
 
 Duas tabelas independentes, sem dimensão e sem FK entre si. A relação é temporal: ambas são indexadas pelo mesmo calendário civil e se cruzam por `data_referencia`, o que também as liga a `commodity_cotacao` (ver [Commodities](commodities.md)).
 

@@ -12,18 +12,9 @@ A fonte fornece a série histórica mensal do salário mínimo oficial federal (
 
 A tabela `salario_minimo` atua como dimensão temporal de poder de compra e renda familiar, vinculando-se temporalmente por `ano_mes` às observações de preços de produtos e índices inflacionários:
 
-```mermaid
-erDiagram
-    salario_minimo {
-        varchar ano_mes PK
-        date data_referencia
-        smallint ano
-        tinyint mes
-        double salario_nominal
-        double salario_necessario
-        double multiplo_necessario_nominal
-    }
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-salario-minimo.svg"
+</div>
 
 ---
 

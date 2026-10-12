@@ -14,15 +14,11 @@ Duas decisões moldam o esquema (ver [ADR 0001](../arquitetura.md)):
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    fonte_agregado ||--o{ observacao : "origina"
-    fonte_agregado ||--o{ classificacao_versao : "nomeia na vigência"
-    classificacao ||--o{ classificacao_versao : "tem versões"
-    classificacao ||--o{ observacao : "é medida em"
-    localidade ||--o{ observacao : "onde"
-    variavel ||--o{ observacao : "o quê"
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-sidra.svg"
+</div>
+
+Cada seta sai da coluna que guarda a chave estrangeira e chega na coluna referenciada. `classificacao_versao.codigo_pai` também referencia `classificacao.codigo`; essa seta foi omitida para não cruzar as demais.
 
 ## Entidades
 

@@ -27,27 +27,9 @@ O Airflow é excelente para **tarefas**; o InflaTrack orquestra **dados**. Nenhu
 
 ## O grafo de ativos
 
-```mermaid
-flowchart LR
-    subgraph src["Assets de ingestão (Python)"]
-        A1[raw_sidra]
-        A2[raw_bcb]
-        A3[raw_alphavantage]
-        A4[raw_worldbank]
-        A5[raw_dieese]
-        A6[raw_inmet]
-    end
-    subgraph bz["Assets Bronze (Parquet)"]
-        B[bronze_&lt;fonte&gt;]
-    end
-    subgraph dbt["Assets dbt (dagster-dbt)"]
-        SV[stg_&lt;fonte&gt;<br/>Silver]
-        GD[fato, dimensão, features<br/>Gold]
-    end
-    A1 & A2 & A3 & A4 & A5 & A6 --> B --> SV --> GD
-    GD --> MT[matriz_treino]
-    GD --> PUB[gold_publicada<br/>cópia para o Streamlit]
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/orquestracao-assets.svg"
+</div>
 
 Cada caixa é um **ativo**: uma coisa que precisa existir e estar atualizada. O Dagster não pergunta "essa tarefa rodou?", e sim "esse dado está lá e está fresco?".
 

@@ -20,25 +20,9 @@ O dado percorre quatro camadas ([Arquitetura Medallion](../arquitetura/arquitetu
 
 O **PostgreSQL** roda em paralelo, com o lado transacional do lojista.
 
-```mermaid
-flowchart LR
-    subgraph Fontes
-        direction TB
-        F1[SIDRA<br/>IPCA/INPC]
-        F2[BCB<br/>Dólar e Selic]
-        F3[Alpha Vantage<br/>Commodities]
-        F4[SIDRA 1846<br/>PIB]
-        F5[World Bank<br/>PIB China]
-        F6[DIEESE<br/>Salário Mínimo]
-        F7[INMET<br/>Clima]
-        F1 ~~~ F5
-        F2 ~~~ F6
-        F3 ~~~ F7
-    end
-    Fontes --> R[(Raw)] --> B[(Bronze)] --> S[(Silver)] --> G[(Gold)]
-    G --> U[Painel + Modelos]
-    PG[(PostgreSQL<br/>lojista, produto, reajuste)] --> U
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/dicionario-visao-geral.svg"
+</div>
 
 ## Fontes → Tabelas
 

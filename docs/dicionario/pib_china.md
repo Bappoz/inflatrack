@@ -20,15 +20,9 @@ Três decisões moldam o esquema:
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    pib_china {
-        SMALLINT ano PK
-        DOUBLE crescimento_pib_pct
-        DOUBLE pib_usd
-        TIMESTAMP atualizado_em
-    }
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-pib-china.svg"
+</div>
 
 Tabela única. Sem dimensão de localidade (só a China), sem dimensão de indicador (só dois, virados em coluna) e sem dimensão de tempo (o ano é a própria chave).
 

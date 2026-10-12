@@ -20,10 +20,9 @@ Três decisões moldam o esquema:
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    pib_setor ||--o{ pib_valor : "é medido em"
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-pib.svg"
+</div>
 
 Uma dimensão e um fato, sem dimensão de localidade: a tabela 1846 só publica o nível Brasil (N1). Não há recorte por praça, diferente do IPCA.
 

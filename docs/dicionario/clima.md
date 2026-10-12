@@ -12,31 +12,11 @@ As medições climáticas funcionam como variáveis explicativas e antecedentes 
 
 O modelo meteorológico adota a separação dimensional clássica entre o cadastro cadastral das estações e as medições temporais diárias:
 
-```mermaid
-erDiagram
-    estacao_meteorologica ||--o{ clima_diario : "registra"
-    estacao_meteorologica {
-        varchar estacao_id PK
-        varchar nome
-        varchar estado
-        varchar tipo
-        double latitude
-        double longitude
-        double altitude_m
-        varchar situacao
-    }
-    clima_diario {
-        varchar estacao_id PK, FK
-        date data_referencia PK
-        double temp_min
-        double temp_max
-        double temp_media
-        double precipitacao_total_mm
-        double umidade_relativa_media_pct
-        double umidade_relativa_min_pct
-        boolean observado
-    }
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-clima.svg"
+</div>
+
+A seta é tracejada porque o DDL (`scripts/setup_duckdb_clima.sql`) não declara a chave estrangeira: a ligação por `estacao_id` é garantida pela carga, não pelo banco.
 
 ---
 

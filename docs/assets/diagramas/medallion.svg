@@ -1,0 +1,95 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 436" width="976" height="436" role="img" aria-labelledby="medallion-title medallion-desc">
+<title id="medallion-title">Arquitetura Medallion do InflaTrack</title>
+<desc id="medallion-desc">As oito fontes públicas passam por Raw, Bronze, Silver e Gold; a Gold serve notebooks e o painel, que lê o PostgreSQL transacional em paralelo. O Dagster orquestra as quatro camadas.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="medallion-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="medallion-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<rect class="zona" x="16" y="16" width="160" height="292" rx="8"/>
+<text class="zona-t" x="28" y="34">8 FONTES PÚBLICAS</text>
+<line class="fio" x1="16" y1="408" x2="960" y2="408"/>
+<rect class="ext" x="16" y="413" width="24" height="14" rx="3"/>
+<text class="sub" x="50" y="424">fonte externa</text>
+<rect class="dep" x="156" y="413" width="24" height="14" rx="3"/>
+<text class="sub" x="190" y="424">camada</text>
+<rect class="foco" x="254" y="413" width="24" height="14" rx="3"/>
+<text class="sub" x="288" y="424">camada de consumo</text>
+<path class="seta-leve" d="M418,420 L442,420" marker-end="url(#medallion-normal)"/>
+<text class="sub" x="452" y="424">orquestra / lê em paralelo</text>
+<path class="seta" d="M176,162 L204,162" marker-end="url(#medallion-normal)"/>
+<path class="seta" d="M324,162 L352,162" marker-end="url(#medallion-normal)"/>
+<path class="seta" d="M472,162 L500,162" marker-end="url(#medallion-normal)"/>
+<path class="seta" d="M620,162 L648,162" marker-end="url(#medallion-normal)"/>
+<path class="seta-foco" d="M768,150 L774,150 Q782,150 782,142 L782,134 Q782,126 790,126 L796,126" marker-end="url(#medallion-foco)"/>
+<path class="seta-foco" d="M768,174 L774,174 Q782,174 782,182 L782,214 Q782,222 790,222 L796,222" marker-end="url(#medallion-foco)"/>
+<path class="seta-leve" d="M878,336 L878,250" marker-end="url(#medallion-normal)"/>
+<path class="seta-leve" d="M264,344 L264,202" marker-end="url(#medallion-normal)"/>
+<path class="seta-leve" d="M412,344 L412,202" marker-end="url(#medallion-normal)"/>
+<path class="seta-leve" d="M560,344 L560,202" marker-end="url(#medallion-normal)"/>
+<path class="seta-leve" d="M708,344 L708,202" marker-end="url(#medallion-normal)"/>
+<rect class="papel" x="28" y="46" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="46" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="62" text-anchor="middle">IPCA / INPC</text>
+<rect class="papel" x="28" y="78" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="78" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="94" text-anchor="middle">Dólar</text>
+<rect class="papel" x="28" y="110" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="110" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="126" text-anchor="middle">Selic</text>
+<rect class="papel" x="28" y="142" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="142" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="158" text-anchor="middle">Commodities</text>
+<rect class="papel" x="28" y="174" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="174" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="190" text-anchor="middle">PIB</text>
+<rect class="papel" x="28" y="206" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="206" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="222" text-anchor="middle">PIB da China</text>
+<rect class="papel" x="28" y="238" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="238" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="254" text-anchor="middle">Salário mínimo</text>
+<rect class="papel" x="28" y="270" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="270" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="286" text-anchor="middle">Clima</text>
+<rect class="papel" x="204" y="122" width="120" height="80" rx="6"/>
+<rect class="dep" x="204" y="122" width="120" height="80" rx="6"/>
+<text class="tag" x="214" y="138">RAW</text>
+<text class="nome" x="264" y="160" text-anchor="middle">Raw</text>
+<text class="sub" x="264" y="175" text-anchor="middle">resposta original</text>
+<text class="sub" x="264" y="190" text-anchor="middle">json.gz</text>
+<rect class="papel" x="352" y="122" width="120" height="80" rx="6"/>
+<rect class="dep" x="352" y="122" width="120" height="80" rx="6"/>
+<text class="tag" x="362" y="138">BRONZE</text>
+<text class="nome" x="412" y="160" text-anchor="middle">Bronze</text>
+<text class="sub" x="412" y="175" text-anchor="middle">tipada, sem regra</text>
+<text class="sub" x="412" y="190" text-anchor="middle">Parquet</text>
+<rect class="papel" x="500" y="122" width="120" height="80" rx="6"/>
+<rect class="dep" x="500" y="122" width="120" height="80" rx="6"/>
+<text class="tag" x="510" y="138">SILVER</text>
+<text class="nome" x="560" y="160" text-anchor="middle">Silver</text>
+<text class="sub" x="560" y="175" text-anchor="middle">limpa e conformada</text>
+<text class="sub" x="560" y="190" text-anchor="middle">dbt-duckdb</text>
+<rect class="papel" x="648" y="122" width="120" height="80" rx="6"/>
+<rect class="foco" x="648" y="122" width="120" height="80" rx="6"/>
+<text class="tag" x="658" y="138">GOLD</text>
+<text class="nome" x="708" y="160" text-anchor="middle">Gold</text>
+<text class="sub" x="708" y="175" text-anchor="middle">pronta para consumo</text>
+<text class="sub" x="708" y="190" text-anchor="middle">tabelas no DuckDB</text>
+<rect class="papel" x="796" y="98" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="98" width="164" height="56" rx="6"/>
+<text class="nome" x="878" y="123" text-anchor="middle">Notebooks</text>
+<text class="sub" x="878" y="138" text-anchor="middle">MLflow</text>
+<rect class="papel" x="796" y="194" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="194" width="164" height="56" rx="6"/>
+<text class="nome" x="878" y="219" text-anchor="middle">Streamlit</text>
+<text class="sub" x="878" y="234" text-anchor="middle">Plotly</text>
+<rect class="papel" x="796" y="336" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="336" width="164" height="56" rx="6"/>
+<text class="tag" x="806" y="352">OLTP</text>
+<text class="nome" x="878" y="369" text-anchor="middle">PostgreSQL</text>
+<text class="sub" x="878" y="384" text-anchor="middle">transacional</text>
+<rect class="papel" x="204" y="344" width="564" height="40" rx="6"/>
+<rect class="caixa" x="204" y="344" width="564" height="40" rx="6"/>
+<text class="nome" x="486" y="368" text-anchor="middle">Dagster</text>
+</svg>

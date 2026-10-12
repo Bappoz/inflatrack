@@ -2,37 +2,9 @@
 
 Da fonte até a tela do lojista. As camadas estão em [Arquitetura Medallion](arquiteturaMedallion.md), as peças em [Componentes](componentes.md) e o detalhe de cada etapa em [Contrato das Etapas](../pipeline/contratoEtapas.md).
 
-```mermaid
-flowchart TB
-    subgraph Fontes
-        S[SIDRA/IBGE<br/>IPCA, INPC e PIB]
-        BCB[BCB<br/>Olinda e SGS]
-        AV[Alpha Vantage<br/>Commodities]
-        WB[Banco Mundial<br/>PIB da China]
-        DI[DIEESE<br/>Salário mínimo]
-        IN[INMET<br/>Clima diário]
-    end
-    subgraph Raw
-        R[(data/raw/&lt;fonte&gt;/<br/>json.gz e html.gz)]
-    end
-    subgraph Bronze
-        B[(data/parquet/&lt;fonte&gt;/<br/>Parquet)]
-    end
-    subgraph Silver
-        SV[dbt-duckdb<br/>models/staging/]
-    end
-    subgraph Gold
-        G[(DuckDB<br/>fato, dimensão e features)]
-    end
-    S & BCB & AV & WB & DI & IN --> R --> B --> SV --> G
-    G --> NB[Notebooks<br/>MLflow]
-    G --> ST[Streamlit + Plotly]
-    PG[(PostgreSQL<br/>lojista, produto, reajuste<br/>+ referência do IPCA)] --> ST
-    DG{{Dagster}} -.orquestra.-> R
-    DG -.-> B
-    DG -.-> SV
-    DG -.-> G
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/fluxo-dados.svg"
+</div>
 
 ## O percurso, etapa por etapa
 

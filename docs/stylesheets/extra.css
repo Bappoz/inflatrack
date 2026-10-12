@@ -909,3 +909,69 @@ body,
 .md-typeset li {
     margin-bottom: 0.14em;
 }
+
+/* =====================================================
+   LARGURA DO CONTEÚDO
+   O padrão do tema (61rem) deixa ~690px para o texto: as tabelas
+   largas rolam e os diagramas encolhem até ficarem ilegíveis.
+   ===================================================== */
+.md-grid {
+    max-width: 78rem;
+}
+
+/* =====================================================
+   DIAGRAMAS (SVG inline gerado por scripts/gerar_diagramas.py)
+   As variáveis --dg-* dão ao SVG as cores do tema ativo.
+   ===================================================== */
+[data-md-color-scheme="default"] {
+    --dg-paper: #FFFFFF;
+    --dg-surface: #FFFFFF;
+    --dg-ink: #1A132F;
+    --dg-muted: #5B5675;
+    --dg-line: #8E86AD;
+    --dg-rule: #D9D3EC;
+    --dg-brand: #511EB6;
+    --dg-brand-tint: #F1EDFB;
+    --dg-accent: #FF5A36;
+    --dg-accent-tint: #FFEEE9;
+    --dg-zone: #F6F4FC;
+    --dg-zebra: #FAF9FE;
+}
+
+[data-md-color-scheme="slate"] {
+    --dg-paper: #161324;
+    --dg-surface: #1E1A30;
+    --dg-ink: #EDEAF7;
+    --dg-muted: #A9A3C2;
+    --dg-line: #6F6890;
+    --dg-rule: #3A3357;
+    --dg-brand: #A98BFF;
+    --dg-brand-tint: #2A2148;
+    --dg-accent: #FF7A59;
+    --dg-accent-tint: #3A2026;
+    --dg-zone: #1A1630;
+    --dg-zebra: #1B1730;
+}
+
+.md-typeset .diagrama {
+    margin: 1.2em 0;
+    padding: 1rem;
+    background: var(--dg-paper);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.md-typeset .diagrama svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Em tela estreita o diagrama mantém o tamanho legível e rola na horizontal. */
+@media screen and (max-width: 44.9375em) {
+    .md-typeset .diagrama svg {
+        max-width: none;
+    }
+}

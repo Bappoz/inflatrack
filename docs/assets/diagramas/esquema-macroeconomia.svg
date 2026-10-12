@@ -1,0 +1,48 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 160" width="520" height="160" role="img" aria-labelledby="esquema-macroeconomia-title esquema-macroeconomia-desc">
+<title id="esquema-macroeconomia-title">Esquema físico do dólar e da Selic no DuckDB</title>
+<desc id="esquema-macroeconomia-desc">Duas séries diárias independentes, uma linha por data de referência em cada tabela.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="esquema-macroeconomia-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="esquema-macroeconomia-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<rect class="papel" x="16" y="16" width="224" height="128" rx="6"/>
+<clipPath id="esquema-macroeconomia-dolar_cotacao"><rect x="16" y="16" width="224" height="128" rx="6"/></clipPath>
+<g clip-path="url(#esquema-macroeconomia-dolar_cotacao)">
+<rect class="cab" x="16" y="16" width="224" height="32"/>
+<rect class="chip" x="26" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="37" y="63" text-anchor="middle">PK</text>
+<text class="col" x="56" y="64">data_referencia</text>
+<text class="tipo" x="228" y="64" text-anchor="end">DATE</text>
+<rect class="zebra" x="16" y="72" width="224" height="24"/>
+<text class="col" x="56" y="88">cotacao_compra</text>
+<text class="tipo" x="228" y="88" text-anchor="end">DOUBLE</text>
+<text class="col" x="56" y="112">cotacao_venda</text>
+<text class="tipo" x="228" y="112" text-anchor="end">DOUBLE</text>
+<rect class="zebra" x="16" y="120" width="224" height="24"/>
+<text class="col" x="56" y="136">observado</text>
+<text class="tipo" x="228" y="136" text-anchor="end">BOOLEAN</text>
+</g>
+<line class="fio" x1="16" y1="48" x2="240" y2="48"/>
+<rect class="caixa" style="fill:none" x="16" y="16" width="224" height="128" rx="6"/>
+<text class="nome" x="28" y="37">dolar_cotacao</text>
+<text class="tag" x="228" y="36" text-anchor="end">DUCKDB</text>
+<rect class="papel" x="280" y="16" width="224" height="104" rx="6"/>
+<clipPath id="esquema-macroeconomia-selic_taxa"><rect x="280" y="16" width="224" height="104" rx="6"/></clipPath>
+<g clip-path="url(#esquema-macroeconomia-selic_taxa)">
+<rect class="cab" x="280" y="16" width="224" height="32"/>
+<rect class="chip" x="290" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="301" y="63" text-anchor="middle">PK</text>
+<text class="col" x="320" y="64">data_referencia</text>
+<text class="tipo" x="492" y="64" text-anchor="end">DATE</text>
+<rect class="zebra" x="280" y="72" width="224" height="24"/>
+<text class="col" x="320" y="88">taxa_dia_pct</text>
+<text class="tipo" x="492" y="88" text-anchor="end">DOUBLE</text>
+<text class="col" x="320" y="112">observado</text>
+<text class="tipo" x="492" y="112" text-anchor="end">BOOLEAN</text>
+</g>
+<line class="fio" x1="280" y1="48" x2="504" y2="48"/>
+<rect class="caixa" style="fill:none" x="280" y="16" width="224" height="104" rx="6"/>
+<text class="nome" x="292" y="37">selic_taxa</text>
+<text class="tag" x="492" y="36" text-anchor="end">DUCKDB</text>
+</svg>
