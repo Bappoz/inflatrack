@@ -12,7 +12,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
-| Lucas Zanetti | 3 | 2026-09-08 a 2026-09-26 | Claude Code (Opus 5) (1), Claude Code (Opus 5.5) (1), Codex (1) |
+| Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
 | Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
@@ -47,6 +47,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do plano da Bronze contra o padrão e contra toda a documentação |
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | E2 no plano e divisão de tarefas por pessoa |
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
+| 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
 
 ---
 
@@ -129,6 +130,58 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 **O que NÃO foi verificado**
 - A carga histórica completa desde 2020 e a Alpha Vantage não foram reexecutadas
   para evitar consumo desnecessário de tempo e cota externa.
+
+### 2026-10-11 — Claude Code (Opus 5.5) — Bronze do IPCA em Delta (E2), diagramas e organização da documentação
+
+**Pedidos:** (1) fazer a parte do IPCA/INPC do plano `tasks_entrega_2.md`; (2) trocar os
+diagramas Mermaid por algo mais legível; (3) reorganizar este registro por integrante;
+(4) melhorar a leitura da documentação sem mudar a estrutura das seções; (5) commits
+separados e um PR.
+
+**O que a ferramenta fez**
+- Escreveu `src/inflatrack/bronze_ipca.py` (transformação sem descarte, checagens de esquema
+  e volume, gravação de `ipca_resposta` e `ipca_observacao` em Delta, importação dos
+  `.json.gz`) e ligou-o ao ingestor, mantendo a escrita no Postgres. Acrescentou
+  `sidra.buscar_resposta`, que devolve o corpo como veio.
+- Fez o agendamento do SIDRA reler os três meses anteriores a cada ciclo (política de dado
+  atrasado), com teste.
+- Escreveu `tests/test_ipca.py` (25 testes) com respostas reais do SIDRA como fixtures.
+- Gerou os 12 diagramas SVG por `scripts/gerar_diagramas.py` e os colocou nas páginas.
+- Reagrupou as 25 entradas deste arquivo por integrante, pelo autor do commit de cada uma,
+  sem alterar o texto de nenhuma.
+- Escreveu `docs/evidencias/e2/ipca.md` e a seção "Bronze em Delta" do dicionário.
+
+**O que foi verificado e como**
+- Carga histórica real dos cinco agregados (886 requisições, ~21 min): 9.116.436 linhas no
+  Delta e 5.992.897 no Postgres; a diferença é exatamente o número de marcadores.
+- Reexecução de jul–set/2026: nenhuma linha nova, nenhuma versão nova no Delta.
+- Importação dos 886 `.json.gz` numa pasta vazia: resultado idêntico, linha a linha, ao da
+  ingestão direta; segunda importação sem linha nova.
+- `pytest`: 55 testes passam. `ruff` limpo nos arquivos alterados.
+- `mkdocs build --strict` passa. Os diagramas foram conferidos em captura de tela do site,
+  nos temas claro e escuro.
+
+**Erros do plano e do código encontrados na verificação**
+- As variáveis do 7060 são 63, 66, 69 e 2265; o plano citava a 2266, que só existe no 1737.
+- `observacao.valor numeric(16,7)` grava como zero o número-índice de dez/1979 a ago/1982
+  (33 meses). Registrado na evidência, **não corrigido**.
+- O `main` estava com `mkdocs build --strict` quebrado (menu apontando para duas páginas
+  ausentes); corrigido num commit à parte.
+- Dois defeitos da própria ferramenta, corrigidos antes do PR: um teste com literal que o
+  `gitleaks` tomou por segredo (reescrito, sem contornar o hook) e uma regra de CSS que fazia
+  tabelas largas estourarem.
+
+**O que NÃO foi verificado**
+- A frequência real de revisão do IBGE: todo o histórico foi baixado numa única data.
+- O agendamento rodando de verdade no Dagster em dias consecutivos; só o teste do que ele pede.
+- A renderização em celular e em navegador que não seja o Chromium.
+- 19 erros de `ruff` que já existiam nos arquivos de commodities continuam lá.
+
+**Decisões que continuam sendo da Squad**
+- Delta × Iceberg e o codec (medido: zstd ocupa menos da metade do snappy na tabela de
+  respostas, com a mesma leitura). As tabelas estão em Delta com snappy, o padrão da biblioteca.
+- O helper comum `inflatrack/bronze.py` não existia; a gravação ficou num módulo do IPCA.
+- O diário de bordo das Semanas 7 a 10 não foi escrito pela ferramenta.
 
 ---
 
