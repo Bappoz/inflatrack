@@ -100,6 +100,58 @@ Tabela de fato: o valor de uma variável, para uma categoria, numa localidade, n
 - `observacao_versao_uk` (único): fonte, categoria, localidade, variável, mês **e valor**. Recarregar o mesmo dado não insere nada; valor revisado entra como linha nova.
 - `observacao_consulta_idx`: (categoria, localidade, variável, mês desc), usado pelas perguntas 1, 4 e 5.
 
+## Bronze em Delta
+
+Desde a Entrega 2, cada resposta do SIDRA também é gravada em duas tabelas **Delta** em `data/parquet/ipca/`, pelo mesmo ingestor que escreve no PostgreSQL ([`bronze_ipca.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze_ipca.py)). As duas só acrescentam linhas: nada é atualizado nem apagado.
+
+| Tabela | Uma linha por | Volume (medido em 2026-10-11) |
+|---|---|---|
+| `ipca_resposta` | Resposta **diferente** recebida da API | 886 respostas (uma por agregado e mês) |
+| `ipca_observacao` | Valor contido numa resposta, **inclusive os marcadores de ausência** | 9.116.436 linhas, das quais 3.123.539 sem valor |
+
+!!! warning "Diferença para a tabela `observacao` do PostgreSQL"
+    `ipca_observacao` guarda **todas** as linhas da resposta; o PostgreSQL descarta as que trazem marcador (`...`, `..`, `-`, `X`). A categoria aparece como `id_categoria`, o id interno do SIDRA, e **não** como o código da cesta (`1101002`): descartar marcador e traduzir a categoria são regras de negócio, e ficam para o dbt (Silver).
+
+### ipca_resposta
+
+O corpo inteiro de cada resposta, para reextrair qualquer campo sem voltar à fonte. Substitui os `.json.gz` de `data/raw/ipca-inpc/`.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `id_resposta` | string | Identificador da resposta: o próprio `hash_corpo` |
+| `_fonte` | string | Sempre `ipca` |
+| `_requisicao` | string | URL completa pedida ao SIDRA (agregado, níveis, mês e classificação) |
+| `_ingerido_em` | timestamp (UTC) | Momento da requisição |
+| `status_http` | smallint, nulo | Status da resposta. Nulo nas respostas importadas do Raw antigo, que não guardou esse dado |
+| `tipo_conteudo` | string, nulo | `Content-Type` da resposta. Nulo nas respostas importadas |
+| `corpo` | string | A resposta como veio (JSON) |
+| `hash_corpo` | string | SHA-256 do corpo. Resposta com hash já guardado não é gravada de novo |
+| `tamanho_bytes` | bigint | Tamanho do corpo em bytes |
+
+### ipca_observacao
+
+Um valor publicado: uma variável, para uma categoria, numa localidade, num mês. Particionada por `agregado`.
+
+| Campo | Tipo | Origem no SIDRA | Descrição |
+|---|---|---|---|
+| `agregado` | smallint | parâmetro da requisição | 2938, 1419, 7060, 7063 ou 1737 |
+| `mes_referencia` | date | `D3C` | Mês de referência, sempre no dia 1 |
+| `nivel_territorial` | smallint | `NC` | 1 = Brasil, 6 = município, 7 = região metropolitana |
+| `codigo_localidade` | integer | `D1C` | Código IBGE da localidade |
+| `codigo_variavel` | integer | `D2C` | Variável medida |
+| `id_categoria` | integer, nulo | `D4C` | Id interno da categoria no SIDRA. Nulo no 1737, que não tem classificação |
+| `codigo_unidade` | smallint, nulo | `MC` | Unidade de medida (2 = %, 30 = número-índice). Nulo quando a API manda vazio, o que acontece nas linhas `...` |
+| `valor` | decimal(28,13), nulo | `V` | Valor numérico; negativo é deflação. Nulo quando `V` é um marcador de ausência |
+| `valor_bruto` | string | `V` | O texto de `V` exatamente como veio, inclusive o marcador |
+| `_id_resposta` | string | — | Resposta em que a linha apareceu pela primeira vez (`ipca_resposta.id_resposta`) |
+| `_fonte` | string | — | Sempre `ipca` |
+| `_requisicao` | string | — | URL da requisição que trouxe a linha |
+| `_ingerido_em` | timestamp (UTC) | — | Momento da requisição |
+
+**Granularidade:** uma linha por agregado × mês × localidade × variável × categoria × `valor_bruto`. O valor faz parte da identidade da linha de propósito: se o IBGE republicar um mês com outro valor, a revisão entra como **linha nova** e a anterior permanece, cada uma apontando para a sua resposta.
+
+**Por que `decimal(28,13)`:** o número-índice de dez/1979 chega como `0.0000000076183`. As 7 casas de `observacao.valor` no PostgreSQL arredondam esse valor para zero (ver [achados da E2](../evidencias/e2/ipca.md#achados-e-limitacoes)).
+
 ## Exemplos de Uso
 
 ```sql

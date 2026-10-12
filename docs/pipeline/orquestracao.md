@@ -97,7 +97,7 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 !!! warning "Agendamentos nascem desligados"
     Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
 
-Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13 e pulam quando a partição do mês anterior já está materializada.
+Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
 
 Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia e a execução do dia **falha de propósito** (`sem dados publicados`), sem gravar nada no Raw. Uma execução vermelha nesses dias é esperada: ela mantém a partição pendente para o agendamento tentar de novo no dia seguinte. Se o mês fosse marcado como carregado, os dias seguintes seriam pulados e o mês nunca entraria.
 

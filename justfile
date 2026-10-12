@@ -50,13 +50,14 @@ pib-china: pib-china-ingest pib-china-load
 # Alias mantido para compatibilidade com a documentação anterior do PR.
 seed-pib-china: pib-china
 
-# Carga histórica completa jul/2006 -> jul/2026 (~2,2 GB, dezenas de minutos; ver docs/carga.md).
+# Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
+# (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
 seed:
     uv run python -m inflatrack.ingest --agregado 2938 --de 2006-07 --ate 2011-12
     uv run python -m inflatrack.ingest --agregado 1419 --de 2012-01 --ate 2019-12
-    uv run python -m inflatrack.ingest --agregado 7060 --de 2020-01 --ate 2026-07
-    uv run python -m inflatrack.ingest --agregado 7063 --de 2020-01 --ate 2026-07
-    uv run python -m inflatrack.ingest --agregado 1737 --de 1979-12 --ate 2026-07
+    uv run python -m inflatrack.ingest --agregado 7060 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.ingest --agregado 7063 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.ingest --agregado 1737 --de 1979-12 --ate 2026-09
 
 # Bronze do IPCA em Delta (data/parquet/ipca/): um intervalo de meses de um agregado.
 bronze-ipca de ate agregado="7060":

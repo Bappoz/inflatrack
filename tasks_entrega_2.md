@@ -213,12 +213,14 @@ Cada fonte é independente das outras até a integração (4.4). Todas usam o he
 
 **E2:**
 
-- [ ] `transformar(payload)` em Python, mantendo todos os campos do SIDRA (localidade, variável, unidade, categoria da classificação 315, mês) e **todas as linhas**, com `valor` nulo e `valor_bruto` para os quatro marcadores (`...`, `..`, `-`, `X`). São **~31 mil linhas por mês** no 7060.
-- [ ] Gravar `ipca_resposta` e `ipca_observacao` em Delta pelo ingestor, **sem tirar ainda a escrita no Postgres** (ela sai só na E3). O IPCA é a fonte central: sem isso, o caminho em lote mais importante não chega ao formato aberto.
-- [ ] Importar os 886 `.json.gz` para `ipca_resposta`, reconstruindo `_requisicao` pelo nome do arquivo (agregado e mês), e extrair ao menos o 7060 para `ipca_observacao`.
-- [ ] Demonstração de reexecução: a mesma partição duas vezes não acrescenta linha. Já observado em 2026-10-11: reexecutar set/2026 do INPC deu "0 linhas novas".
-- [ ] Política de dado atrasado (2.6): revisão do IBGE e mês ainda não publicado (o agendamento tenta nos dias 9–13 até o mês sair).
-- [ ] Checagens de esquema e volume: 17 localidades (12 no 2938), variáveis 63, 2265 e 2266, ~31 mil linhas por mês no 7060.
+- [x] `transformar(payload)` em Python, mantendo todos os campos do SIDRA (localidade, variável, unidade, categoria da classificação 315, mês) e **todas as linhas**, com `valor` nulo e `valor_bruto` para os quatro marcadores (`...`, `..`, `-`, `X`). São **~31 mil linhas por mês** no 7060.
+- [x] Gravar `ipca_resposta` e `ipca_observacao` em Delta pelo ingestor, **sem tirar ainda a escrita no Postgres** (ela sai só na E3). O IPCA é a fonte central: sem isso, o caminho em lote mais importante não chega ao formato aberto.
+- [x] Importar os 886 `.json.gz` para `ipca_resposta`, reconstruindo `_requisicao` pelo nome do arquivo (agregado e mês), e extrair ao menos o 7060 para `ipca_observacao`.
+- [x] Demonstração de reexecução: a mesma partição duas vezes não acrescenta linha. Já observado em 2026-10-11: reexecutar set/2026 do INPC deu "0 linhas novas".
+- [x] Política de dado atrasado (2.6): revisão do IBGE e mês ainda não publicado (o agendamento tenta nos dias 9–13 até o mês sair).
+- [x] Checagens de esquema e volume: 17 localidades (12 no 2938), variáveis 63, 66, 69 e 2265 no 7060 (a 2266 só existe no 1737), 31.076 linhas por mês no 7060.
+
+Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../evidencias/e2/ipca.md). Feito num módulo da própria fonte (`bronze_ipca.py`), porque o helper comum de 4.1 ainda não existe.
 
 **E3:**
 
