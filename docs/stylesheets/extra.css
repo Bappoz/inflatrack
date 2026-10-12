@@ -986,8 +986,14 @@ body,
 }
 
 .md-typeset table:not([class]) th {
-    white-space: nowrap;
     vertical-align: bottom;
+}
+
+/* Código no cabeçalho herdava o violeta do texto sobre o fundo violeta e sumia. */
+.md-typeset table:not([class]) th code {
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .md-typeset table:not([class]) td {
