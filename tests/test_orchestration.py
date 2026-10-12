@@ -1,7 +1,10 @@
-from datetime import date
+from datetime import date, datetime
+
+from dagster import build_schedule_context, instance_for_test
 
 from orchestration.definitions import defs
-from orchestration.partitions import segmentos_ipca
+from orchestration.partitions import janela_de_releitura, segmentos_ipca
+from orchestration.schedules import SCHEDULES
 
 
 def test_definicoes_carregam_sem_erro():
@@ -23,3 +26,48 @@ def test_segmentos_ipca_dentro_de_um_agregado():
     assert list(segmentos_ipca(date(2026, 5, 1), date(2026, 7, 1))) == [
         (7060, date(2026, 5, 1), date(2026, 7, 1)),
     ]
+
+
+def test_janela_de_releitura_volta_tres_meses_e_atravessa_o_ano():
+    assert janela_de_releitura(date(2027, 2, 10)) == (
+        "2027-01-01",
+        ["2026-12-01", "2026-11-01", "2026-10-01"],
+    )
+
+
+def _pedidos_do_agendamento_do_ipca(dia: int) -> list:
+    (agendamento,) = [item for item in SCHEDULES if item.name == "ipca_job_mensal"]
+    # O contexto do agendamento exige instância persistente; a efêmera é recusada.
+    with instance_for_test() as instancia:
+        contexto = build_schedule_context(
+            instance=instancia,
+            repository_def=defs.get_repository_def(),
+            scheduled_execution_time=datetime(2026, 10, dia, 10, 0),
+        )
+        return agendamento.evaluate_tick(contexto).run_requests
+
+
+def test_agendamento_do_ipca_pede_o_mes_novo_e_rele_os_tres_anteriores():
+    """Política de dado atrasado: sem reler, uma revisão do IBGE nunca seria vista."""
+    pedidos = _pedidos_do_agendamento_do_ipca(dia=9)
+
+    assert [pedido.partition_key for pedido in pedidos] == [
+        "2026-09-01",
+        "2026-08-01",
+        "2026-07-01",
+        "2026-06-01",
+    ]
+
+
+def test_agendamento_do_ipca_rele_uma_vez_por_ciclo():
+    """O mês novo é tentado de novo a cada dia; a releitura, não.
+
+    O Dagster ignora pedido com `run_key` já vista: a do mês novo muda com o dia, a
+    das releituras é a mesma do dia 9 ao 13.
+    """
+    novo_dia_9, *relidos_dia_9 = _pedidos_do_agendamento_do_ipca(dia=9)
+    novo_dia_10, *relidos_dia_10 = _pedidos_do_agendamento_do_ipca(dia=10)
+
+    assert novo_dia_9.run_key != novo_dia_10.run_key
+    assert [p.run_key for p in relidos_dia_9] == [p.run_key for p in relidos_dia_10]
+    assert len({p.run_key for p in relidos_dia_9}) == 3

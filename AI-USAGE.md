@@ -1,10 +1,59 @@
 # Registro de uso de IA
 
-Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
-disciplina. Uma entrada por sessão em que assistente ou agente participou.
-Ferramenta, o que fez, o que a Squad conferiu depois.
+Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da disciplina. Uma entrada por sessão em que assistente ou agente participou: a ferramenta, o que ela fez e o que a Squad conferiu depois.
 
-## 2026-09-08 — Claude Code (Opus 5) — levantamento das fontes e esqueleto do repositório
+## Como ler e como registrar
+
+- As entradas estão **agrupadas por integrante**, em ordem cronológica dentro de cada um. O agrupamento segue quem fez o commit da entrada.
+- Cada entrada responde a três perguntas: **o que a ferramenta fez**, **o que foi verificado e como**, e **o que não foi verificado**.
+- Para registrar uma sessão nova, acrescente um título `### AAAA-MM-DD — Ferramenta (modelo) — assunto` ao fim da **sua** seção e uma linha na tabela abaixo.
+
+## Resumo por integrante
+
+| Integrante | Sessões | Período | Ferramentas |
+|---|---|---|---|
+| Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
+| João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
+| Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
+| Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
+| Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
+
+## Todas as sessões
+
+| Data | Integrante | Ferramenta | Assunto |
+|---|---|---|---|
+| 2026-09-08 | Lucas Zanetti | Claude Code (Opus 5) | Levantamento das fontes e esqueleto do repositório |
+| 2026-09-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5) | Primeira subida do banco e correção de bugs na ingestão |
+| 2026-09-22 | João Pedro Lopes da Cruz | Antigravity (Gemini 3.1 Pro) | Ingestão de Commodities e Energia via Alpha Vantage |
+| 2026-09-24 | Lucas Zanetti | Claude Code (Opus 5.5) | Documentação da fonte IPCA/INPC no MkDocs |
+| 2026-09-25 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Realinhamento dos caminhos de `data/` |
+| 2026-09-25 | Artur Fernandes Galdino | Antigravity (Gemini 3.6 Flash) | Caracterização e Documentação do PIB da China |
+| 2026-09-25 | Pedro Américo | Antigravity (Gemini 3.1 Pro) | Ingestão Banco Central (Dólar Comercial e Selic) |
+| 2026-09-25 (Fase 2) | Pedro Américo | Antigravity (Gemini 3.1 Pro) | Finalização do Módulo de Macroeconomia |
+| 2026-09-25 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Ingestão das Contas Nacionais Trimestrais (SIDRA 1846) |
+| 2026-09-26 | Lucas Zanetti | Codex | Revisão do PR de Dólar e Selic |
+| 2026-09-27 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Documentação da fonte Taxa SELIC (BCB/SGS) |
+| 2026-09-27 (Fase 2) | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Documentação do Dólar Comercial e remoção do `bcb.md` |
+| 2026-09-27 (Fase 3) | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Generalização das páginas de arquitetura |
+| 2026-09-28 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET) |
+| 2026-09-28 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Atualização da seção de Arquitetura para as fontes novas |
+| 2026-09-28 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Discussão: migrar o IPCA para o DuckDB |
+| 2026-09-28 | João Pedro Lopes da Cruz | Claude Code (Opus 5) | Arquitetura da E3: dbt, Dagster, MLflow e Streamlit |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Dagster como orquestrador |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | `just` sem `sh` no Windows |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Lacunas da extração, commodities e testes do Dagster |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Correção: timeout do Postgres e ano fixo do PIB |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Plano de preparação da Bronze por base |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do plano da Bronze contra o padrão e contra toda a documentação |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | E2 no plano e divisão de tarefas por pessoa |
+| 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
+| 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
+
+---
+
+## Lucas Zanetti
+
+### 2026-09-08 — Claude Code (Opus 5) — levantamento das fontes e esqueleto do repositório
 
 **O que a ferramenta fez**
 - Consultou a API de metadados do IBGE (`servicodados.ibge.gov.br/api/v3/agregados`)
@@ -38,7 +87,107 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
   carimbo de tempo) e as alternativas consideradas.
 - O recorte de fontes: manter INPC e número-índice, ou cortar.
 
-## 2026-09-14 — Claude Code (Sonnet 5) — primeira subida do banco e correção de bugs na ingestão
+### 2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs
+
+**O que a ferramenta fez**
+- Levou para o site as linhas do IPCA/INPC da planilha de acompanhamento,
+  conferindo cada afirmação contra `migrations/`, `sidra.py` e `ingest.py`:
+  seção 2 e leitura do armazenamento em `fontes/sidra.md`, dicionário
+  `dicionario/sidra.md` e a seção do IPCA em `pipeline/pipelineDados.md`.
+- Corrigiu links quebrados (`carga.md` removido, link para `src/`) que faziam
+  `mkdocs build --strict` falhar.
+
+**O que foi verificado e como**
+- `just docs-build` (`mkdocs build --strict`) passa sem warning.
+- Os dois exemplos SQL do dicionário foram validados só sintaticamente com
+  `pglast`; não rodaram contra o banco (Docker indisponível na sessão).
+
+**O que NÃO foi verificado**
+- Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
+  foi medido de novo.
+
+### 2026-09-26 — Codex — revisão do PR de Dólar e Selic
+
+**O que a ferramenta fez**
+- Revisou o PR #3, integrou a `main` e resolveu conflitos de documentação,
+  navegação e automação.
+- Alinhou Dólar e Selic ao DuckDB analítico único em
+  `data/duckdb/inflatrack.duckdb` e moveu o esquema para
+  `scripts/setup_duckdb_macro.sql`.
+- Corrigiu caminhos da camada raw, datas finais estáticas, ausência do comando
+  `seed-macro`, timeouts HTTP e propagação de falhas.
+- Corrigiu a semântica da série SGS 11 para taxa efetiva diária e adicionou a
+  coluna `observado` para distinguir publicações do BCB de valores preenchidos.
+- Ampliou os testes para transformação do calendário e UPSERT idempotente.
+
+**O que foi verificado e como**
+- Oito testes automatizados passaram.
+- Uma carga real de 19–25/09/2026 consultou Olinda/PTAX e SGS, gerou sete dias
+  por tabela (cinco observados e dois preenchidos) e permitiu `JOIN` diário sem
+  lacunas no mesmo DuckDB.
+- A documentação foi compilada com `mkdocs build --strict`.
+
+**O que NÃO foi verificado**
+- A carga histórica completa desde 2020 e a Alpha Vantage não foram reexecutadas
+  para evitar consumo desnecessário de tempo e cota externa.
+
+### 2026-10-11 — Claude Code (Opus 5.5) — Bronze do IPCA em Delta (E2), diagramas e organização da documentação
+
+**Pedidos:** (1) fazer a parte do IPCA/INPC do plano `tasks_entrega_2.md`; (2) trocar os
+diagramas Mermaid por algo mais legível; (3) reorganizar este registro por integrante;
+(4) melhorar a leitura da documentação sem mudar a estrutura das seções; (5) commits
+separados e um PR.
+
+**O que a ferramenta fez**
+- Escreveu `src/inflatrack/bronze_ipca.py` (transformação sem descarte, checagens de esquema
+  e volume, gravação de `ipca_resposta` e `ipca_observacao` em Delta, importação dos
+  `.json.gz`) e ligou-o ao ingestor, mantendo a escrita no Postgres. Acrescentou
+  `sidra.buscar_resposta`, que devolve o corpo como veio.
+- Fez o agendamento do SIDRA reler os três meses anteriores a cada ciclo (política de dado
+  atrasado), com teste.
+- Escreveu `tests/test_ipca.py` (25 testes) com respostas reais do SIDRA como fixtures.
+- Gerou os 12 diagramas SVG por `scripts/gerar_diagramas.py` e os colocou nas páginas.
+- Reagrupou as 25 entradas deste arquivo por integrante, pelo autor do commit de cada uma,
+  sem alterar o texto de nenhuma.
+- Escreveu `docs/evidencias/e2/ipca.md` e a seção "Bronze em Delta" do dicionário.
+
+**O que foi verificado e como**
+- Carga histórica real dos cinco agregados (886 requisições, ~21 min): 9.116.436 linhas no
+  Delta e 5.992.897 no Postgres; a diferença é exatamente o número de marcadores.
+- Reexecução de jul–set/2026: nenhuma linha nova, nenhuma versão nova no Delta.
+- Importação dos 886 `.json.gz` numa pasta vazia: resultado idêntico, linha a linha, ao da
+  ingestão direta; segunda importação sem linha nova.
+- `pytest`: 55 testes passam. `ruff` limpo nos arquivos alterados.
+- `mkdocs build --strict` passa. Os diagramas foram conferidos em captura de tela do site,
+  nos temas claro e escuro.
+
+**Erros do plano e do código encontrados na verificação**
+- As variáveis do 7060 são 63, 66, 69 e 2265; o plano citava a 2266, que só existe no 1737.
+- `observacao.valor numeric(16,7)` grava como zero o número-índice de dez/1979 a ago/1982
+  (33 meses). Registrado na evidência, **não corrigido**.
+- O `main` estava com `mkdocs build --strict` quebrado (menu apontando para duas páginas
+  ausentes); corrigido num commit à parte.
+- Dois defeitos da própria ferramenta, corrigidos antes do PR: um teste com literal que o
+  `gitleaks` tomou por segredo (reescrito, sem contornar o hook) e uma regra de CSS que fazia
+  tabelas largas estourarem.
+
+**O que NÃO foi verificado**
+- A frequência real de revisão do IBGE: todo o histórico foi baixado numa única data.
+- O agendamento rodando de verdade no Dagster em dias consecutivos; só o teste do que ele pede.
+- A renderização em celular e em navegador que não seja o Chromium.
+- 19 erros de `ruff` que já existiam nos arquivos de commodities continuam lá.
+
+**Decisões que continuam sendo da Squad**
+- Delta × Iceberg e o codec (medido: zstd ocupa menos da metade do snappy na tabela de
+  respostas, com a mesma leitura). As tabelas estão em Delta com snappy, o padrão da biblioteca.
+- O helper comum `inflatrack/bronze.py` não existia; a gravação ficou num módulo do IPCA.
+- O diário de bordo das Semanas 7 a 10 não foi escrito pela ferramenta.
+
+---
+
+## João Pedro Lopes da Cruz
+
+### 2026-09-14 — Claude Code (Sonnet 5) — primeira subida do banco e correção de bugs na ingestão
 
 **O que a ferramenta fez**
 - Subiu o Postgres pela primeira vez (`just up`), aplicando `migrations/` do
@@ -97,7 +246,7 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
   criação da tabela `carga`, para não depender de execução manual contra a
   API real a cada regressão.
 
-## 2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage
+### 2026-09-22 — Antigravity (Gemini 3.1 Pro) — Ingestão de Commodities e Energia via Alpha Vantage
 
 **O que a ferramenta fez**
 - Escreveu o script de inicialização do banco analítico local `scripts/setup_duckdb.sql` (e o utilitário Python `scripts/init_db.py`).
@@ -119,26 +268,7 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 - Preencher a chave `ALPHAVANTAGE_API_KEY` na configuração `.env`.
 - Executar o download ponta-a-ponta para validar os schemas do JSON real retornado pela API e se os mesmos se encaixam no esperado.
 
-## 2026-09-24 — Claude Code (Opus 5.5) — documentação da fonte IPCA/INPC no MkDocs
-
-**O que a ferramenta fez**
-- Levou para o site as linhas do IPCA/INPC da planilha de acompanhamento,
-  conferindo cada afirmação contra `migrations/`, `sidra.py` e `ingest.py`:
-  seção 2 e leitura do armazenamento em `fontes/sidra.md`, dicionário
-  `dicionario/sidra.md` e a seção do IPCA em `pipeline/pipelineDados.md`.
-- Corrigiu links quebrados (`carga.md` removido, link para `src/`) que faziam
-  `mkdocs build --strict` falhar.
-
-**O que foi verificado e como**
-- `just docs-build` (`mkdocs build --strict`) passa sem warning.
-- Os dois exemplos SQL do dicionário foram validados só sintaticamente com
-  `pglast`; não rodaram contra o banco (Docker indisponível na sessão).
-
-**O que NÃO foi verificado**
-- Números de volume foram reaproveitados da caracterização de 2026-09-08; nada
-  foi medido de novo.
-
-## 2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de `data/`
+### 2026-09-25 — Claude Code (Opus 5) — realinhamento dos caminhos de `data/`
 
 **O que a ferramenta fez**
 - Atualizou os scripts para a nova hierarquia de `data/` criada pela Squad:
@@ -185,50 +315,7 @@ Ferramenta, o que fez, o que a Squad conferiu depois.
 **Decisões que continuam sendo da Squad**
 - Apagar ou manter `data_old/` (49 MB), que ficou no disco como backup.
 
-## 2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China
-
-**O que a ferramenta fez**
-- Mapeou os arquivos de contexto da pasta `Bancos 2/Planilha inicial` para auxiliar o integrante da squad na caracterização dos dados para a Primeira Entrega da disciplina.
-- Auxiliou na escolha e justificativa técnica da inclusão do **PIB da China (World Bank API)** como variável macroeconômica explicativa da demanda por commodities.
-- Preencheu tecnicamente os 5 blocos da planilha da disciplina (Fontes, Formatos, Modelos, Cargas/Engines e Pipeline) para o PIB da China.
-- Criou o documento `docs/fontes/pib_china.md` no padrão MkDocs do repositório, detalhando volumetria, retenção, pureza e restrições da API do Banco Mundial.
-- Atualizou o índice da arquitetura em `docs/arquitetura/fonteDados.md` e o menu de navegação em `mkdocs.yml`.
-
-**O que foi verificado e como**
-- Verificada a conformidade do formato de documentação comparando com `docs/fontes/commodities.md` e `docs/fontes/sidra.md`.
-- Criada a migration `migrations/0004_pib_china.sql` e aplicada ao banco de dados PostgreSQL.
-- Criado o script `src/inflatrack/ingest_pib_china.py` com padrão ELT (salva JSON em `data/raw/pib_china/` e faz UPSERT no banco).
-- **Execução e validação real**: Ingestão ponta-a-ponta executada contra a API do Banco Mundial (`api.worldbank.org`), processando 66 anos de dados históricos (1960-2025) salvos na tabela `pib_china` do PostgreSQL.
-
-**O que NÃO foi verificado**
-- Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.
-
-## 2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
-
-**O que a ferramenta fez**
-- Analisou o cliente de API `src/inflatrack/bcb.py` focado no SGS (Sistema Gerenciador de Séries Temporais) do Banco Central do Brasil para buscar os códigos 1 (Dólar Venda Diário) e 11 (Taxa Selic Efetiva Diária).
-- Verificou o script de ingestão CLI `src/inflatrack/ingest_bcb.py` que converte a saída JSON da API para tabelas Pandas e salva localmente em blocos Parquet (`dolar.parquet` e `selic.parquet`).
-
-**O que foi verificado e como**
-- A análise dos arquivos da squad confirmou que o formato em `ingest_bcb.py` é exatamente o padrão adotado na `ingest_commodities.py` previamente feita pelo time (Silver -> Parquet, CLI com argparse, etc.).
-- Conferida a existência do `docker-compose.yml` base para PostgreSQL (`inflatrack`) e checagem da estrutura de diretórios (`migrations/`, `sql/`, `scripts/`).
-
-**O que NÃO foi verificado**
-- Não foi feita a conexão direta de rede para a API do BCB por dentro do ambiente sandbox de execução.
-- O script `load_bcb.py` não foi escrito ainda, o que transportaria os arquivos parquet recém baixados para o DuckDB ou PostgreSQL do projeto.
-
-**Decisões que continuam sendo da Squad**
-- Definir como juntar todos esses dados na tabela fato final (DuckDB/dbt) e estruturar o pipeline de agendamento usando o orquestrador (Dagster) prometido no fluxo.
-
-## 2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia
-
-**O que a ferramenta fez**
-- Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (`dolar_olinda.py`, `ingest_dolar.py`, `load_dolar.py`) e Selic (`selic_sgs.py`, `ingest_selic.py`, `load_selic.py`).
-- Criou os arquivos de teste automatizado na pasta `tests/` (`test_dolar_olinda.py` e `test_selic_sgs.py`), inaugurando a cobertura de testes do projeto via `pytest` e *Mocks*.
-- Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas `pipelineMacro.md`, `evidencias_macro.md`, `dicionario/macroeconomia.md` e o `adr_0002_macro.md`.
----
-
-## 2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)
+### 2026-09-25 — Claude Code (Opus 5) — ingestão das Contas Nacionais Trimestrais (SIDRA 1846)
 
 **Prompt da Squad**
 Implementar a tabela [1846 do SIDRA](https://sidra.ibge.gov.br/tabela/1846) na
@@ -319,32 +406,7 @@ erro nenhum.
 
 ---
 
-## 2026-09-26 — Codex — revisão do PR de Dólar e Selic
-
-**O que a ferramenta fez**
-- Revisou o PR #3, integrou a `main` e resolveu conflitos de documentação,
-  navegação e automação.
-- Alinhou Dólar e Selic ao DuckDB analítico único em
-  `data/duckdb/inflatrack.duckdb` e moveu o esquema para
-  `scripts/setup_duckdb_macro.sql`.
-- Corrigiu caminhos da camada raw, datas finais estáticas, ausência do comando
-  `seed-macro`, timeouts HTTP e propagação de falhas.
-- Corrigiu a semântica da série SGS 11 para taxa efetiva diária e adicionou a
-  coluna `observado` para distinguir publicações do BCB de valores preenchidos.
-- Ampliou os testes para transformação do calendário e UPSERT idempotente.
-
-**O que foi verificado e como**
-- Oito testes automatizados passaram.
-- Uma carga real de 19–25/09/2026 consultou Olinda/PTAX e SGS, gerou sete dias
-  por tabela (cinco observados e dois preenchidos) e permitiu `JOIN` diário sem
-  lacunas no mesmo DuckDB.
-- A documentação foi compilada com `mkdocs build --strict`.
-
-**O que NÃO foi verificado**
-- A carga histórica completa desde 2020 e a Alpha Vantage não foram reexecutadas
-  para evitar consumo desnecessário de tempo e cota externa.
-
-## 2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)
+### 2026-09-27 — Claude Code (Opus 5) — documentação da fonte Taxa SELIC (BCB/SGS)
 
 **O que a ferramenta fez**
 - Iniciou a quebra de `docs/fontes/bcb.md` em dois documentos por indicador,
@@ -377,7 +439,7 @@ erro nenhum.
   abaixo: a Squad pediu a remoção do `bcb.md`.
 - Se vale particionar o raw do BCB por ano para eliminar a redundância apontada.
 
-## 2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do `bcb.md`
+### 2026-09-27 (Fase 2) — Claude Code (Opus 5) — documentação do Dólar Comercial e remoção do `bcb.md`
 
 **O que a ferramenta fez**
 - Criou `docs/fontes/dolar.md` na mesma estrutura das demais fontes, com as
@@ -412,7 +474,7 @@ erro nenhum.
 - Se a troca SGS→Olinda merece um ADR próprio ou uma seção no ADR 0003.
 - Se vale particionar o raw do BCB por ano para eliminar as janelas repetidas.
 
-## 2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura
+### 2026-09-27 (Fase 3) — Claude Code (Opus 5) — generalização das páginas de arquitetura
 
 **O que a ferramenta fez**
 - Reescreveu `docs/arquitetura/arquiteturaMedallion.md`, que descrevia apenas o
@@ -447,31 +509,7 @@ erro nenhum.
 
 ---
 
-## 2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)
-
-**O que a ferramenta fez**
-- Caracterizou e adicionou duas novas fontes de dados ao projeto: **Salário Mínimo Nominal e Necessário (DIEESE)** e **Dados do Clima Diário (INMET)**.
-- Elaborou os documentos de pipeline de dados em `docs/pipeline/pipelineSalarioMinimo.md` e `docs/pipeline/pipelineClima.md`, contendo diagramas conceituais Mermaid, fluxos ELT (Raw em gzip, Silver em Parquet e Gold no DuckDB compartilhado `inflatrack.duckdb`), garantias de idempotência e diagnóstico de falhas.
-- Desenvolveu os dicionários de dados físicos em `docs/dicionario/salario_minimo.md` (tabela `salario_minimo`) e `docs/dicionario/clima.md` (dimensão `estacao_meteorologica` e fato `clima_diario`), com diagramas entidade-relacionamento (Mermaid) e consultas analíticas de exemplo (cruzamentos de chuva/geada com cotações de milho/café e poder de compra com inflação).
-- Atualizou os índices e tabelas centrais do repositório: `docs/arquitetura/fonteDados.md`, `docs/dicionario/dicionario.md`, `mkdocs.yml` e `README.md`.
-
-**O que foi verificado e como**
-- `uv run mkdocs build --strict` executado e aprovado com código 0, sem alertas ou links quebrados.
-- Testes reais de requisição HTTP realizados contra as origens durante a concepção:
-  - Inspeção do HTML e encoding `ISO-8859-1` da tabela de 420 linhas do DIEESE.
-  - Consulta ao endpoint de estações ativas do INMET (`https://apitempo.inmet.gov.br/estacoes/T`), confirmando o retorno de 673 estações com geolocalização e metadados.
-
-**O que NÃO foi verificado**
-- As CLIs de extração (`ingest_*.py`) e migrações SQL físicas para essas duas fontes não foram codificadas em disco nesta etapa, tendo sido documentadas arquiteturalmente conforme solicitado.
-
-**Decisões que continuam sendo da Squad**
-- Definir se a ingestão do clima coletará a totalidade das 673 estações nacionais ou aplicará filtro geográfico prévio para os principais polos produtores de commodities agrícolas.
-- Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
-
-
----
-
-## 2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas
+### 2026-09-28 — Claude Code (Opus 5) — atualização da seção de Arquitetura para as fontes novas
 
 **O que a ferramenta fez**
 - Reescreveu as quatro páginas de `docs/arquitetura/`: `visaoGeral.md`, `fluxoDados.md`,
@@ -532,7 +570,7 @@ erro nenhum.
 
 ---
 
-## 2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB
+### 2026-09-28 — Claude Code (Opus 5) — discussão: migrar o IPCA para o DuckDB
 
 Sessão de **análise, sem alteração de código ou de esquema**. A Squad perguntou se
 mover o IPCA para o DuckDB quebraria o fluxo atual.
@@ -601,7 +639,7 @@ mover o IPCA para o DuckDB quebraria o fluxo atual.
 
 ---
 
-## 2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit
+### 2026-09-28 — Claude Code (Opus 5) — arquitetura da E3: dbt, Dagster, MLflow e Streamlit
 
 **O que a ferramenta fez**
 - Leu o checklist de aceite da E3 (`projeto-e3.md`) e da E4 e confrontou o plano da
@@ -660,7 +698,7 @@ mover o IPCA para o DuckDB quebraria o fluxo atual.
   granularidade declarada do fato, teste de distribuição, freshness com SLA e a consulta
   otimizada com plano de execução antes e depois.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — Dagster como orquestrador
+### 2026-10-11 — Claude Code (Opus 5.5) — Dagster como orquestrador
 
 **Pedido:** "Coloque o dagster como o orquestrador desse repositório."
 
@@ -692,7 +730,7 @@ mover o IPCA para o DuckDB quebraria o fluxo atual.
 - Ligar os agendamentos e ajustar as cadências.
 - Integração `dagster-dbt` e asset de publicação, quando o projeto dbt existir.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — `just` sem `sh` no Windows
+### 2026-10-11 — Claude Code (Opus 5.5) — `just` sem `sh` no Windows
 
 **Pedido:** `just orquestrador` falhou no PowerShell com "could not find the shell `sh`".
 
@@ -714,7 +752,7 @@ receitas do `justfile` estavam quebradas nesse ambiente, não só a do Dagster.
 **O que NÃO foi verificado**
 - `just psql` e `just verificar-carga` não foram executados (Postgres não estava no ar).
 
-## 2026-10-11 — Claude Code (Opus 5.5) — lacunas da extração, commodities e testes do Dagster
+### 2026-10-11 — Claude Code (Opus 5.5) — lacunas da extração, commodities e testes do Dagster
 
 **Pedidos:** (1) listar o que falta no pipeline inicial de extração, sem escrever código;
 (2) opinião sobre manter `json.gz` e Parquet dos mesmos dados; (3) corrigir a carga das
@@ -751,7 +789,7 @@ de falhas, com autorização para rodar os comandos.
 - Ingestão das commodities (gastaria 9 das 25 requisições diárias).
 - Nenhum agendamento foi ligado; a lógica foi avaliada com `build_schedule_context`.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — correção: timeout do Postgres e ano fixo do PIB
+### 2026-10-11 — Claude Code (Opus 5.5) — correção: timeout do Postgres e ano fixo do PIB
 
 **Pedido:** corrigir duas das falhas achadas nos testes do Dagster.
 
@@ -774,7 +812,7 @@ de falhas, com autorização para rodar os comandos.
 **Pendente, por decisão de quem pediu**
 - Mês não publicado pelo SIDRA tratado como sucesso (falha 1) e backoff errado na doc (falha 4).
 
-## 2026-10-11 — Claude Code (Opus 5.5) — plano de preparação da Bronze por base
+### 2026-10-11 — Claude Code (Opus 5.5) — plano de preparação da Bronze por base
 
 **Pedido:** separar as tarefas por base de dados, com a decisão da Squad de remover a camada
 Raw e gravar direto em Parquet (Bronze) com tratamento leve; detalhar o que falta em cada
@@ -802,7 +840,7 @@ base para a próxima fase, num arquivo `.md`.
   fechando a conexão (o endpoint de estações também falhou na segunda). Não se sabe se exige
   token nem qual é o formato real; o plano marca isso como primeira tarefa do Clima.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — revisão do plano da Bronze contra o padrão e contra toda a documentação
+### 2026-10-11 — Claude Code (Opus 5.5) — revisão do plano da Bronze contra o padrão e contra toda a documentação
 
 **Pedidos:** (1) recriar o plano, que tinha sumido do disco depois do commit `993a2f3`;
 (2) revisar o plano para o padrão Parquet → DuckDB, com dbt-duckdb no tratamento, Dagster na
@@ -834,7 +872,7 @@ orquestração e tudo separado por base; (3) ler toda a documentação e complet
 - A E2 (13/10/2026) cobra CDC a partir do OLTP, tabela Iceberg/Delta, ADR do mecanismo de
   ingestão e diário de bordo, e nada disso existe no repositório. O plano não cabe no prazo.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — E2 no plano e divisão de tarefas por pessoa
+### 2026-10-11 — Claude Code (Opus 5.5) — E2 no plano e divisão de tarefas por pessoa
 
 **Pedidos:** (1) ler o enunciado da E2 no site da disciplina e completar o plano;
 (2) dividir as atividades por base, uma pessoa por base, com carga parecida;
@@ -856,7 +894,7 @@ orquestração e tudo separado por base; (3) ler toda a documentação e complet
   `!!!` ficaram vazias e 40 listas aninhadas foram achatadas na página renderizada. A
   ferramenta apontou e não desfez, porque a mudança veio de quem edita.
 
-## 2026-10-11 — Claude Code (Opus 5.5) — Delta, fonte que some e tabela de respostas na Bronze
+### 2026-10-11 — Claude Code (Opus 5.5) — Delta, fonte que some e tabela de respostas na Bronze
 
 **Pedidos:** (1) o Parquet já não faz o papel do Delta?; (2) Parquet + Delta basta se a fonte
 sumir para sempre?; (3) melhor jeito de guardar o valor bruto; (4) atualizar plano e divisão
@@ -881,3 +919,82 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - O tamanho da tabela de respostas com zstd em relação ao `.json.gz` é expectativa; o plano
   deixa a medição como tarefa (2.6).
+
+---
+
+## Artur Fernandes Galdino
+
+### 2026-09-25 — Antigravity (Gemini 3.6 Flash) — Caracterização e Documentação do PIB da China
+
+**O que a ferramenta fez**
+- Mapeou os arquivos de contexto da pasta `Bancos 2/Planilha inicial` para auxiliar o integrante da squad na caracterização dos dados para a Primeira Entrega da disciplina.
+- Auxiliou na escolha e justificativa técnica da inclusão do **PIB da China (World Bank API)** como variável macroeconômica explicativa da demanda por commodities.
+- Preencheu tecnicamente os 5 blocos da planilha da disciplina (Fontes, Formatos, Modelos, Cargas/Engines e Pipeline) para o PIB da China.
+- Criou o documento `docs/fontes/pib_china.md` no padrão MkDocs do repositório, detalhando volumetria, retenção, pureza e restrições da API do Banco Mundial.
+- Atualizou o índice da arquitetura em `docs/arquitetura/fonteDados.md` e o menu de navegação em `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Verificada a conformidade do formato de documentação comparando com `docs/fontes/commodities.md` e `docs/fontes/sidra.md`.
+- Criada a migration `migrations/0004_pib_china.sql` e aplicada ao banco de dados PostgreSQL.
+- Criado o script `src/inflatrack/ingest_pib_china.py` com padrão ELT (salva JSON em `data/raw/pib_china/` e faz UPSERT no banco).
+- **Execução e validação real**: Ingestão ponta-a-ponta executada contra a API do Banco Mundial (`api.worldbank.org`), processando 66 anos de dados históricos (1960-2025) salvos na tabela `pib_china` do PostgreSQL.
+
+**O que NÃO foi verificado**
+- Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.
+
+---
+
+## Pedro Américo
+
+### 2026-09-25 — Antigravity (Gemini 3.1 Pro) — Ingestão Banco Central (Dólar Comercial e Selic)
+
+**O que a ferramenta fez**
+- Analisou o cliente de API `src/inflatrack/bcb.py` focado no SGS (Sistema Gerenciador de Séries Temporais) do Banco Central do Brasil para buscar os códigos 1 (Dólar Venda Diário) e 11 (Taxa Selic Efetiva Diária).
+- Verificou o script de ingestão CLI `src/inflatrack/ingest_bcb.py` que converte a saída JSON da API para tabelas Pandas e salva localmente em blocos Parquet (`dolar.parquet` e `selic.parquet`).
+
+**O que foi verificado e como**
+- A análise dos arquivos da squad confirmou que o formato em `ingest_bcb.py` é exatamente o padrão adotado na `ingest_commodities.py` previamente feita pelo time (Silver -> Parquet, CLI com argparse, etc.).
+- Conferida a existência do `docker-compose.yml` base para PostgreSQL (`inflatrack`) e checagem da estrutura de diretórios (`migrations/`, `sql/`, `scripts/`).
+
+**O que NÃO foi verificado**
+- Não foi feita a conexão direta de rede para a API do BCB por dentro do ambiente sandbox de execução.
+- O script `load_bcb.py` não foi escrito ainda, o que transportaria os arquivos parquet recém baixados para o DuckDB ou PostgreSQL do projeto.
+
+**Decisões que continuam sendo da Squad**
+- Definir como juntar todos esses dados na tabela fato final (DuckDB/dbt) e estruturar o pipeline de agendamento usando o orquestrador (Dagster) prometido no fluxo.
+
+### 2026-09-25 (Fase 2) — Antigravity (Gemini 3.1 Pro) — Finalização do Módulo de Macroeconomia
+
+**O que a ferramenta fez**
+- Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (`dolar_olinda.py`, `ingest_dolar.py`, `load_dolar.py`) e Selic (`selic_sgs.py`, `ingest_selic.py`, `load_selic.py`).
+- Criou os arquivos de teste automatizado na pasta `tests/` (`test_dolar_olinda.py` e `test_selic_sgs.py`), inaugurando a cobertura de testes do projeto via `pytest` e *Mocks*.
+- Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas `pipelineMacro.md`, `evidencias_macro.md`, `dicionario/macroeconomia.md` e o `adr_0002_macro.md`.
+---
+
+---
+
+## Johnnatan Salles
+
+### 2026-09-28 — Antigravity (Gemini 3.8 Flash) — Documentação, Pipeline e Dicionário de Dados do Salário Mínimo (DIEESE) e Clima Diário (INMET)
+
+**O que a ferramenta fez**
+- Caracterizou e adicionou duas novas fontes de dados ao projeto: **Salário Mínimo Nominal e Necessário (DIEESE)** e **Dados do Clima Diário (INMET)**.
+- Elaborou os documentos de pipeline de dados em `docs/pipeline/pipelineSalarioMinimo.md` e `docs/pipeline/pipelineClima.md`, contendo diagramas conceituais Mermaid, fluxos ELT (Raw em gzip, Silver em Parquet e Gold no DuckDB compartilhado `inflatrack.duckdb`), garantias de idempotência e diagnóstico de falhas.
+- Desenvolveu os dicionários de dados físicos em `docs/dicionario/salario_minimo.md` (tabela `salario_minimo`) e `docs/dicionario/clima.md` (dimensão `estacao_meteorologica` e fato `clima_diario`), com diagramas entidade-relacionamento (Mermaid) e consultas analíticas de exemplo (cruzamentos de chuva/geada com cotações de milho/café e poder de compra com inflação).
+- Atualizou os índices e tabelas centrais do repositório: `docs/arquitetura/fonteDados.md`, `docs/dicionario/dicionario.md`, `mkdocs.yml` e `README.md`.
+
+**O que foi verificado e como**
+- `uv run mkdocs build --strict` executado e aprovado com código 0, sem alertas ou links quebrados.
+- Testes reais de requisição HTTP realizados contra as origens durante a concepção:
+  - Inspeção do HTML e encoding `ISO-8859-1` da tabela de 420 linhas do DIEESE.
+  - Consulta ao endpoint de estações ativas do INMET (`https://apitempo.inmet.gov.br/estacoes/T`), confirmando o retorno de 673 estações com geolocalização e metadados.
+
+**O que NÃO foi verificado**
+- As CLIs de extração (`ingest_*.py`) e migrações SQL físicas para essas duas fontes não foram codificadas em disco nesta etapa, tendo sido documentadas arquiteturalmente conforme solicitado.
+
+**Decisões que continuam sendo da Squad**
+- Definir se a ingestão do clima coletará a totalidade das 673 estações nacionais ou aplicará filtro geográfico prévio para os principais polos produtores de commodities agrícolas.
+- Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
+
+
+---

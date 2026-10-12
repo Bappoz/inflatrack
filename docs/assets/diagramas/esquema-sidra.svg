@@ -1,0 +1,174 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 912 596" width="912" height="596" role="img" aria-labelledby="esquema-sidra-title esquema-sidra-desc">
+<title id="esquema-sidra-title">Esquema físico do IPCA/INPC no PostgreSQL</title>
+<desc id="esquema-sidra-desc">A tabela de fato observacao referencia fonte_agregado, classificacao, localidade e variavel; classificacao_versao guarda o nome de cada código por fonte e vigência.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="esquema-sidra-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="esquema-sidra-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<line class="fio" x1="16" y1="568" x2="896" y2="568"/>
+<path class="seta" d="M16,580 L40,580" marker-end="url(#esquema-sidra-normal)"/>
+<text class="sub" x="50" y="584">FK com ON DELETE RESTRICT</text>
+<rect class="cab-foco" x="228" y="573" width="24" height="14" rx="3"/>
+<text class="sub" x="262" y="584">tabela de fato</text>
+<path class="seta" d="M368,172 L336,172 Q328,172 328,164 L328,68 Q328,60 320,60 L288,60" marker-end="url(#esquema-sidra-normal)"/>
+<path class="seta" d="M368,196 L320,196 Q312,196 312,204 L312,260 Q312,268 304,268 L288,268" marker-end="url(#esquema-sidra-normal)"/>
+<path class="seta" d="M56,404 L48,404 Q40,404 40,396 L40,276 Q40,268 48,268 L56,268" marker-end="url(#esquema-sidra-normal)"/>
+<path class="seta" d="M56,428 L32,428 Q24,428 24,420 L24,68 Q24,60 32,60 L56,60" marker-end="url(#esquema-sidra-normal)"/>
+<path class="seta" d="M624,220 L648,220 Q656,220 656,212 L656,92 Q656,84 664,84 L696,84" marker-end="url(#esquema-sidra-normal)"/>
+<path class="seta" d="M624,244 L664,244 Q672,244 672,252 L672,268 Q672,276 680,276 L696,276" marker-end="url(#esquema-sidra-normal)"/>
+<rect class="papel" x="56" y="16" width="232" height="176" rx="6"/>
+<clipPath id="esquema-sidra-fonte_agregado"><rect x="56" y="16" width="232" height="176" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-fonte_agregado)">
+<rect class="cab" x="56" y="16" width="232" height="32"/>
+<rect class="chip" x="66" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="63" text-anchor="middle">PK</text>
+<text class="col" x="96" y="64">id</text>
+<text class="tipo" x="276" y="64" text-anchor="end">smallint</text>
+<rect class="zebra" x="56" y="72" width="232" height="24"/>
+<text class="col" x="96" y="88">indice</text>
+<text class="tipo" x="276" y="88" text-anchor="end">text</text>
+<text class="col" x="96" y="112">nome</text>
+<text class="tipo" x="276" y="112" text-anchor="end">text</text>
+<rect class="zebra" x="56" y="120" width="232" height="24"/>
+<text class="col" x="96" y="136">periodo_inicio</text>
+<text class="tipo" x="276" y="136" text-anchor="end">date</text>
+<text class="col" x="96" y="160">periodo_fim</text>
+<text class="tipo" x="276" y="160" text-anchor="end">date</text>
+<rect class="zebra" x="56" y="168" width="232" height="24"/>
+<text class="col" x="96" y="184">tem_acum_12m</text>
+<text class="tipo" x="276" y="184" text-anchor="end">boolean</text>
+</g>
+<line class="fio" x1="56" y1="48" x2="288" y2="48"/>
+<rect class="caixa" style="fill:none" x="56" y="16" width="232" height="176" rx="6"/>
+<text class="nome" x="68" y="37">fonte_agregado</text>
+<text class="tag" x="276" y="36" text-anchor="end">REFERÊNCIA</text>
+<rect class="papel" x="56" y="224" width="232" height="80" rx="6"/>
+<clipPath id="esquema-sidra-classificacao"><rect x="56" y="224" width="232" height="80" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-classificacao)">
+<rect class="cab" x="56" y="224" width="232" height="32"/>
+<rect class="chip" x="66" y="261" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="271" text-anchor="middle">PK</text>
+<text class="col" x="96" y="272">codigo</text>
+<text class="tipo" x="276" y="272" text-anchor="end">text</text>
+<rect class="zebra" x="56" y="280" width="232" height="24"/>
+<text class="col" x="96" y="296">nivel</text>
+<text class="tipo" x="276" y="296" text-anchor="end">text</text>
+</g>
+<line class="fio" x1="56" y1="256" x2="288" y2="256"/>
+<rect class="caixa" style="fill:none" x="56" y="224" width="232" height="80" rx="6"/>
+<text class="nome" x="68" y="245">classificacao</text>
+<text class="tag" x="276" y="244" text-anchor="end">REFERÊNCIA</text>
+<rect class="papel" x="56" y="336" width="232" height="200" rx="6"/>
+<clipPath id="esquema-sidra-classificacao_versao"><rect x="56" y="336" width="232" height="200" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-classificacao_versao)">
+<rect class="cab" x="56" y="336" width="232" height="32"/>
+<rect class="chip" x="66" y="373" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="383" text-anchor="middle">PK</text>
+<text class="col" x="96" y="384">id</text>
+<text class="tipo" x="276" y="384" text-anchor="end">bigint</text>
+<rect class="zebra" x="56" y="392" width="232" height="24"/>
+<rect class="chip" x="66" y="397" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="407" text-anchor="middle">FK</text>
+<text class="col" x="96" y="408">codigo</text>
+<text class="tipo" x="276" y="408" text-anchor="end">text</text>
+<rect class="chip" x="66" y="421" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="431" text-anchor="middle">FK</text>
+<text class="col" x="96" y="432">id_fonte</text>
+<text class="tipo" x="276" y="432" text-anchor="end">smallint</text>
+<rect class="zebra" x="56" y="440" width="232" height="24"/>
+<text class="col" x="96" y="456">nome</text>
+<text class="tipo" x="276" y="456" text-anchor="end">text</text>
+<rect class="chip" x="66" y="469" width="22" height="14" rx="2"/>
+<text class="tag" x="77" y="479" text-anchor="middle">FK</text>
+<text class="col" x="96" y="480">codigo_pai</text>
+<text class="tipo" x="276" y="480" text-anchor="end">text</text>
+<rect class="zebra" x="56" y="488" width="232" height="24"/>
+<text class="col" x="96" y="504">vigencia_inicio</text>
+<text class="tipo" x="276" y="504" text-anchor="end">date</text>
+<text class="col" x="96" y="528">vigencia_fim</text>
+<text class="tipo" x="276" y="528" text-anchor="end">date</text>
+</g>
+<line class="fio" x1="56" y1="368" x2="288" y2="368"/>
+<rect class="caixa" style="fill:none" x="56" y="336" width="232" height="200" rx="6"/>
+<text class="nome" x="68" y="357">classificacao_versao</text>
+<text class="tag" x="276" y="356" text-anchor="end">DIMENSÃO SCD2</text>
+<rect class="papel" x="368" y="104" width="256" height="224" rx="6"/>
+<clipPath id="esquema-sidra-observacao"><rect x="368" y="104" width="256" height="224" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-observacao)">
+<rect class="cab-foco" x="368" y="104" width="256" height="32"/>
+<rect class="chip" x="378" y="141" width="22" height="14" rx="2"/>
+<text class="tag" x="389" y="151" text-anchor="middle">PK</text>
+<text class="col" x="408" y="152">id</text>
+<text class="tipo" x="612" y="152" text-anchor="end">bigint</text>
+<rect class="zebra" x="368" y="160" width="256" height="24"/>
+<rect class="chip" x="378" y="165" width="22" height="14" rx="2"/>
+<text class="tag" x="389" y="175" text-anchor="middle">FK</text>
+<text class="col" x="408" y="176">id_fonte</text>
+<text class="tipo" x="612" y="176" text-anchor="end">smallint</text>
+<rect class="chip" x="378" y="189" width="22" height="14" rx="2"/>
+<text class="tag" x="389" y="199" text-anchor="middle">FK</text>
+<text class="col" x="408" y="200">codigo_classificacao</text>
+<text class="tipo" x="612" y="200" text-anchor="end">text</text>
+<rect class="zebra" x="368" y="208" width="256" height="24"/>
+<rect class="chip" x="378" y="213" width="22" height="14" rx="2"/>
+<text class="tag" x="389" y="223" text-anchor="middle">FK</text>
+<text class="col" x="408" y="224">codigo_localidade</text>
+<text class="tipo" x="612" y="224" text-anchor="end">integer</text>
+<rect class="chip" x="378" y="237" width="22" height="14" rx="2"/>
+<text class="tag" x="389" y="247" text-anchor="middle">FK</text>
+<text class="col" x="408" y="248">codigo_variavel</text>
+<text class="tipo" x="612" y="248" text-anchor="end">smallint</text>
+<rect class="zebra" x="368" y="256" width="256" height="24"/>
+<text class="col" x="408" y="272">mes_referencia</text>
+<text class="tipo" x="612" y="272" text-anchor="end">date</text>
+<text class="col" x="408" y="296">valor</text>
+<text class="tipo" x="612" y="296" text-anchor="end">numeric(16,7)</text>
+<rect class="zebra" x="368" y="304" width="256" height="24"/>
+<text class="col" x="408" y="320">ingerido_em</text>
+<text class="tipo" x="612" y="320" text-anchor="end">timestamptz</text>
+</g>
+<line class="fio" x1="368" y1="136" x2="624" y2="136"/>
+<rect class="foco" style="fill:none" x="368" y="104" width="256" height="224" rx="6"/>
+<text class="nome" x="380" y="125">observacao</text>
+<text class="tag" x="612" y="124" text-anchor="end">FATO · INSERT-ONLY</text>
+<rect class="papel" x="696" y="40" width="200" height="128" rx="6"/>
+<clipPath id="esquema-sidra-localidade"><rect x="696" y="40" width="200" height="128" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-localidade)">
+<rect class="cab" x="696" y="40" width="200" height="32"/>
+<rect class="chip" x="706" y="77" width="22" height="14" rx="2"/>
+<text class="tag" x="717" y="87" text-anchor="middle">PK</text>
+<text class="col" x="736" y="88">codigo_ibge</text>
+<text class="tipo" x="884" y="88" text-anchor="end">integer</text>
+<rect class="zebra" x="696" y="96" width="200" height="24"/>
+<text class="col" x="736" y="112">nome</text>
+<text class="tipo" x="884" y="112" text-anchor="end">text</text>
+<text class="col" x="736" y="136">tipo</text>
+<text class="tipo" x="884" y="136" text-anchor="end">text</text>
+<rect class="zebra" x="696" y="144" width="200" height="24"/>
+<text class="col" x="736" y="160">uf</text>
+<text class="tipo" x="884" y="160" text-anchor="end">char(2)</text>
+</g>
+<line class="fio" x1="696" y1="72" x2="896" y2="72"/>
+<rect class="caixa" style="fill:none" x="696" y="40" width="200" height="128" rx="6"/>
+<text class="nome" x="708" y="61">localidade</text>
+<text class="tag" x="884" y="60" text-anchor="end">REFERÊNCIA</text>
+<rect class="papel" x="696" y="232" width="200" height="104" rx="6"/>
+<clipPath id="esquema-sidra-variavel"><rect x="696" y="232" width="200" height="104" rx="6"/></clipPath>
+<g clip-path="url(#esquema-sidra-variavel)">
+<rect class="cab" x="696" y="232" width="200" height="32"/>
+<rect class="chip" x="706" y="269" width="22" height="14" rx="2"/>
+<text class="tag" x="717" y="279" text-anchor="middle">PK</text>
+<text class="col" x="736" y="280">codigo</text>
+<text class="tipo" x="884" y="280" text-anchor="end">smallint</text>
+<rect class="zebra" x="696" y="288" width="200" height="24"/>
+<text class="col" x="736" y="304">nome</text>
+<text class="tipo" x="884" y="304" text-anchor="end">text</text>
+<text class="col" x="736" y="328">unidade</text>
+<text class="tipo" x="884" y="328" text-anchor="end">text</text>
+</g>
+<line class="fio" x1="696" y1="264" x2="896" y2="264"/>
+<rect class="caixa" style="fill:none" x="696" y="232" width="200" height="104" rx="6"/>
+<text class="nome" x="708" y="253">variavel</text>
+<text class="tag" x="884" y="252" text-anchor="end">REFERÊNCIA</text>
+</svg>

@@ -1,0 +1,76 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 404" width="976" height="404" role="img" aria-labelledby="dicionario-visao-geral-title dicionario-visao-geral-desc">
+<title id="dicionario-visao-geral-title">Onde vive cada conjunto de dados</title>
+<desc id="dicionario-visao-geral-desc">Sete grupos de fontes passam por Raw, Bronze, Silver e Gold até o painel e os modelos; o PostgreSQL transacional alimenta o painel diretamente.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="dicionario-visao-geral-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="dicionario-visao-geral-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<rect class="zona" x="16" y="16" width="160" height="260" rx="8"/>
+<text class="zona-t" x="28" y="34">FONTES</text>
+<line class="fio" x1="16" y1="376" x2="960" y2="376"/>
+<rect class="ext" x="16" y="381" width="24" height="14" rx="3"/>
+<text class="sub" x="50" y="392">fonte externa</text>
+<rect class="dep" x="156" y="381" width="24" height="14" rx="3"/>
+<text class="sub" x="190" y="392">camada</text>
+<rect class="foco" x="254" y="381" width="24" height="14" rx="3"/>
+<text class="sub" x="288" y="392">camada de consumo</text>
+<path class="seta-leve" d="M418,388 L442,388" marker-end="url(#dicionario-visao-geral-normal)"/>
+<text class="sub" x="452" y="392">lê em paralelo</text>
+<path class="seta" d="M176,146 L204,146" marker-end="url(#dicionario-visao-geral-normal)"/>
+<path class="seta" d="M324,146 L352,146" marker-end="url(#dicionario-visao-geral-normal)"/>
+<path class="seta" d="M472,146 L500,146" marker-end="url(#dicionario-visao-geral-normal)"/>
+<path class="seta" d="M620,146 L648,146" marker-end="url(#dicionario-visao-geral-normal)"/>
+<path class="seta-foco" d="M768,146 L796,146" marker-end="url(#dicionario-visao-geral-foco)"/>
+<path class="seta-leve" d="M878,304 L878,174" marker-end="url(#dicionario-visao-geral-normal)"/>
+<rect class="papel" x="28" y="46" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="46" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="62" text-anchor="middle">SIDRA · IPCA/INPC</text>
+<rect class="papel" x="28" y="78" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="78" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="94" text-anchor="middle">BCB · Dólar e Selic</text>
+<rect class="papel" x="28" y="110" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="110" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="126" text-anchor="middle">Alpha Vantage</text>
+<rect class="papel" x="28" y="142" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="142" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="158" text-anchor="middle">SIDRA 1846 · PIB</text>
+<rect class="papel" x="28" y="174" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="174" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="190" text-anchor="middle">World Bank</text>
+<rect class="papel" x="28" y="206" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="206" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="222" text-anchor="middle">DIEESE</text>
+<rect class="papel" x="28" y="238" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="238" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="254" text-anchor="middle">INMET · Clima</text>
+<rect class="papel" x="204" y="106" width="120" height="80" rx="6"/>
+<rect class="dep" x="204" y="106" width="120" height="80" rx="6"/>
+<text class="tag" x="214" y="122">RAW</text>
+<text class="nome" x="264" y="151" text-anchor="middle">Raw</text>
+<text class="sub" x="264" y="166" text-anchor="middle">resposta original</text>
+<rect class="papel" x="352" y="106" width="120" height="80" rx="6"/>
+<rect class="dep" x="352" y="106" width="120" height="80" rx="6"/>
+<text class="tag" x="362" y="122">BRONZE</text>
+<text class="nome" x="412" y="151" text-anchor="middle">Bronze</text>
+<text class="sub" x="412" y="166" text-anchor="middle">Parquet</text>
+<rect class="papel" x="500" y="106" width="120" height="80" rx="6"/>
+<rect class="dep" x="500" y="106" width="120" height="80" rx="6"/>
+<text class="tag" x="510" y="122">SILVER</text>
+<text class="nome" x="560" y="151" text-anchor="middle">Silver</text>
+<text class="sub" x="560" y="166" text-anchor="middle">staging</text>
+<rect class="papel" x="648" y="106" width="120" height="80" rx="6"/>
+<rect class="foco" x="648" y="106" width="120" height="80" rx="6"/>
+<text class="tag" x="658" y="122">GOLD</text>
+<text class="nome" x="708" y="151" text-anchor="middle">Gold</text>
+<text class="sub" x="708" y="166" text-anchor="middle">fato e dimensão</text>
+<rect class="papel" x="796" y="118" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="118" width="164" height="56" rx="6"/>
+<text class="nome" x="878" y="143" text-anchor="middle">Painel + Modelos</text>
+<text class="sub" x="878" y="158" text-anchor="middle">consumo</text>
+<rect class="papel" x="796" y="304" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="304" width="164" height="56" rx="6"/>
+<text class="tag" x="806" y="320">OLTP</text>
+<text class="nome" x="878" y="337" text-anchor="middle">PostgreSQL</text>
+<text class="sub" x="878" y="352" text-anchor="middle">lojista, produto, reajuste</text>
+</svg>

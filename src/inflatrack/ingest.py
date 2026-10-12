@@ -8,6 +8,12 @@ A carga é ELT: grava a resposta crua em ``data/raw/ipca-inpc/`` (gzip, ~18x men
 depois transforma dentro do banco. A camada crua existe para reprocessar e para
 provar de onde veio o número — não para ser consultada.
 
+Cada mês também vai para a Bronze em Delta (``data/parquet/ipca/``, ver
+:mod:`inflatrack.bronze_ipca`): a resposta inteira em ``ipca_resposta`` e todas as
+linhas, sem descarte, em ``ipca_observacao``. A escrita no Postgres e o ``.json.gz``
+continuam até a E3; o Delta é gravado antes do banco, para que uma falha do Postgres
+não deixe o formato aberto para trás (a reexecução não duplica nada em nenhum dos dois).
+
 Idempotente: reexecutar com o mesmo dado não insere nada (índice único inclui o
 valor). Se o IBGE revisar um mês já carregado, a revisão entra como linha nova.
 """
@@ -26,7 +32,7 @@ from pathlib import Path
 import httpx
 import psycopg
 
-from inflatrack import sidra
+from inflatrack import bronze_ipca, sidra
 
 logger = logging.getLogger("inflatrack.ingest")
 
@@ -148,6 +154,7 @@ def carregar_periodo(
 def executar(args: argparse.Namespace) -> int:
     inicio, fim = mes_para_data(args.de.replace("-", "")), mes_para_data(args.ate.replace("-", ""))
     destino_bruto = Path(args.raw_dir)
+    destino_bronze = Path(args.parquet_dir)
     total = 0
 
     with (
@@ -165,19 +172,26 @@ def executar(args: argparse.Namespace) -> int:
                 args.agregado,
             )
 
+        niveis, classificacao = sidra.consulta_do_agregado(args.agregado)
         for periodo in sidra.meses(inicio, fim):
-            payload = sidra.buscar_valores(
-                cliente,
-                args.agregado,
-                periodo,
-                niveis="n1/all" if args.agregado == 1737 else "n1/all/n6/all/n7/all",
-                classificacao=None if args.agregado == 1737 else "315",
+            resposta = sidra.buscar_resposta(
+                cliente, args.agregado, periodo, niveis=niveis, classificacao=classificacao
             )
+            payload = resposta.json()
             if not payload:
                 # Mês ainda não divulgado vem como 200 + lista vazia. Falhar (sem gravar Raw)
                 # mantém a partição pendente no Dagster, e o agendamento tenta no dia seguinte.
                 raise sidra.SidraError(f"{args.agregado}/{periodo}: sem dados publicados")
             gravar_bruto(destino_bruto, args.agregado, periodo, payload)
+            bronze = bronze_ipca.gravar(destino_bronze, args.agregado, periodo, resposta)
+            logger.info(
+                "%s/%s: bronze com %d de %d linhas novas (resposta %s)",
+                args.agregado,
+                periodo,
+                bronze.linhas_novas,
+                bronze.linhas_lidas,
+                "nova" if bronze.resposta_nova else "já guardada",
+            )
             inseridas = carregar_periodo(
                 conexao, args.agregado, periodo, payload, mapa_classificacao
             )
@@ -197,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--de", required=True, metavar="AAAA-MM")
     parser.add_argument("--ate", required=True, metavar="AAAA-MM")
     parser.add_argument("--raw-dir", default="data/raw/ipca-inpc")
+    parser.add_argument("--parquet-dir", default=bronze_ipca.DIRETORIO_PADRAO)
     parser.add_argument("--dsn", default=None)
     args = parser.parse_args(argv)
     args.dsn = args.dsn or dsn_do_ambiente()
@@ -204,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         executar(args)
-    except (sidra.SidraError, psycopg.Error) as erro:
+    except (sidra.SidraError, bronze_ipca.ChecagemError, psycopg.Error) as erro:
         logger.error("carga abortada: %s", erro)
         return 1
     return 0

@@ -1,0 +1,145 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" width="960" height="452" role="img" aria-labelledby="esquema-transacional-title esquema-transacional-desc">
+<title id="esquema-transacional-title">Esquema físico do banco transacional do lojista</title>
+<desc id="esquema-transacional-desc">Um lojista tem produtos e cada produto tem um histórico de reajustes, apagados em cascata; lojista e produto apontam para a localidade e a classificação de referência do IPCA.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="esquema-transacional-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="esquema-transacional-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<line class="fio" x1="16" y1="424" x2="944" y2="424"/>
+<path class="seta-foco" d="M16,436 L40,436" marker-end="url(#esquema-transacional-foco)"/>
+<text class="sub" x="50" y="440">ON DELETE CASCADE</text>
+<path class="seta" d="M180,436 L204,436" marker-end="url(#esquema-transacional-normal)"/>
+<text class="sub" x="214" y="440">ON DELETE RESTRICT</text>
+<path class="seta-foco" d="M344,84 L320,84 Q312,84 312,92 L312,132 Q312,140 304,140 L280,140" marker-end="url(#esquema-transacional-foco)"/>
+<path class="seta-foco" d="M672,84 L648,84 Q640,84 640,76 L640,68 Q640,60 632,60 L608,60" marker-end="url(#esquema-transacional-foco)"/>
+<path class="seta" d="M40,212 L28,212 Q20,212 20,204 L20,68 Q20,60 28,60 L40,60" marker-end="url(#esquema-transacional-normal)"/>
+<path class="seta" d="M280,236 L288,236 Q296,236 296,244 L296,340 Q296,348 288,348 L280,348" marker-end="url(#esquema-transacional-normal)"/>
+<path class="seta" d="M344,180 L328,180 Q320,180 320,188 L320,356 Q320,364 312,364 L280,364" marker-end="url(#esquema-transacional-normal)"/>
+<rect class="papel" x="40" y="16" width="240" height="56" rx="6"/>
+<clipPath id="esquema-transacional-localidade"><rect x="40" y="16" width="240" height="56" rx="6"/></clipPath>
+<g clip-path="url(#esquema-transacional-localidade)">
+<rect class="cab" x="40" y="16" width="240" height="32"/>
+<rect class="chip" x="50" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="63" text-anchor="middle">PK</text>
+<text class="col" x="80" y="64">codigo_ibge</text>
+<text class="tipo" x="268" y="64" text-anchor="end">integer</text>
+</g>
+<line class="fio" x1="40" y1="48" x2="280" y2="48"/>
+<rect class="caixa" style="fill:none" x="40" y="16" width="240" height="56" rx="6"/>
+<text class="nome" x="52" y="37">localidade</text>
+<text class="tag" x="268" y="36" text-anchor="end">REFERÊNCIA IPCA</text>
+<rect class="papel" x="40" y="96" width="240" height="176" rx="6"/>
+<clipPath id="esquema-transacional-lojista"><rect x="40" y="96" width="240" height="176" rx="6"/></clipPath>
+<g clip-path="url(#esquema-transacional-lojista)">
+<rect class="cab" x="40" y="96" width="240" height="32"/>
+<rect class="chip" x="50" y="133" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="143" text-anchor="middle">PK</text>
+<text class="col" x="80" y="144">id</text>
+<text class="tipo" x="268" y="144" text-anchor="end">bigint</text>
+<rect class="zebra" x="40" y="152" width="240" height="24"/>
+<text class="col" x="80" y="168">nome_fantasia</text>
+<text class="tipo" x="268" y="168" text-anchor="end">text</text>
+<rect class="chip" x="50" y="181" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="191" text-anchor="middle">UQ</text>
+<text class="col" x="80" y="192">cnpj</text>
+<text class="tipo" x="268" y="192" text-anchor="end">char(14)</text>
+<rect class="zebra" x="40" y="200" width="240" height="24"/>
+<rect class="chip" x="50" y="205" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="215" text-anchor="middle">FK</text>
+<text class="col" x="80" y="216">codigo_localidade</text>
+<text class="tipo" x="268" y="216" text-anchor="end">integer</text>
+<rect class="chip" x="50" y="229" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="239" text-anchor="middle">FK</text>
+<text class="col" x="80" y="240">codigo_grupo_ipca</text>
+<text class="tipo" x="268" y="240" text-anchor="end">text</text>
+<rect class="zebra" x="40" y="248" width="240" height="24"/>
+<text class="col" x="80" y="264">criado_em</text>
+<text class="tipo" x="268" y="264" text-anchor="end">timestamptz</text>
+</g>
+<line class="fio" x1="40" y1="128" x2="280" y2="128"/>
+<rect class="caixa" style="fill:none" x="40" y="96" width="240" height="176" rx="6"/>
+<text class="nome" x="52" y="117">lojista</text>
+<text class="tag" x="268" y="116" text-anchor="end">TABELA</text>
+<rect class="papel" x="40" y="312" width="240" height="80" rx="6"/>
+<clipPath id="esquema-transacional-classificacao"><rect x="40" y="312" width="240" height="80" rx="6"/></clipPath>
+<g clip-path="url(#esquema-transacional-classificacao)">
+<rect class="cab" x="40" y="312" width="240" height="32"/>
+<rect class="chip" x="50" y="349" width="22" height="14" rx="2"/>
+<text class="tag" x="61" y="359" text-anchor="middle">PK</text>
+<text class="col" x="80" y="360">codigo</text>
+<text class="tipo" x="268" y="360" text-anchor="end">text</text>
+<rect class="zebra" x="40" y="368" width="240" height="24"/>
+<text class="col" x="80" y="384">nivel</text>
+<text class="tipo" x="268" y="384" text-anchor="end">text</text>
+</g>
+<line class="fio" x1="40" y1="344" x2="280" y2="344"/>
+<rect class="caixa" style="fill:none" x="40" y="312" width="240" height="80" rx="6"/>
+<text class="nome" x="52" y="333">classificacao</text>
+<text class="tag" x="268" y="332" text-anchor="end">REFERÊNCIA IPCA</text>
+<rect class="papel" x="344" y="16" width="264" height="200" rx="6"/>
+<clipPath id="esquema-transacional-produto"><rect x="344" y="16" width="264" height="200" rx="6"/></clipPath>
+<g clip-path="url(#esquema-transacional-produto)">
+<rect class="cab" x="344" y="16" width="264" height="32"/>
+<rect class="chip" x="354" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="365" y="63" text-anchor="middle">PK</text>
+<text class="col" x="384" y="64">id</text>
+<text class="tipo" x="596" y="64" text-anchor="end">bigint</text>
+<rect class="zebra" x="344" y="72" width="264" height="24"/>
+<rect class="chip" x="354" y="77" width="22" height="14" rx="2"/>
+<text class="tag" x="365" y="87" text-anchor="middle">FK</text>
+<text class="col" x="384" y="88">id_lojista</text>
+<text class="tipo" x="596" y="88" text-anchor="end">bigint</text>
+<text class="col" x="384" y="112">nome</text>
+<text class="tipo" x="596" y="112" text-anchor="end">text</text>
+<rect class="zebra" x="344" y="120" width="264" height="24"/>
+<text class="col" x="384" y="136">preco_inicial_centavos</text>
+<text class="tipo" x="596" y="136" text-anchor="end">integer</text>
+<text class="col" x="384" y="160">custo_inicial_centavos</text>
+<text class="tipo" x="596" y="160" text-anchor="end">integer</text>
+<rect class="zebra" x="344" y="168" width="264" height="24"/>
+<rect class="chip" x="354" y="173" width="22" height="14" rx="2"/>
+<text class="tag" x="365" y="183" text-anchor="middle">FK</text>
+<text class="col" x="384" y="184">codigo_subitem_ipca</text>
+<text class="tipo" x="596" y="184" text-anchor="end">text</text>
+<text class="col" x="384" y="208">criado_em</text>
+<text class="tipo" x="596" y="208" text-anchor="end">timestamptz</text>
+</g>
+<line class="fio" x1="344" y1="48" x2="608" y2="48"/>
+<rect class="caixa" style="fill:none" x="344" y="16" width="264" height="200" rx="6"/>
+<text class="nome" x="356" y="37">produto</text>
+<text class="tag" x="596" y="36" text-anchor="end">TABELA</text>
+<rect class="papel" x="672" y="16" width="272" height="224" rx="6"/>
+<clipPath id="esquema-transacional-reajuste"><rect x="672" y="16" width="272" height="224" rx="6"/></clipPath>
+<g clip-path="url(#esquema-transacional-reajuste)">
+<rect class="cab" x="672" y="16" width="272" height="32"/>
+<rect class="chip" x="682" y="53" width="22" height="14" rx="2"/>
+<text class="tag" x="693" y="63" text-anchor="middle">PK</text>
+<text class="col" x="712" y="64">id</text>
+<text class="tipo" x="932" y="64" text-anchor="end">bigint</text>
+<rect class="zebra" x="672" y="72" width="272" height="24"/>
+<rect class="chip" x="682" y="77" width="22" height="14" rx="2"/>
+<text class="tag" x="693" y="87" text-anchor="middle">FK</text>
+<text class="col" x="712" y="88">id_produto</text>
+<text class="tipo" x="932" y="88" text-anchor="end">bigint</text>
+<text class="col" x="712" y="112">preco_anterior_centavos</text>
+<text class="tipo" x="932" y="112" text-anchor="end">integer</text>
+<rect class="zebra" x="672" y="120" width="272" height="24"/>
+<text class="col" x="712" y="136">preco_novo_centavos</text>
+<text class="tipo" x="932" y="136" text-anchor="end">integer</text>
+<text class="col" x="712" y="160">ipca_acumulado_ref</text>
+<text class="tipo" x="932" y="160" text-anchor="end">numeric(8,4)</text>
+<rect class="zebra" x="672" y="168" width="272" height="24"/>
+<text class="col" x="712" y="184">mes_referencia_ipca</text>
+<text class="tipo" x="932" y="184" text-anchor="end">date</text>
+<text class="col" x="712" y="208">motivo</text>
+<text class="tipo" x="932" y="208" text-anchor="end">text</text>
+<rect class="zebra" x="672" y="216" width="272" height="24"/>
+<text class="col" x="712" y="232">aplicado_em</text>
+<text class="tipo" x="932" y="232" text-anchor="end">timestamptz</text>
+</g>
+<line class="fio" x1="672" y1="48" x2="944" y2="48"/>
+<rect class="caixa" style="fill:none" x="672" y="16" width="272" height="224" rx="6"/>
+<text class="nome" x="684" y="37">reajuste</text>
+<text class="tag" x="932" y="36" text-anchor="end">TABELA</text>
+</svg>

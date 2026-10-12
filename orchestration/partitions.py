@@ -24,6 +24,26 @@ VIGENCIA_AGREGADOS_IPCA = (
 )
 
 
+# Política de dado atrasado do IPCA/INPC: o IBGE pode republicar um mês já divulgado, e
+# a API não tem como pedir "só o que mudou". Reler os meses recentes é o único jeito de
+# ver uma revisão; a Bronze só acrescenta, então reler um mês sem revisão não grava nada.
+MESES_RELIDOS = 3
+
+
+def janela_de_releitura(execucao: date) -> tuple[str, list[str]]:
+    """Chaves de partição pedidas numa execução do agendamento do SIDRA.
+
+    Devolve o mês novo (o anterior ao da execução, que o IBGE divulga agora) e os
+    ``MESES_RELIDOS`` meses antes dele, do mais recente para o mais antigo.
+    """
+    ano, mes = execucao.year, execucao.month
+    chaves = []
+    for _ in range(MESES_RELIDOS + 1):
+        ano, mes = (ano - 1, 12) if mes == 1 else (ano, mes - 1)
+        chaves.append(date(ano, mes, 1).isoformat())
+    return chaves[0], chaves[1:]
+
+
 def mes_da_chave(chave: str) -> date:
     """Chave de partição do Dagster ('2026-07-01') para date."""
     return date.fromisoformat(chave)

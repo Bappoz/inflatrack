@@ -17,8 +17,10 @@ Fatos medidos em 2026-09-08 que moldam este módulo:
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import date
 
 import httpx
@@ -50,6 +52,86 @@ def eh_ausente(valor: str) -> bool:
     return valor in MARCADORES_AUSENTE
 
 
+@dataclass(frozen=True)
+class Resposta:
+    """Resposta HTTP do SIDRA como chegou, antes de qualquer interpretação.
+
+    O ``corpo`` é o texto exato devolvido pela API: é ele que a Bronze guarda na
+    tabela de respostas, para reextrair qualquer campo sem voltar à fonte.
+    """
+
+    url: str
+    status_http: int
+    tipo_conteudo: str | None
+    corpo: str
+
+    def json(self) -> list[dict[str, str]]:
+        return json.loads(self.corpo)
+
+
+def consulta_do_agregado(agregado: int) -> tuple[str, str | None]:
+    """Níveis territoriais e classificação pedidos para cada agregado.
+
+    O 1737 (número-índice) só existe para o Brasil e não tem a classificação 315.
+    """
+    if agregado == 1737:
+        return "n1/all", None
+    return "n1/all/n6/all/n7/all", "315"
+
+
+def url_valores(
+    agregado: int,
+    periodo: str,
+    *,
+    niveis: str = "n1/all/n6/all/n7/all",
+    classificacao: str | None = "315",
+) -> str:
+    """URL de um período de um agregado no formato compacto (só códigos)."""
+    partes = [URL_VALORES, "t", str(agregado), *niveis.split("/"), "v", "all", "p", periodo]
+    if classificacao:
+        partes += ["c" + classificacao, "all"]
+    return "/".join(partes) + "/f/c/h/n"
+
+
+def buscar_resposta(
+    cliente: httpx.Client,
+    agregado: int,
+    periodo: str,
+    *,
+    niveis: str = "n1/all/n6/all/n7/all",
+    classificacao: str | None = "315",
+    tentativas: int = 4,
+) -> Resposta:
+    """Busca um período de um agregado e devolve a resposta sem interpretar o corpo.
+
+    Só devolve resposta 200 com JSON válido: erro HTTP ou corpo ilegível vira
+    :class:`SidraError`, e nada disso chega à tabela de respostas.
+    """
+    url = url_valores(agregado, periodo, niveis=niveis, classificacao=classificacao)
+
+    ultimo_erro: Exception | None = None
+    for tentativa in range(tentativas):
+        try:
+            resposta = cliente.get(url, timeout=_TIMEOUT)
+            if resposta.status_code == 400:
+                raise SidraError(f"{agregado}/{periodo}: {resposta.text.strip()[:200]}")
+            resposta.raise_for_status()
+            saida = Resposta(
+                url=url,
+                status_http=resposta.status_code,
+                tipo_conteudo=resposta.headers.get("content-type"),
+                corpo=resposta.text,
+            )
+            saida.json()  # corpo truncado ou não-JSON conta como falha de rede: tenta de novo
+            return saida
+        except SidraError:
+            raise
+        except (httpx.HTTPError, ValueError) as erro:
+            ultimo_erro = erro
+            time.sleep(2**tentativa)
+    raise SidraError(f"{agregado}/{periodo}: falhou em {tentativas} tentativas") from ultimo_erro
+
+
 def buscar_valores(
     cliente: httpx.Client,
     agregado: int,
@@ -64,25 +146,14 @@ def buscar_valores(
     Devolve a lista crua da API. A conversão fica em :mod:`inflatrack.ingest`
     para que a camada bruta possa ser gravada exatamente como veio.
     """
-    partes = [URL_VALORES, "t", str(agregado), *niveis.split("/"), "v", "all", "p", periodo]
-    if classificacao:
-        partes += ["c" + classificacao, "all"]
-    url = "/".join(partes) + "/f/c/h/n"
-
-    ultimo_erro: Exception | None = None
-    for tentativa in range(tentativas):
-        try:
-            resposta = cliente.get(url, timeout=_TIMEOUT)
-            if resposta.status_code == 400:
-                raise SidraError(f"{agregado}/{periodo}: {resposta.text.strip()[:200]}")
-            resposta.raise_for_status()
-            return resposta.json()
-        except SidraError:
-            raise
-        except (httpx.HTTPError, ValueError) as erro:
-            ultimo_erro = erro
-            time.sleep(2**tentativa)
-    raise SidraError(f"{agregado}/{periodo}: falhou em {tentativas} tentativas") from ultimo_erro
+    return buscar_resposta(
+        cliente,
+        agregado,
+        periodo,
+        niveis=niveis,
+        classificacao=classificacao,
+        tentativas=tentativas,
+    ).json()
 
 
 def buscar_metadados(cliente: httpx.Client, agregado: int) -> dict:

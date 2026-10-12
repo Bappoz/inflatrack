@@ -13,17 +13,9 @@ O PostgreSQL roda **em paralelo** a essa trilha, e não dentro dela: ele guarda 
 | **Silver** | Modelos `dbt-duckdb` em `models/staging/` | Modelagem e tratamento: limpeza, deduplicação, chaves resolvidas |
 | **Gold** | Tabelas tratadas no DuckDB, a partir de `models/marts/` | Fato, dimensão e métricas — recorte pronto para painel e modelo |
 
-```mermaid
-flowchart LR
-    O[8 fontes públicas] --> R[(Raw<br/>json.gz)]
-    R --> B[(Bronze<br/>Parquet)]
-    B --> S[(Silver<br/>dbt-duckdb)]
-    S --> G[(Gold<br/>tabelas no DuckDB)]
-    G --> N[Notebooks + MLflow]
-    G --> P[Streamlit + Plotly]
-    PG[(PostgreSQL<br/>transacional)] -.paralelo.-> P
-    D{{Dagster}} -.orquestra.-> R & B & S & G
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/medallion.svg"
+</div>
 
 ## A trilha de cada fonte
 

@@ -1,0 +1,68 @@
+<svg class="dg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 328" width="976" height="328" role="img" aria-labelledby="orquestracao-assets-title orquestracao-assets-desc">
+<title id="orquestracao-assets-title">Grafo de assets do Dagster</title>
+<desc id="orquestracao-assets-desc">Seis assets de ingestão em Python alimentam o asset Bronze de cada fonte; os assets dbt produzem a Silver e a Gold, de onde saem a matriz de treino e a cópia publicada para o Streamlit.</desc>
+<defs>
+<style>.dg text{font-family:var(--inflatrack-font-body,Inter,system-ui,sans-serif)}.dg .nome{font-size:13px;font-weight:600;fill:var(--dg-ink,#1A132F)}.dg .col{font-size:12px;fill:var(--dg-ink,#1A132F)}.dg .sub,.dg .tipo,.dg .rot,.dg .tag,.dg .zona-t{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.dg .sub{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .tipo{font-size:10px;fill:var(--dg-muted,#5B5675)}.dg .rot{font-size:9px;letter-spacing:.06em;fill:var(--dg-muted,#5B5675)}.dg .tag{font-size:8px;font-weight:600;letter-spacing:.1em;fill:var(--dg-brand,#511EB6)}.dg .zona-t{font-size:9px;font-weight:600;letter-spacing:.12em;fill:var(--dg-muted,#5B5675)}.dg .papel{fill:var(--dg-paper,#FFFFFF)}.dg .caixa{fill:var(--dg-surface,#FFFFFF);stroke:var(--dg-line,#8E86AD);stroke-width:1}.dg .dep{fill:var(--dg-brand-tint,#F1EDFB);stroke:var(--dg-brand,#511EB6);stroke-width:1}.dg .foco{fill:var(--dg-accent-tint,#FFEEE9);stroke:var(--dg-accent,#FF5A36);stroke-width:1.2}.dg .ext{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-line,#8E86AD);stroke-width:1;stroke-dasharray:4 3}.dg .zona{fill:var(--dg-zone,#F6F4FC);stroke:var(--dg-rule,#D9D3EC);stroke-width:1;stroke-dasharray:4 4}.dg .cab{fill:var(--dg-brand-tint,#F1EDFB)}.dg .cab-foco{fill:var(--dg-accent-tint,#FFEEE9)}.dg .zebra{fill:var(--dg-zebra,#FAF9FE)}.dg .fio{stroke:var(--dg-rule,#D9D3EC);stroke-width:1}.dg .chip{fill:none;stroke:var(--dg-brand,#511EB6);stroke-width:.8;opacity:.7}.dg .seta{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2}.dg .seta-foco{fill:none;stroke:var(--dg-accent,#FF5A36);stroke-width:1.4}.dg .seta-leve{fill:none;stroke:var(--dg-muted,#5B5675);stroke-width:1.2;stroke-dasharray:5 4}.dg .ponta{fill:var(--dg-muted,#5B5675)}.dg .ponta-foco{fill:var(--dg-accent,#FF5A36)}.dg .rot-foco{fill:var(--dg-accent,#FF5A36)}</style>
+<marker id="orquestracao-assets-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta" points="0 0, 8 3, 0 6"/></marker>
+<marker id="orquestracao-assets-foco" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="ponta-foco" points="0 0, 8 3, 0 6"/></marker>
+</defs>
+<rect class="zona" x="16" y="40" width="160" height="228" rx="8"/>
+<text class="zona-t" x="28" y="58">INGESTÃO (PYTHON)</text>
+<rect class="zona" x="192" y="82" width="176" height="124" rx="8"/>
+<text class="zona-t" x="204" y="100">ASSET BRONZE</text>
+<rect class="zona" x="396" y="82" width="380" height="124" rx="8"/>
+<text class="zona-t" x="408" y="100">ASSETS DBT (DAGSTER-DBT)</text>
+<line class="fio" x1="16" y1="300" x2="960" y2="300"/>
+<rect class="ext" x="16" y="305" width="24" height="14" rx="3"/>
+<text class="sub" x="50" y="316">asset de ingestão</text>
+<rect class="dep" x="180" y="305" width="24" height="14" rx="3"/>
+<text class="sub" x="214" y="316">camada</text>
+<rect class="foco" x="278" y="305" width="24" height="14" rx="3"/>
+<text class="sub" x="312" y="316">camada de consumo</text>
+<path class="seta" d="M176,154 L204,154" marker-end="url(#orquestracao-assets-normal)"/>
+<path class="seta" d="M360,154 L408,154" marker-end="url(#orquestracao-assets-normal)"/>
+<path class="seta" d="M564,154 L612,154" marker-end="url(#orquestracao-assets-normal)"/>
+<path class="seta-foco" d="M768,142 L774,142 Q782,142 782,134 L782,126 Q782,118 790,118 L796,118" marker-end="url(#orquestracao-assets-foco)"/>
+<path class="seta-foco" d="M768,166 L774,166 Q782,166 782,174 L782,206 Q782,214 790,214 L796,214" marker-end="url(#orquestracao-assets-foco)"/>
+<rect class="papel" x="28" y="70" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="70" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="86" text-anchor="middle">raw_sidra</text>
+<rect class="papel" x="28" y="102" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="102" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="118" text-anchor="middle">raw_bcb</text>
+<rect class="papel" x="28" y="134" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="134" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="150" text-anchor="middle">raw_alphavantage</text>
+<rect class="papel" x="28" y="166" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="166" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="182" text-anchor="middle">raw_worldbank</text>
+<rect class="papel" x="28" y="198" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="198" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="214" text-anchor="middle">raw_dieese</text>
+<rect class="papel" x="28" y="230" width="136" height="24" rx="6"/>
+<rect class="ext" x="28" y="230" width="136" height="24" rx="6"/>
+<text class="col" x="96" y="246" text-anchor="middle">raw_inmet</text>
+<rect class="papel" x="204" y="114" width="156" height="80" rx="6"/>
+<rect class="dep" x="204" y="114" width="156" height="80" rx="6"/>
+<text class="tag" x="214" y="130">BRONZE</text>
+<text class="nome" x="282" y="159" text-anchor="middle">bronze_&lt;fonte&gt;</text>
+<text class="sub" x="282" y="174" text-anchor="middle">Parquet</text>
+<rect class="papel" x="408" y="114" width="156" height="80" rx="6"/>
+<rect class="dep" x="408" y="114" width="156" height="80" rx="6"/>
+<text class="tag" x="418" y="130">SILVER</text>
+<text class="nome" x="486" y="159" text-anchor="middle">stg_&lt;fonte&gt;</text>
+<text class="sub" x="486" y="174" text-anchor="middle">staging</text>
+<rect class="papel" x="612" y="114" width="156" height="80" rx="6"/>
+<rect class="foco" x="612" y="114" width="156" height="80" rx="6"/>
+<text class="tag" x="622" y="130">GOLD</text>
+<text class="nome" x="690" y="159" text-anchor="middle">fato, dimensão</text>
+<text class="sub" x="690" y="174" text-anchor="middle">features</text>
+<rect class="papel" x="796" y="90" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="90" width="164" height="56" rx="6"/>
+<text class="nome" x="878" y="115" text-anchor="middle">matriz_treino</text>
+<text class="sub" x="878" y="130" text-anchor="middle">modelos</text>
+<rect class="papel" x="796" y="186" width="164" height="56" rx="6"/>
+<rect class="caixa" x="796" y="186" width="164" height="56" rx="6"/>
+<text class="nome" x="878" y="211" text-anchor="middle">gold_publicada</text>
+<text class="sub" x="878" y="226" text-anchor="middle">cópia para o Streamlit</text>
+</svg>

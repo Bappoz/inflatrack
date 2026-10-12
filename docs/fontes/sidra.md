@@ -38,7 +38,7 @@ Todas as séries temporais são obtidas diretamente da API do SIDRA/IBGE (`apisi
 O dado passa por duas camadas com natureza diferente (ELT: grava a resposta crua e só depois transforma dentro do banco), por isso cada resposta separa a **camada crua** do **banco relacional**.
 
 !!! note "Estado atual"
-    Descreve o que está implementado hoje (entrega 1): JSON gzip em disco + PostgreSQL 16. A migração da camada analítica para DuckDB/Parquet está em discussão e, quando decidida, atualiza esta seção.
+    Descreve o que a entrega 1 implementou: JSON gzip em disco + PostgreSQL 16. Desde a entrega 2 o mesmo ingestor também grava a **Bronze em Delta** (`data/parquet/ipca/`), com a resposta inteira e todas as linhas; as colunas estão no [Dicionário](../dicionario/sidra.md#bronze-em-delta) e as medições em [Evidência E2](../evidencias/e2/ipca.md). O JSON gzip e a escrita direta no PostgreSQL saem na entrega 3.
 
 | Atributo | Camada crua (`data/raw/ipca-inpc/`) | Banco relacional (tabela `observacao`) |
 | :--- | :--- | :--- |

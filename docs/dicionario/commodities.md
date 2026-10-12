@@ -20,10 +20,9 @@ Três decisões moldam o esquema:
 
 ## Modelo Conceitual
 
-```mermaid
-erDiagram
-    commodity ||--o{ commodity_cotacao : "é cotada em"
-```
+<div class="diagrama">
+--8<-- "docs/assets/diagramas/esquema-commodities.svg"
+</div>
 
 Uma dimensão e um fato, sem dimensão de calendário: a data é atributo da própria cotação. Não há localidade — os preços são internacionais, em dólar.
 
