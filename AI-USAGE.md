@@ -15,7 +15,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
-| Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
+| Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
 
 ## Todas as sessões
@@ -50,6 +50,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB da China em Delta Lake (E2) |
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2) |
+| 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
 
 ---
 
@@ -1014,6 +1015,34 @@ de tarefas nessa linha.
 - Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (`dolar_olinda.py`, `ingest_dolar.py`, `load_dolar.py`) e Selic (`selic_sgs.py`, `ingest_selic.py`, `load_selic.py`).
 - Criou os arquivos de teste automatizado na pasta `tests/` (`test_dolar_olinda.py` e `test_selic_sgs.py`), inaugurando a cobertura de testes do projeto via `pytest` e *Mocks*.
 - Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas `pipelineMacro.md`, `evidencias_macro.md`, `dicionario/macroeconomia.md` e o `adr_0002_macro.md`.
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Camada Bronze Delta do Dólar e Selic (E2)
+
+**O que a ferramenta fez**
+- Elaborou os módulos da camada Bronze em formato Delta Lake (`src/inflatrack/bronze_dolar.py` e `src/inflatrack/bronze_selic.py`), substituindo os arquivos `.json.gz` por tabelas Delta de respostas (`dolar_resposta`, `selic_resposta`) e tabelas Delta de registros (`dolar_boletim`, `selic_taxa_dia`).
+- No Dólar, implementou a retenção de todos os boletins intradiários (abertura, intermediários e fechamento) com tipagem PyArrow estrita e particionamento anual, viabilizando o cálculo de volatilidade intradiária (consulta C10) sem perda de dados na Bronze.
+- Na Selic, implementou a extração dos valores originais diários publicados pelo Banco Central (série 11 do SGS), sem forward fill prematuro na Bronze, com validação de limites diários e particionamento anual.
+- Implementou mecanismos de idempotência via hash SHA-256 do corpo e filtragem de registros existentes.
+- Desenvolveu fixtures com dados reais em `tests/fixtures/dolar/olinda_amostra.json` e `tests/fixtures/selic/sgs_amostra.json`.
+- Criou as suítes de testes unitários e de idempotência `tests/test_bronze_dolar.py` e `tests/test_bronze_selic.py`.
+- Integrou a gravação Delta Bronze aos ingestores existentes `src/inflatrack/ingest_dolar.py` e `src/inflatrack/ingest_selic.py` com parâmetro `--bronze-dir`.
+- Adicionou as receitas `bronze-dolar`, `bronze-dolar-checar`, `bronze-dolar-importar`, `bronze-selic`, `bronze-selic-checar`, `bronze-selic-importar` e `bronze-macro` no `justfile`.
+- Executou carga histórica real (2020 a 2026): 1.703 boletins no Dólar e 1.701 taxas na Selic, comprovando idempotência na reexecução imediata (`resposta_nova=False`, `novas=0`).
+- Documentou a entrega em `docs/evidencias/e2/macroeconomia.md`, atualizou `docs/dicionario/macroeconomia.md`, cadastrou as páginas no `mkdocs.yml`, corrigiu links do MkDocs em `pib_china.md` e marcou as tarefas 3.2 e 3.3 concluídas em `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execução real contra as APIs do Banco Central (Olinda e SGS) via `just bronze-macro`.
+- Verificação de integridade e esquemas via `just bronze-dolar-checar` e `just bronze-selic-checar` (código 0).
+- Teste de idempotência e reexecução: comprovado que rodar a ingestão consecutivamente resulta em `resposta_nova=False` e `novas=0`.
+- Suíte completa de testes do projeto via `uv run pytest` (68 testes aprovados).
+- `uv run ruff check` e `uv run ruff format --check` limpos nos arquivos da frente.
+- `uv run --group docs mkdocs build --strict` aprovado com código 0.
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_dolar_*`, `stg_selic_*`) e migração final do DuckDB para o dbt-duckdb (escopo delimitado para a E3).
+
+**Decisões que continuam sendo da Squad**
+- Definir o cronograma exato de migração do DuckDB transitório para os modelos dbt-duckdb na Entrega 3.
 ---
 
 ---
