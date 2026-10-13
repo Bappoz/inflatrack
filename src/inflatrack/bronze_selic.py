@@ -179,10 +179,9 @@ def gravar_resposta(
     caminho = _caminho(destino, "resposta")
     id_resposta = hash_do_corpo(corpo)
     if DeltaTable.is_deltatable(caminho):
-        existentes = (
-            DeltaTable(caminho)
-            .to_pyarrow_dataset()
-            .to_table(columns=["hash_corpo"], filter=ds.field("hash_corpo") == id_resposta)
+        dataset = ds.dataset(caminho, format="parquet")
+        existentes = dataset.to_table(
+            columns=["hash_corpo"], filter=ds.field("hash_corpo") == id_resposta
         )
         if existentes.num_rows > 0:
             return id_resposta, False
@@ -210,9 +209,8 @@ def _chaves_existentes(caminho: str, anos: Iterable[int]) -> set[tuple]:
     if not DeltaTable.is_deltatable(caminho):
         return set()
     filtro = ds.field("ano").isin(list(anos))
-    tabela = (
-        DeltaTable(caminho).to_pyarrow_dataset().to_table(columns=list(CHAVE_TAXA), filter=filtro)
-    )
+    dataset = ds.dataset(caminho, format="parquet", partitioning="hive")
+    tabela = dataset.to_table(columns=list(CHAVE_TAXA), filter=filtro)
     colunas = [tabela.column(col).to_pylist() for col in CHAVE_TAXA]
     return set(zip(*colunas, strict=True))
 
@@ -337,11 +335,8 @@ def checar_tabela(destino: Path = DIRETORIO_PADRAO) -> None:
     if not DeltaTable.is_deltatable(caminho_taxa):
         raise ChecagemError(f"tabela de taxas não encontrada em {caminho_taxa}")
 
-    dt_resp = DeltaTable(caminho_resp)
-    dt_taxa = DeltaTable(caminho_taxa)
-
-    linhas_resp = dt_resp.to_pyarrow_table().num_rows
-    tab_taxa = dt_taxa.to_pyarrow_table()
+    linhas_resp = ds.dataset(caminho_resp, format="parquet").to_table().num_rows
+    tab_taxa = ds.dataset(caminho_taxa, format="parquet", partitioning="hive").to_table()
     linhas_taxa = tab_taxa.num_rows
 
     print(f"=== selic_resposta: {linhas_resp} requisições gravadas")
