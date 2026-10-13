@@ -50,6 +50,18 @@ pib-china: pib-china-ingest pib-china-load
 # Alias mantido para compatibilidade com a documentação anterior do PR.
 seed-pib-china: pib-china
 
+# Bronze do PIB da China em Delta (data/parquet/pib_china/): coleta direta da API do Banco Mundial.
+bronze-pib-china:
+    uv run python -m inflatrack.bronze_pib_china coletar
+
+# Leva os .json.gz antigos de data/raw/pib_china/ para as tabelas Delta. Reexecutável.
+bronze-pib-china-importar:
+    uv run python -m inflatrack.bronze_pib_china importar
+
+# Checagens de integridade e volume das tabelas Delta do PIB da China.
+bronze-pib-china-checar:
+    uv run python -m inflatrack.bronze_pib_china checar
+
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
 # (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
 seed:

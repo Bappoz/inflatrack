@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
+| Artur Fernandes Galdino | 2 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (1) |
 | Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
 | Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
 
@@ -48,6 +48,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | E2 no plano e divisão de tarefas por pessoa |
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
+| 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB da China em Delta Lake (E2) |
 
 ---
 
@@ -941,6 +942,28 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Implementação da Bronze do PIB da China em Delta Lake (E2)
+
+**O que a ferramenta fez**
+- Analisou o documento de diretrizes `tasks_entrega_2.md` e a convenção estabelecida no piloto da fonte IPCA (`src/inflatrack/bronze_ipca.py`).
+- Implementou o módulo `src/inflatrack/bronze_pib_china.py`, gravando duas tabelas Delta Lake (`pib_china_resposta` e `pib_china_indicador`) em `data/parquet/pib_china/`.
+- Manteve o formato longo com todos os campos da API do Banco Mundial (`indicador`, `ano`, `valor`, `indicador_nome`, `pais_id`, `pais_nome`, `pais_iso3`, `unidade`, `obs_status`, `decimal`) e metadados de linhagem (`_id_resposta`, `_fonte`, `_requisicao`, `_ingerido_em`).
+- Implementou deduplicação por hash SHA-256 no corpo da requisição e verificação de duplicatas por chave lógica em Delta Lake.
+- Adicionou função de migração/importação do histórico de `data/raw/pib_china/*.json.gz` para Delta Lake.
+- Integrou a escrita em Delta no módulo legado `src/inflatrack/ingest_pib_china.py` para compatibilidade contínua.
+- Adicionou receitas no `justfile` (`bronze-pib-china`, `bronze-pib-china-importar`, `bronze-pib-china-checar`).
+- Desenvolveu testes automatizados em `tests/test_pib_china.py` cobrindo transformação em formato longo, checagens de regras de negócio e garantia de idempotência em Delta Lake.
+- Elaborou o documento de evidência `docs/evidencias/e2/pib_china.md` e marcou as tarefas da E2 como concluídas em `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execução real contra a API do Banco Mundial e validação da tabela de respostas e de indicadores.
+- Teste de idempotência e reexecução: comprovado que rodar a ingestão pela segunda vez resulta em 0 linhas adicionadas e não altera versões.
+- Validação estática com `ruff check` (0 erros).
+- Execução da suíte completa de testes com `pytest` (58 testes passando, 6 deles do PIB da China).
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_pib_china`) e carga para DuckDB (escopo delimitado para a E3).
 
 ---
 

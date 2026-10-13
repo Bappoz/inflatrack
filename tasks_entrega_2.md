@@ -330,10 +330,10 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] `pib_china_resposta` (uma resposta por indicador, com o cabeçalho `payload[0]` no corpo) e `pib_china_indicador` em Delta, em **formato longo** (`indicador`, `ano`, `valor` e os campos hoje descartados).
-- [ ] Importar o Raw existente para `pib_china_resposta`.
-- [ ] Demonstração de reexecução e política: a série chega inteira e pode ser revisada fora de calendário.
-- [ ] Checagens: `(indicador, ano)` único, ~60 a 65 anos desde 1960, último ano anulável.
+- [x] `pib_china_resposta` (uma resposta por indicador, com o cabeçalho `payload[0]` no corpo) e `pib_china_indicador` em Delta, em **formato longo** (`indicador`, `ano`, `valor` e os campos hoje descartados).
+- [x] Importar o Raw existente para `pib_china_resposta`.
+- [x] Demonstração de reexecução e política: a série chega inteira e pode ser revisada fora de calendário.
+- [x] Checagens: `(indicador, ano)` único, ~60 a 65 anos desde 1960, último ano anulável.
 
 **E3:**
 
