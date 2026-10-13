@@ -42,6 +42,24 @@ vêm das Contas Nacionais Trimestrais e levam ~10 segundos:
 just pib            # SIDRA 1846: raw gzip -> Parquet -> DuckDB
 ```
 
+### Como reproduzir a E2
+
+```bash
+cp .env.example .env   # e preencha ALPHAVANTAGE_API_KEY
+uv sync
+just e2                # Bronze em Delta de cada fonte, seguida das checagens
+just test
+```
+
+O que precisa de configuração:
+
+| Fonte | O quê |
+|---|---|
+| Commodities | `ALPHAVANTAGE_API_KEY` no `.env`. A cota é de 25 requisições por dia, e cada `just e2` gasta 9 |
+| PIB | Nada: SIDRA aberto, 32 requisições, ~10 s |
+
+Hoje a receita cobre o PIB e as commodities; cada fonte acrescenta as suas receitas a ela. As evidências de cada fonte estão em [`docs/evidencias/e2/`](docs/evidencias/e2/).
+
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 

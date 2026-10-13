@@ -25,6 +25,8 @@ from datetime import date
 
 import httpx
 
+from inflatrack import bronze
+
 URL_VALORES = "https://apisidra.ibge.gov.br/values"
 URL_METADADOS = "https://servicodados.ibge.gov.br/api/v3/agregados/{agregado}/metadados"
 
@@ -53,19 +55,14 @@ def eh_ausente(valor: str) -> bool:
 
 
 @dataclass(frozen=True)
-class Resposta:
+class Resposta(bronze.Resposta):
     """Resposta HTTP do SIDRA como chegou, antes de qualquer interpretação.
 
     O ``corpo`` é o texto exato devolvido pela API: é ele que a Bronze guarda na
     tabela de respostas, para reextrair qualquer campo sem voltar à fonte.
     """
 
-    url: str
-    status_http: int
-    tipo_conteudo: str | None
-    corpo: str
-
-    def json(self) -> list[dict[str, str]]:
+    def json(self):
         return json.loads(self.corpo)
 
 
@@ -156,11 +153,22 @@ def buscar_valores(
     ).json()
 
 
+def buscar_metadados_resposta(cliente: httpx.Client, agregado: int) -> Resposta:
+    """Metadados do agregado como vieram, para guardar na tabela de respostas."""
+    url = URL_METADADOS.format(agregado=agregado)
+    resposta = cliente.get(url, timeout=_TIMEOUT)
+    resposta.raise_for_status()
+    return Resposta(
+        url=url,
+        status_http=resposta.status_code,
+        tipo_conteudo=resposta.headers.get("content-type"),
+        corpo=resposta.text,
+    )
+
+
 def buscar_metadados(cliente: httpx.Client, agregado: int) -> dict:
     """Metadados do agregado: variáveis, classificações e nomes das categorias."""
-    resposta = cliente.get(URL_METADADOS.format(agregado=agregado), timeout=_TIMEOUT)
-    resposta.raise_for_status()
-    return resposta.json()
+    return buscar_metadados_resposta(cliente, agregado).json()
 
 
 def categorias(metadados: dict) -> list[tuple[str, str, str, str | None]]:

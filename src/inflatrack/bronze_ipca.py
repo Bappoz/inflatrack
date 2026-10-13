@@ -20,16 +20,15 @@ Uso::
     uv run python -m inflatrack.bronze_ipca importar --raw-dir data/raw/ipca-inpc
     uv run python -m inflatrack.bronze_ipca checar
 
-Este módulo é da fonte IPCA. Quando o helper comum ``inflatrack/bronze.py`` (contrato
-4.1 do plano) existir, :func:`gravar_resposta` e :func:`acrescentar_observacoes` passam
-a delegar para ele; os nomes de coluna já seguem a seção 2.2 do plano.
+A tabela de respostas é gravada pelo helper comum :mod:`inflatrack.bronze`. A tabela de
+observações continua aqui, porque filtra as chaves existentes por agregado e mês para
+não ler os 9 milhões de linhas a cada mês.
 """
 
 from __future__ import annotations
 
 import argparse
 import gzip
-import hashlib
 import json
 import logging
 import re
@@ -44,7 +43,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
-from inflatrack import sidra
+from inflatrack import bronze, sidra
 
 logger = logging.getLogger("inflatrack.bronze_ipca")
 
@@ -54,19 +53,7 @@ DIRETORIO_PADRAO = "data/parquet/ipca"
 # 13 casas: o número-índice do 1737 chega como "0.0000000076183" (dez/1979).
 TIPO_VALOR = pa.decimal128(28, 13)
 
-ESQUEMA_RESPOSTA = pa.schema(
-    [
-        pa.field("id_resposta", pa.string(), nullable=False),
-        pa.field("_fonte", pa.string(), nullable=False),
-        pa.field("_requisicao", pa.string(), nullable=False),
-        pa.field("_ingerido_em", pa.timestamp("us", tz="UTC"), nullable=False),
-        pa.field("status_http", pa.int16()),
-        pa.field("tipo_conteudo", pa.string()),
-        pa.field("corpo", pa.string(), nullable=False),
-        pa.field("hash_corpo", pa.string(), nullable=False),
-        pa.field("tamanho_bytes", pa.int64(), nullable=False),
-    ]
-)
+ESQUEMA_RESPOSTA = bronze.ESQUEMA_RESPOSTA
 
 ESQUEMA_OBSERVACAO = pa.schema(
     [
@@ -130,8 +117,7 @@ TOLERANCIA_CATEGORIAS = 0.05
 _NOME_ARQUIVO_RAW = re.compile(r"^(?P<agregado>\d+)-(?P<periodo>\d{6})\.json\.gz$")
 
 
-class ChecagemError(ValueError):
-    """A resposta não tem a forma esperada e não deve ser promovida à Bronze."""
+ChecagemError = bronze.ChecagemError
 
 
 @dataclass(frozen=True)
@@ -144,8 +130,7 @@ class Gravacao:
     linhas_novas: int
 
 
-def hash_do_corpo(corpo: str) -> str:
-    return hashlib.sha256(corpo.encode("utf-8")).hexdigest()
+hash_do_corpo = bronze.hash_do_corpo
 
 
 def _inteiro(texto: str) -> int | None:
@@ -270,30 +255,12 @@ def gravar_resposta(
     Devolve ``(id_resposta, nova)``. O id é o SHA-256 do corpo, então a tabela tem
     exatamente uma linha por versão diferente que a fonte publicou.
     """
-    caminho = _caminho(destino, "resposta")
-    id_resposta = hash_do_corpo(corpo)
-    if DeltaTable.is_deltatable(caminho):
-        existentes = (
-            DeltaTable(caminho)
-            .to_pyarrow_dataset()
-            .to_table(columns=["hash_corpo"], filter=ds.field("hash_corpo") == id_resposta)
-        )
-        if existentes.num_rows:
-            return id_resposta, False
-
-    linha = {
-        "id_resposta": id_resposta,
-        "_fonte": FONTE,
-        "_requisicao": requisicao,
-        "_ingerido_em": ingerido_em,
-        "status_http": status_http,
-        "tipo_conteudo": tipo_conteudo,
-        "corpo": corpo,
-        "hash_corpo": id_resposta,
-        "tamanho_bytes": len(corpo.encode("utf-8")),
-    }
-    write_deltalake(caminho, pa.Table.from_pylist([linha], ESQUEMA_RESPOSTA), mode="append")
-    return id_resposta, True
+    return bronze.gravar_resposta(
+        destino,
+        FONTE,
+        bronze.Resposta(requisicao, status_http, tipo_conteudo, corpo),
+        ingerido_em,
+    )
 
 
 def _chave(linha: dict) -> tuple:
