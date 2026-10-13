@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
 | Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
-| Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
+| Johnnatan Salles | 2 | 2026-09-28 a 2026-10-12 | Antigravity (Gemini 3.8 Flash) (2) |
 
 ## Todas as sessões
 
@@ -48,6 +48,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | E2 no plano e divisão de tarefas por pessoa |
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
+| 2026-10-12 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Bronze em Delta para Salário Mínimo (DIEESE) e Clima (INMET) na Entrega 2 |
 
 ---
 
@@ -997,4 +998,28 @@ de tarefas nessa linha.
 - Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
 
 
+### 2026-10-12 — Antigravity (Gemini 3.8 Flash) — Bronze em Delta para Salário Mínimo (DIEESE) e Clima (INMET) na Entrega 2
+
+**O que a ferramenta fez**
+- Implementou a camada Bronze em Delta para a fonte Salário Mínimo (`src/inflatrack/bronze_salario_minimo.py`) gerando as tabelas `salario_minimo_resposta` e `salario_minimo_mes` em `data/parquet/salario_minimo/`, com deduplicação por `hash_corpo` e chave composta `(ano_mes, salario_nominal, salario_necessario)`, sem a coluna calculada `multiplo_necessario_nominal` (transferida para o dbt Silver).
+- Diagnosticou e validou a API meteorológica do INMET (`apitempo.inmet.gov.br`), confirmando a estabilidade da listagem de estações (`/estacoes/T` com 671 estações sem autenticação/token), identificando a desativação da rota legada de medições diárias (`/estacao/diaria` retornando HTTP 404 Route not found) e a descontinuação do wrapper comunitário `inmetpy`. Documentou a estratégia para a E3 com base no repositório de arquivos históricos anuais do BDMEP.
+- Implementou a camada Bronze em Delta para a fonte Dados do Clima (`src/inflatrack/bronze_clima.py`) gerando `clima_resposta` e `clima_estacao` em `data/parquet/clima/`, expurgando valores padrão inventados (`tipo="Automatica"` e `situacao="Operante"` agora preservam valor nulo original).
+- Integrou os módulos Bronze aos ingestores existentes `ingest_salario_minimo.py` e `ingest_clima.py`, mantendo a geração concomitante dos Parquets legados para garantir estabilidade da carga DuckDB durante a transição da E2.
+- Desenvolveu testes automatizados em `tests/test_salario_minimo.py` e `tests/test_clima.py` (23 novos testes, expandindo a suíte do projeto para 78 testes passando), alimentados por fixtures reais em `tests/fixtures/salario_minimo/salario_minimo.html` e `tests/fixtures/clima/estacoes.json`.
+- Criou as páginas de evidência `docs/evidencias/e2/salario_minimo.md` e `docs/evidencias/e2/clima.md`, atualizou os esquemas Bronze nos dicionários de dados `docs/dicionario/salario_minimo.md` e `docs/dicionario/clima.md`, adicionou as páginas ao `mkdocs.yml` e configurou as receitas `bronze-salario-minimo`, `bronze-clima`, checagens e importações no `justfile`.
+- Marcou como concluídas todas as tarefas das seções 3.7 e 3.8 do plano de trabalho `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execuções reais e sucessivas dos comandos `just bronze-salario-minimo`, `just bronze-salario-minimo-checar`, `just bronze-clima` e `just bronze-clima-checar`, atestando a coleta completa das origens, checagens de continuidade e volume e idempotência (0 linhas novas na segunda rodada).
+- Suíte completa de 78 testes executada via `pytest` e aprovada em 1.5s.
+- Conformidade estrita de tipagem e estilo com `ruff check` em todos os arquivos modificados e criados.
+- Compilação estrita da documentação com `just docs-build` (`mkdocs build --strict`) aprovada com código 0 e sem links quebrados.
+
+**O que NÃO foi verificado**
+- Ingestão contínua de medições pluviométricas e de temperatura diárias não foi executada nesta etapa (escopo planejado para a E3), tendo sido validado e entregue integralmente o catálogo cadastral das estações em Delta.
+
+**Decisões que continuam sendo da Squad**
+- Definir para a E3 se a extração de medições meteorológicas consumirá os pacotes anuais do BDMEP ou aplicará filtro por estações de capitais/polos de commodities.
+
 ---
+

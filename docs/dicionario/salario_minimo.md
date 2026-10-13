@@ -63,3 +63,45 @@ SELECT
 FROM salario_minimo
 ORDER BY data_referencia DESC;
 ```
+
+---
+
+## Bronze em Delta
+
+As duas tabelas gravadas pelo ingestor em `data/parquet/salario_minimo/`, em formato Delta. Ficam no Delta e substituem a camada Raw em `.html.gz`. Quando necessário, o DuckDB lê com `delta_scan`.
+
+### salario_minimo_resposta
+
+Armazena o HTML original integral recebido do DIEESE. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`).
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `id_resposta` | string | Identificador da resposta: o hash SHA-256 do corpo |
+| `_fonte` | string | Sempre `"salario_minimo"` |
+| `_requisicao` | string | URL consultada no portal do DIEESE |
+| `_ingerido_em` | timestamp (UTC) | Momento do download |
+| `status_http` | smallint, nulo | Status HTTP da resposta (200, ou nulo se importado do Raw) |
+| `tipo_conteudo` | string, nulo | `Content-Type` retornado pelo servidor |
+| `corpo` | string | O documento HTML na íntegra |
+| `hash_corpo` | string | SHA-256 do corpo (idempotência) |
+| `tamanho_bytes` | bigint | Tamanho do documento em bytes |
+
+### salario_minimo_mes
+
+Série temporal extraída com **todas as linhas** da tabela HTML, tipada e sem descarte. Não inclui colunas calculadas (o múltiplo necessário/nominal é delegado para o dbt).
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `ano_mes` | string | Identificador mensal no formato `YYYY-MM` (ex.: `2026-08`) |
+| `data_referencia` | date | Primeiro dia do mês (`YYYY-MM-01`), chave canônica de junção |
+| `ano` | smallint | Ano civil da observação |
+| `mes` | smallint | Mês civil da observação (1 a 12) |
+| `salario_nominal` | decimal(12,2) | Salário mínimo oficial federal vigente (em R$) |
+| `salario_necessario` | decimal(12,2) | Salário mínimo necessário apurado pelo DIEESE (em R$) |
+| `_id_resposta` | string | Chave estrangeira para `salario_minimo_resposta.id_resposta` |
+| `_fonte` | string | Sempre `"salario_minimo"` |
+| `_requisicao` | string | URL que originou a observação |
+| `_ingerido_em` | timestamp (UTC) | Carimbo temporal da ingestão |
+
+**Granularidade:** uma linha por mês apurado × `salario_nominal` × `salario_necessario`. Caso o DIEESE retifique um mês já divulgado, a alteração entra como **linha nova**, assegurando linhagem e histórico imutável (*insert-only*).
+

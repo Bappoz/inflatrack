@@ -132,6 +132,16 @@ salario-minimo-load:
 
 salario-minimo: salario-minimo-ingest salario-minimo-load
 
+# Bronze do Salário Mínimo em Delta (data/parquet/salario_minimo/).
+bronze-salario-minimo:
+    uv run python -m inflatrack.ingest_salario_minimo
+
+bronze-salario-minimo-importar:
+    uv run python -m inflatrack.bronze_salario_minimo importar
+
+bronze-salario-minimo-checar:
+    uv run python -m inflatrack.bronze_salario_minimo checar
+
 # INMET: Dados de Clima e Estações
 clima-ingest:
     uv run python -m inflatrack.ingest_clima --apenas-estacoes
@@ -140,6 +150,16 @@ clima-load:
     uv run python -m inflatrack.load_clima
 
 clima: clima-ingest clima-load
+
+# Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
+bronze-clima:
+    uv run python -m inflatrack.ingest_clima --apenas-estacoes
+
+bronze-clima-importar:
+    uv run python -m inflatrack.bronze_clima importar
+
+bronze-clima-checar:
+    uv run python -m inflatrack.bronze_clima checar
 
 # Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
 orquestrador:

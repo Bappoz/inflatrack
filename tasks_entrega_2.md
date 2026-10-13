@@ -346,10 +346,12 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] `salario_minimo_resposta` (o HTML inteiro) e `salario_minimo_mes` em Delta, com **todas as linhas** da tabela HTML e sem a coluna calculada.
-- [ ] Importar os `.html.gz` de `data/raw/dieese/` para `salario_minimo_resposta`.
-- [ ] Demonstração de reexecução e política: a divulgação sai na 1ª quinzena do mês seguinte, sem dia fixo; a página traz a série inteira.
-- [ ] Checagens: `ano_mes` único, série desde 1994-07.
+- [x] `salario_minimo_resposta` (o HTML inteiro) e `salario_minimo_mes` em Delta, com **todas as linhas** da tabela HTML e sem a coluna calculada.
+- [x] Importar os `.html.gz` de `data/raw/dieese/` para `salario_minimo_resposta`.
+- [x] Demonstração de reexecução e política: a divulgação sai na 1ª quinzena do mês seguinte, sem dia fixo; a página traz a série inteira.
+- [x] Checagens: `ano_mes` único, série desde 1994-07.
+
+Evidência de cada item, com comando e saída: [evidencias/e2/salario_minimo.md](../evidencias/e2/salario_minimo.md).
 
 **E3:**
 
@@ -365,11 +367,13 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] **Validar a API de medições.** Em 2026-10-11, os endpoints de medições e de estações fecharam a conexão sem resposta. Descobrir se exige token, qual é o limite e qual é o formato real, e registrar na evidência.
-- [ ] `clima_resposta` e `clima_estacao` em Delta para o cadastro de estações, sem valores padrão inventados.
-- [ ] Importar `data/raw/inmet/` para `clima_resposta`.
-- [ ] Demonstração de reexecução e política provisória (retransmissão nos últimos 7 dias).
-- [ ] Checagens: estações únicas por `estacao_id`; ~671 estações.
+- [x] **Validar a API de medições.** Em 2026-10-11, os endpoints de medições e de estações fecharam a conexão sem resposta. Descobrir se exige token, qual é o limite e qual é o formato real, e registrar na evidência.
+- [x] `clima_resposta` e `clima_estacao` em Delta para o cadastro de estações, sem valores padrão inventados.
+- [x] Importar `data/raw/inmet/` para `clima_resposta`.
+- [x] Demonstração de reexecução e política provisória (retransmissão nos últimos 7 dias).
+- [x] Checagens: estações únicas por `estacao_id`; ~671 estações.
+
+Evidência de cada item, com comando e saída: [evidencias/e2/clima.md](../evidencias/e2/clima.md).
 
 **E3:**
 

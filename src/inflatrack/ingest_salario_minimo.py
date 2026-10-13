@@ -14,12 +14,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from inflatrack import bronze_salario_minimo
 from inflatrack.dieese import DieeseError, baixar_html, extrair_tabela
 
 logger = logging.getLogger("inflatrack.ingest_salario_minimo")
 
 RAW_DIR_PADRAO = Path("data/raw/dieese")
 PARQUET_DIR_PADRAO = Path("data/parquet/dieese")
+DELTA_DIR_PADRAO = Path("data/parquet/salario_minimo")
 
 
 def gravar_bruto(destino_dir: Path, html_conteudo: str) -> Path:
@@ -34,9 +36,10 @@ def gravar_bruto(destino_dir: Path, html_conteudo: str) -> Path:
 def processar(
     raw_dir: Path = RAW_DIR_PADRAO,
     parquet_dir: Path = PARQUET_DIR_PADRAO,
+    delta_dir: Path = DELTA_DIR_PADRAO,
     html_conteudo: str | None = None,
 ) -> pd.DataFrame:
-    """Executa a extração do HTML, gravação raw e conversão para Parquet."""
+    """Executa a extração do HTML, gravação raw, gravação Delta Bronze e conversão para Parquet."""
     if html_conteudo is None:
         logger.info("Baixando página de salário mínimo do DIEESE...")
         html_conteudo = baixar_html()
@@ -44,7 +47,17 @@ def processar(
     caminho_raw = gravar_bruto(raw_dir, html_conteudo)
     logger.info("HTML bruto salvo em %s (%d bytes)", caminho_raw, len(html_conteudo))
 
-    logger.info("Extraindo tabela de séries históricas...")
+    # Bronze em Delta: tabela de respostas e tabela mensal
+    grav = bronze_salario_minimo.gravar(delta_dir, html_conteudo)
+    logger.info(
+        "Bronze Delta: resposta %s, %d de %d meses novos em %s",
+        "nova" if grav.resposta_nova else "já guardada",
+        grav.linhas_novas,
+        grav.linhas_lidas,
+        delta_dir,
+    )
+
+    logger.info("Extraindo tabela de séries históricas para parquet...")
     df = extrair_tabela(html_conteudo)
     logger.info("Extraídos %d registros mensais de salário mínimo", len(df))
 
@@ -62,14 +75,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--parquet-dir", default=str(PARQUET_DIR_PADRAO), help="Diretório da camada Parquet"
     )
+    parser.add_argument(
+        "--delta-dir", default=str(DELTA_DIR_PADRAO), help="Diretório da camada Bronze Delta"
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     try:
-        processar(raw_dir=Path(args.raw_dir), parquet_dir=Path(args.parquet_dir))
+        processar(
+            raw_dir=Path(args.raw_dir),
+            parquet_dir=Path(args.parquet_dir),
+            delta_dir=Path(args.delta_dir),
+        )
         return 0
-    except DieeseError as exc:
+    except (DieeseError, bronze_salario_minimo.ChecagemError) as exc:
         logger.error("Erro no processamento do DIEESE: %s", exc)
         return 1
     except Exception as exc:
