@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 2 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (1) |
+| Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
 
@@ -49,6 +49,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB da China em Delta Lake (E2) |
+| 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2) |
 | 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
 
 ---
@@ -965,6 +966,27 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Modelos dbt na camada Silver (`stg_pib_china`) e carga para DuckDB (escopo delimitado para a E3).
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2)
+
+**O que a ferramenta fez**
+- Recuperou os documentos arquiteturais e dicionários de dados da branch `origin/docs/pib-usa-russia` (`docs/fontes/pib_usa.md`, `docs/fontes/pib_russia.md`, `docs/dicionario/pib_usa.md`, `docs/dicionario/pib_russia.md`).
+- Implementou a camada Bronze em Delta Lake para os EUA em `src/inflatrack/bronze_pib_usa.py` (`pib_usa_resposta` e `pib_usa_indicador`) e para a Rússia em `src/inflatrack/bronze_pib_russia.py` (`pib_russia_resposta` e `pib_russia_indicador`).
+- Tratou as particularidades da Rússia: preservação dos nulos históricos no período soviético (1960–1989), com validação específica de volume pós-1990.
+- Criou os módulos de ingestão `src/inflatrack/ingest_pib_usa.py` e `src/inflatrack/ingest_pib_russia.py` mantendo compatibilidade com arquivos Parquet legados.
+- Adicionou testes automatizados em `tests/test_pib_usa.py` e `tests/test_pib_russia.py` cobrindo formato longo, particularidade dos nulos e garantia de idempotência em Delta Lake.
+- Adicionou receitas no `justfile` (`bronze-pib-usa`, `bronze-pib-usa-checar`, `bronze-pib-russia`, `bronze-pib-russia-checar`).
+- Criou as evidências da Entrega 2 em `docs/evidencias/e2/pib_usa.md` e `docs/evidencias/e2/pib_russia.md` e integrou todas as páginas ao menu de navegação em `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Coleta ao vivo na API do Banco Mundial para os dois países (`USA` e `RUS`), gravando com sucesso nas tabelas Delta Lake locais.
+- Demonstração de reexecução e idempotência: segunda execução resultou em 0 linhas novas inseridas em ambos os países.
+- `ruff check` limpo em todos os módulos novos e alterados (0 erros).
+- `pytest` executado com sucesso: 64 testes passando (6 testes dos EUA e Rússia).
+- `mkdocs build --strict` executado e aprovado com código 0 (sem links quebrados).
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_pib_usa`, `stg_pib_russia`) e carga para DuckDB (escopo da E3).
 
 ---
 

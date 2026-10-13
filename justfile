@@ -62,6 +62,22 @@ bronze-pib-china-importar:
 bronze-pib-china-checar:
     uv run python -m inflatrack.bronze_pib_china checar
 
+# Bronze do PIB dos EUA em Delta (data/parquet/pib_usa/): coleta da API do Banco Mundial.
+bronze-pib-usa:
+    uv run python -m inflatrack.bronze_pib_usa coletar
+
+# Checagens das tabelas Delta do PIB dos EUA.
+bronze-pib-usa-checar:
+    uv run python -m inflatrack.bronze_pib_usa checar
+
+# Bronze do PIB da Rússia em Delta (data/parquet/pib_russia/): coleta da API do Banco Mundial.
+bronze-pib-russia:
+    uv run python -m inflatrack.bronze_pib_russia coletar
+
+# Checagens das tabelas Delta do PIB da Rússia.
+bronze-pib-russia-checar:
+    uv run python -m inflatrack.bronze_pib_russia checar
+
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
 # (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
 seed:
