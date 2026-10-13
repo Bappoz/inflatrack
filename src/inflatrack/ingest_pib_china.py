@@ -100,6 +100,31 @@ def executar(args: argparse.Namespace) -> int:
     destino = parquet_dir / "pib_china.parquet"
     quadro.to_parquet(destino, index=False)
     logger.info("%d anos transformados em %s", len(quadro), destino)
+
+    # Bronze em Delta (E2)
+    try:
+        from inflatrack import bronze_pib_china
+
+        req_crescimento = (
+            API_URL.format(indicador=INDICADOR_CRESCIMENTO) + "?format=json&per_page=1000"
+        )
+        bronze_pib_china.gravar(
+            destino=parquet_dir,
+            indicador=INDICADOR_CRESCIMENTO,
+            requisicao=req_crescimento,
+            corpo=json.dumps(payload_crescimento),
+        )
+        req_pib_usd = API_URL.format(indicador=INDICADOR_PIB_USD) + "?format=json&per_page=1000"
+        bronze_pib_china.gravar(
+            destino=parquet_dir,
+            indicador=INDICADOR_PIB_USD,
+            requisicao=req_pib_usd,
+            corpo=json.dumps(payload_pib_usd),
+        )
+        logger.info("tabelas Delta da Bronze atualizadas em %s", parquet_dir)
+    except Exception as erro:  # noqa: BLE001
+        logger.warning("não foi possível atualizar a Bronze em Delta: %s", erro)
+
     return len(quadro)
 
 
