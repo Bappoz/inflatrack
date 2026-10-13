@@ -66,35 +66,21 @@ Chave primária `data_referencia`, com UPSERT — mesma mecânica do dólar, e p
 
 Nenhuma. Ao contrário das commodities (`vw_features_daily`) e do PIB (`vw_features_pib_trimestral`), estas duas séries já estão em formato largo, com uma linha por dia e o calendário completo: não há o que pivotar nem lacuna a cobrir. O cruzamento entre elas e com as demais fontes é um `join` direto por `data_referencia`.
 
-## Camadas anteriores
+## Camada Bronze em Delta Lake (E2)
 
-Não há Parquet nesta fonte — só a camada bruta e o banco:
+A partir da Entrega 2, a frente de macroeconomia adota armazenamento aberto em **Delta Lake sobre Parquet**, eliminando a necessidade de arquivos `.json.gz` avulsos e preservando o histórico integral:
 
-| Camada | Caminho | Formato |
-|---|---|---|
-| Bruta (dólar) | `data/raw/bcb/dolar_<de>_a_<ate>.json.gz` | Conteúdo da chave `value` da resposta OData, em gzip |
-| Bruta (Selic) | `data/raw/bcb/selic_<de>_a_<ate>.json.gz` | Lista devolvida pelo SGS, em gzip |
-| Servida | `data/duckdb/inflatrack.duckdb` | Tabelas `dolar_cotacao` e `selic_taxa` |
-
-O nome do arquivo bruto carrega a janela **pedida** (`--de`/`--ate`), não a buscada: o recuo de 10 dias da consulta não aparece no nome, embora os registros desse recuo estejam dentro do arquivo.
-
-Campos do JSON bruto do dólar (API Olinda/PTAX):
-
-| Campo | Descrição |
-|---|---|
-| `dataHoraCotacao` | Instante do boletim. Usado para ordenar e deduplicar; só a data é gravada |
-| `cotacaoCompra` / `cotacaoVenda` | Viram `cotacao_compra` e `cotacao_venda` |
-| `tipoBoletim` | Tipo do boletim (abertura, intermediário, fechamento). Não é carregado — a deduplicação pelo instante já seleciona o fechamento |
-
-Campos do JSON bruto da Selic (API SGS, série 11):
-
-| Campo | Descrição |
-|---|---|
-| `data` | Data no formato **`DD/MM/AAAA`**, não ISO. Convertida com `format="%d/%m/%Y"` explícito |
-| `valor` | Taxa como **string** com ponto decimal; vira `taxa_dia_pct` |
+| Tabela | Caminho | Formato | Papel na Plataforma |
+|---|---|---|---|
+| `dolar_resposta` | `data/parquet/dolar/resposta/` | Parquet + Delta | Payload OData integral imutável, indexado por SHA-256 |
+| `dolar_boletim` | `data/parquet/dolar/boletim/` | Parquet + Delta | Todos os boletins intradiários tipados, particionado por ano |
+| `selic_resposta` | `data/parquet/selic/resposta/` | Parquet + Delta | Resposta JSON da API SGS imutável, indexada por SHA-256 |
+| `selic_taxa_dia` | `data/parquet/selic/taxa_dia/` | Parquet + Delta | Taxas efetivas em dias úteis tipadas, particionado por ano |
+| `dolar_cotacao` | `data/duckdb/inflatrack.duckdb` | DuckDB (legado/transitório) | Vista diária com calendário civil preenchido por *forward fill* |
+| `selic_taxa` | `data/duckdb/inflatrack.duckdb` | DuckDB (legado/transitório) | Vista diária com calendário civil preenchido por *forward fill* |
 
 !!! note "Sem histórico anterior ao início da série"
-    Se `--de` for anterior à primeira observação disponível na origem, não existe valor com que preencher o começo do período. As duas ingestões abortam com erro explícito em vez de gravar uma tabela com lacunas — e nenhuma das duas tabelas aceita `NULL` nas colunas de valor, o que torna esse erro impossível de contornar por acidente.
+    Se `--de` for anterior à primeira observação disponível na origem, não existe valor com que preencher o começo do período. As ingestões abortam com erro explícito em vez de gravar tabelas com lacunas inconsistentes.
 
 ## Exemplos de Uso
 

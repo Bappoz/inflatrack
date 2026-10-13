@@ -244,11 +244,11 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] Gravar `dolar_resposta` e `dolar_boletim` em Delta, com **todos os boletins** (`data_hora_cotacao`, `cotacao_compra`, `cotacao_venda` e `tipo_boletim`, hoje descartado), partição por ano. A escrita em `main.dolar_cotacao` continua por enquanto.
-- [ ] Importar os `data/raw/bcb/dolar_*.json.gz` para `dolar_resposta`.
-- [ ] Demonstração de reexecução: rodar duas vezes no mesmo dia não grava resposta nova (hash) e não muda a contagem de boletins.
-- [ ] Política de dado atrasado: o valor do dia muda até o fechamento; a janela relida é o ano corrente.
-- [ ] Checagens: ao menos um boletim por dia útil; compra e venda não nulas.
+- [x] Gravar `dolar_resposta` e `dolar_boletim` em Delta, com **todos os boletins** (`data_hora_cotacao`, `cotacao_compra`, `cotacao_venda` e `tipo_boletim`, hoje descartado), partição por ano. A escrita em `main.dolar_cotacao` continua por enquanto.
+- [x] Importar os `data/raw/bcb/dolar_*.json.gz` para `dolar_resposta`.
+- [x] Demonstração de reexecução: rodar duas vezes no mesmo dia não grava resposta nova (hash) e não muda a contagem de boletins.
+- [x] Política de dado atrasado: o valor do dia muda até o fechamento; a janela relida é o ano corrente.
+- [x] Checagens: ao menos um boletim por dia útil; compra e venda não nulas.
 
 **E3:**
 
@@ -269,10 +269,10 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] Gravar `selic_resposta` e `selic_taxa_dia` em Delta, com `data` e `valor` só tipados e sem preencher dias, partição por ano. A escrita em `main.selic_taxa` continua por enquanto.
-- [ ] Importar os `data/raw/bcb/selic_*.json.gz` para `selic_resposta`.
-- [ ] Demonstração de reexecução e política de dado atrasado: a taxa do dia só sai no dia útil seguinte.
-- [ ] Checagens: uma linha por dia útil; taxa na ordem de 0,05 (% ao dia).
+- [x] Gravar `selic_resposta` e `selic_taxa_dia` em Delta, com `data` e `valor` só tipados e sem preencher dias, partição por ano. A escrita em `main.selic_taxa` continua por enquanto.
+- [x] Importar os `data/raw/bcb/selic_*.json.gz` para `selic_resposta`.
+- [x] Demonstração de reexecução e política de dado atrasado: a taxa do dia só sai no dia útil seguinte.
+- [x] Checagens: uma linha por dia útil; taxa na ordem de 0,05 (% ao dia).
 
 **E3:**
 
