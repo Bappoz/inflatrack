@@ -94,7 +94,10 @@ nav:
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
   - Evidências:
+    - E2 — Situação por fonte: evidencias/e2/index.md
     - E2 — IPCA/INPC (SIDRA): evidencias/e2/ipca.md
+    - E2 — Commodities: evidencias/e2/commodities.md
+    - E2 — PIB e setores: evidencias/e2/pib.md
     - Uso de IA: evidencias/uso_ia.md
 
 extra_css:
