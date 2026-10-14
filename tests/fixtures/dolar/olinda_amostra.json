@@ -1,0 +1,29 @@
+{
+  "@odata.context": "https://was-p.bcnet.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/$metadata#_CotacaoDolarPeriodo",
+  "value": [
+    {
+      "cotacaoCompra": 4.0207,
+      "cotacaoVenda": 4.0213,
+      "dataHoraCotacao": "2020-01-02 10:07:37.892",
+      "tipoBoletim": "Abertura"
+    },
+    {
+      "cotacaoCompra": 4.0225,
+      "cotacaoVenda": 4.0231,
+      "dataHoraCotacao": "2020-01-02 11:08:44.301",
+      "tipoBoletim": "Intermediário"
+    },
+    {
+      "cotacaoCompra": 4.0207,
+      "cotacaoVenda": 4.0213,
+      "dataHoraCotacao": "2020-01-02 13:09:44.204",
+      "tipoBoletim": "Fechamento PTAX"
+    },
+    {
+      "cotacaoCompra": 4.0516,
+      "cotacaoVenda": 4.0522,
+      "dataHoraCotacao": "2020-01-03 13:08:12.115",
+      "tipoBoletim": "Fechamento PTAX"
+    }
+  ]
+}
