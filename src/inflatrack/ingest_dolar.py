@@ -14,10 +14,12 @@ import duckdb
 import pandas as pd
 import requests
 
+from inflatrack import bronze_dolar
 from inflatrack.dolar_olinda import OlindaClient, OlindaError
 
 logger = logging.getLogger("inflatrack.ingest_dolar")
 
+BRONZE_DIR_PADRAO = Path("data/parquet/dolar")
 RAW_DIR_PADRAO = Path("data/raw/bcb")
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 SCHEMA_SQL = Path(__file__).resolve().parents[2] / "scripts" / "setup_duckdb_macro.sql"
@@ -85,6 +87,20 @@ def executar(args: argparse.Namespace) -> int:
     data = OlindaClient().buscar_dolar(busca_inicio.strftime("%m-%d-%Y"), fim.strftime("%m-%d-%Y"))
     raw = salvar_raw(data, Path(args.raw_dir), inicio, fim)
     logger.info("resposta crua salva em %s", raw)
+
+    # Gravação na Bronze Delta (tabela de respostas e tabela de boletins)
+    inicio_str = busca_inicio.strftime("%m-%d-%Y")
+    fim_str = fim.strftime("%m-%d-%Y")
+    req = f"CotacaoDolarPeriodo(dataInicial='{inicio_str}',dataFinalCotacao='{fim_str}')"
+    corpo_json = json.dumps({"value": data}, ensure_ascii=False)
+    res_bronze = bronze_dolar.gravar(Path(args.bronze_dir), requisicao=req, corpo=corpo_json)
+    logger.info(
+        "bronze delta: resposta_nova=%s, lidas=%d, novas=%d",
+        res_bronze.resposta_nova,
+        res_bronze.linhas_lidas,
+        res_bronze.linhas_novas,
+    )
+
     quadro = transformar(data, inicio, fim)
 
     db = Path(args.db)
@@ -99,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--de", default="2020-01-01", help="AAAA-MM-DD")
     parser.add_argument("--ate", default=date.today().isoformat(), help="AAAA-MM-DD")
+    parser.add_argument("--bronze-dir", default=str(BRONZE_DIR_PADRAO))
     parser.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO))
     parser.add_argument("--db", default=str(DB_PADRAO))
     args = parser.parse_args(argv)

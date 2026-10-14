@@ -76,7 +76,8 @@ def transformar_estacoes(payload: list[dict[str, Any]]) -> pd.DataFrame:
         estacao_id = item.get("CD_ESTACAO") or item.get("estacao_id")
         nome = item.get("DC_NOME") or item.get("nome")
         estado = item.get("SG_ESTADO") or item.get("estado")
-        tipo = item.get("TP_ESTACAO") or item.get("tipo", "Automatica")
+        tipo = item.get("TP_ESTACAO") or item.get("tipo")
+        situacao = item.get("CD_SITUACAO") or item.get("situacao")
 
         if not estacao_id or not nome or not estado:
             continue
@@ -86,13 +87,11 @@ def transformar_estacoes(payload: list[dict[str, Any]]) -> pd.DataFrame:
                 "estacao_id": str(estacao_id).strip(),
                 "nome": str(nome).strip(),
                 "estado": str(estado).strip(),
-                "tipo": str(tipo).strip(),
+                "tipo": str(tipo).strip() if tipo else None,
                 "latitude": _para_float(item.get("VL_LATITUDE") or item.get("latitude")),
                 "longitude": _para_float(item.get("VL_LONGITUDE") or item.get("longitude")),
                 "altitude_m": _para_float(item.get("VL_ALTITUDE") or item.get("altitude_m")),
-                "situacao": str(
-                    item.get("CD_SITUACAO") or item.get("situacao", "Operante")
-                ).strip(),
+                "situacao": str(situacao).strip() if situacao else None,
             }
         )
 

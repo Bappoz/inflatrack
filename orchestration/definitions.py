@@ -1,15 +1,26 @@
-"""Ponto de entrada do Dagster: `uv run dagster dev` (ou `just orquestrador`).
+"""Ponto de entrada do Dagster: `uv run dagster dev` (ou `just orquestrador`)."""
 
-Carrega todo módulo de `orchestration/assets/`: cada fonte cria o seu sem mexer nos outros.
-"""
+import importlib
+import pkgutil
 
-from dagster import Definitions, load_assets_from_package_module
+from dagster import Definitions, load_assets_from_modules
 
 from orchestration import assets
 from orchestration.schedules import JOBS, SCHEDULES
 
+
+def _carregar_modulos_de_assets():
+    """Descobre e carrega automaticamente todos os módulos em orchestration/assets/."""
+    modulos = []
+    for _, nome_modulo, is_pkg in pkgutil.iter_modules(assets.__path__):
+        if not is_pkg and not nome_modulo.startswith("_"):
+            mod = importlib.import_module(f"orchestration.assets.{nome_modulo}")
+            modulos.append(mod)
+    return modulos
+
+
 defs = Definitions(
-    assets=load_assets_from_package_module(assets),
+    assets=load_assets_from_modules(_carregar_modulos_de_assets()),
     jobs=JOBS,
     schedules=SCHEDULES,
 )

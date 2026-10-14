@@ -244,11 +244,11 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] Gravar `dolar_resposta` e `dolar_boletim` em Delta, com **todos os boletins** (`data_hora_cotacao`, `cotacao_compra`, `cotacao_venda` e `tipo_boletim`, hoje descartado), partição por ano. A escrita em `main.dolar_cotacao` continua por enquanto.
-- [ ] Importar os `data/raw/bcb/dolar_*.json.gz` para `dolar_resposta`.
-- [ ] Demonstração de reexecução: rodar duas vezes no mesmo dia não grava resposta nova (hash) e não muda a contagem de boletins.
-- [ ] Política de dado atrasado: o valor do dia muda até o fechamento; a janela relida é o ano corrente.
-- [ ] Checagens: ao menos um boletim por dia útil; compra e venda não nulas.
+- [x] Gravar `dolar_resposta` e `dolar_boletim` em Delta, com **todos os boletins** (`data_hora_cotacao`, `cotacao_compra`, `cotacao_venda` e `tipo_boletim`, hoje descartado), partição por ano. A escrita em `main.dolar_cotacao` continua por enquanto.
+- [x] Importar os `data/raw/bcb/dolar_*.json.gz` para `dolar_resposta`.
+- [x] Demonstração de reexecução: rodar duas vezes no mesmo dia não grava resposta nova (hash) e não muda a contagem de boletins.
+- [x] Política de dado atrasado: o valor do dia muda até o fechamento; a janela relida é o ano corrente.
+- [x] Checagens: ao menos um boletim por dia útil; compra e venda não nulas.
 
 **E3:**
 
@@ -269,10 +269,10 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] Gravar `selic_resposta` e `selic_taxa_dia` em Delta, com `data` e `valor` só tipados e sem preencher dias, partição por ano. A escrita em `main.selic_taxa` continua por enquanto.
-- [ ] Importar os `data/raw/bcb/selic_*.json.gz` para `selic_resposta`.
-- [ ] Demonstração de reexecução e política de dado atrasado: a taxa do dia só sai no dia útil seguinte.
-- [ ] Checagens: uma linha por dia útil; taxa na ordem de 0,05 (% ao dia).
+- [x] Gravar `selic_resposta` e `selic_taxa_dia` em Delta, com `data` e `valor` só tipados e sem preencher dias, partição por ano. A escrita em `main.selic_taxa` continua por enquanto.
+- [x] Importar os `data/raw/bcb/selic_*.json.gz` para `selic_resposta`.
+- [x] Demonstração de reexecução e política de dado atrasado: a taxa do dia só sai no dia útil seguinte.
+- [x] Checagens: uma linha por dia útil; taxa na ordem de 0,05 (% ao dia).
 
 **E3:**
 
@@ -334,10 +334,10 @@ Evidência: [evidencias/e2/pib.md](../evidencias/e2/pib.md). A janela relida fic
 
 **E2:**
 
-- [ ] `pib_china_resposta` (uma resposta por indicador, com o cabeçalho `payload[0]` no corpo) e `pib_china_indicador` em Delta, em **formato longo** (`indicador`, `ano`, `valor` e os campos hoje descartados).
-- [ ] Importar o Raw existente para `pib_china_resposta`.
-- [ ] Demonstração de reexecução e política: a série chega inteira e pode ser revisada fora de calendário.
-- [ ] Checagens: `(indicador, ano)` único, ~60 a 65 anos desde 1960, último ano anulável.
+- [x] `pib_china_resposta` (uma resposta por indicador, com o cabeçalho `payload[0]` no corpo) e `pib_china_indicador` em Delta, em **formato longo** (`indicador`, `ano`, `valor` e os campos hoje descartados).
+- [x] Importar o Raw existente para `pib_china_resposta`.
+- [x] Demonstração de reexecução e política: a série chega inteira e pode ser revisada fora de calendário.
+- [x] Checagens: `(indicador, ano)` único, ~60 a 65 anos desde 1960, último ano anulável.
 
 **E3:**
 
@@ -350,10 +350,12 @@ Evidência: [evidencias/e2/pib.md](../evidencias/e2/pib.md). A janela relida fic
 
 **E2:**
 
-- [ ] `salario_minimo_resposta` (o HTML inteiro) e `salario_minimo_mes` em Delta, com **todas as linhas** da tabela HTML e sem a coluna calculada.
-- [ ] Importar os `.html.gz` de `data/raw/dieese/` para `salario_minimo_resposta`.
-- [ ] Demonstração de reexecução e política: a divulgação sai na 1ª quinzena do mês seguinte, sem dia fixo; a página traz a série inteira.
-- [ ] Checagens: `ano_mes` único, série desde 1994-07.
+- [x] `salario_minimo_resposta` (o HTML inteiro) e `salario_minimo_mes` em Delta, com **todas as linhas** da tabela HTML e sem a coluna calculada.
+- [x] Importar os `.html.gz` de `data/raw/dieese/` para `salario_minimo_resposta`.
+- [x] Demonstração de reexecução e política: a divulgação sai na 1ª quinzena do mês seguinte, sem dia fixo; a página traz a série inteira.
+- [x] Checagens: `ano_mes` único, série desde 1994-07.
+
+Evidência de cada item, com comando e saída: [evidencias/e2/salario_minimo.md](../evidencias/e2/salario_minimo.md).
 
 **E3:**
 
@@ -369,11 +371,13 @@ Evidência: [evidencias/e2/pib.md](../evidencias/e2/pib.md). A janela relida fic
 
 **E2:**
 
-- [ ] **Validar a API de medições.** Em 2026-10-11, os endpoints de medições e de estações fecharam a conexão sem resposta. Descobrir se exige token, qual é o limite e qual é o formato real, e registrar na evidência.
-- [ ] `clima_resposta` e `clima_estacao` em Delta para o cadastro de estações, sem valores padrão inventados.
-- [ ] Importar `data/raw/inmet/` para `clima_resposta`.
-- [ ] Demonstração de reexecução e política provisória (retransmissão nos últimos 7 dias).
-- [ ] Checagens: estações únicas por `estacao_id`; ~671 estações.
+- [x] **Validar a API de medições.** Em 2026-10-11, os endpoints de medições e de estações fecharam a conexão sem resposta. Descobrir se exige token, qual é o limite e qual é o formato real, e registrar na evidência.
+- [x] `clima_resposta` e `clima_estacao` em Delta para o cadastro de estações, sem valores padrão inventados.
+- [x] Importar `data/raw/inmet/` para `clima_resposta`.
+- [x] Demonstração de reexecução e política provisória (retransmissão nos últimos 7 dias).
+- [x] Checagens: estações únicas por `estacao_id`; ~671 estações.
+
+Evidência de cada item, com comando e saída: [evidencias/e2/clima.md](../evidencias/e2/clima.md).
 
 **E3:**
 

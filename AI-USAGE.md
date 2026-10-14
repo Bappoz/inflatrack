@@ -14,9 +14,9 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
 | João Pedro Lopes da Cruz | 19 | 2026-09-14 a 2026-10-13 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
-| Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
-| Johnnatan Salles | 1 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
+| Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
+| Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
+| Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
 ## Todas as sessões
 
@@ -48,6 +48,11 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | E2 no plano e divisão de tarefas por pessoa |
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
+| 2026-10-12 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Bronze em Delta para Salário Mínimo (DIEESE) e Clima (INMET) na Entrega 2 |
+| 2026-10-13 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Carga Bronze no DuckDB (dois modos) e isolamento dos módulos Dagster de Salário Mínimo e Clima |
+| 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB da China em Delta Lake (E2) |
+| 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2) |
+| 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
 | 2026-10-13 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes |
 
 ---
@@ -993,6 +998,49 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Testes de concorrência simultânea entre a ingestão das commodities e do PIB da China.
 
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Implementação da Bronze do PIB da China em Delta Lake (E2)
+
+**O que a ferramenta fez**
+- Analisou o documento de diretrizes `tasks_entrega_2.md` e a convenção estabelecida no piloto da fonte IPCA (`src/inflatrack/bronze_ipca.py`).
+- Implementou o módulo `src/inflatrack/bronze_pib_china.py`, gravando duas tabelas Delta Lake (`pib_china_resposta` e `pib_china_indicador`) em `data/parquet/pib_china/`.
+- Manteve o formato longo com todos os campos da API do Banco Mundial (`indicador`, `ano`, `valor`, `indicador_nome`, `pais_id`, `pais_nome`, `pais_iso3`, `unidade`, `obs_status`, `decimal`) e metadados de linhagem (`_id_resposta`, `_fonte`, `_requisicao`, `_ingerido_em`).
+- Implementou deduplicação por hash SHA-256 no corpo da requisição e verificação de duplicatas por chave lógica em Delta Lake.
+- Adicionou função de migração/importação do histórico de `data/raw/pib_china/*.json.gz` para Delta Lake.
+- Integrou a escrita em Delta no módulo legado `src/inflatrack/ingest_pib_china.py` para compatibilidade contínua.
+- Adicionou receitas no `justfile` (`bronze-pib-china`, `bronze-pib-china-importar`, `bronze-pib-china-checar`).
+- Desenvolveu testes automatizados em `tests/test_pib_china.py` cobrindo transformação em formato longo, checagens de regras de negócio e garantia de idempotência em Delta Lake.
+- Elaborou o documento de evidência `docs/evidencias/e2/pib_china.md` e marcou as tarefas da E2 como concluídas em `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execução real contra a API do Banco Mundial e validação da tabela de respostas e de indicadores.
+- Teste de idempotência e reexecução: comprovado que rodar a ingestão pela segunda vez resulta em 0 linhas adicionadas e não altera versões.
+- Validação estática com `ruff check` (0 erros).
+- Execução da suíte completa de testes com `pytest` (58 testes passando, 6 deles do PIB da China).
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_pib_china`) e carga para DuckDB (escopo delimitado para a E3).
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2)
+
+**O que a ferramenta fez**
+- Recuperou os documentos arquiteturais e dicionários de dados da branch `origin/docs/pib-usa-russia` (`docs/fontes/pib_usa.md`, `docs/fontes/pib_russia.md`, `docs/dicionario/pib_usa.md`, `docs/dicionario/pib_russia.md`).
+- Implementou a camada Bronze em Delta Lake para os EUA em `src/inflatrack/bronze_pib_usa.py` (`pib_usa_resposta` e `pib_usa_indicador`) e para a Rússia em `src/inflatrack/bronze_pib_russia.py` (`pib_russia_resposta` e `pib_russia_indicador`).
+- Tratou as particularidades da Rússia: preservação dos nulos históricos no período soviético (1960–1989), com validação específica de volume pós-1990.
+- Criou os módulos de ingestão `src/inflatrack/ingest_pib_usa.py` e `src/inflatrack/ingest_pib_russia.py` mantendo compatibilidade com arquivos Parquet legados.
+- Adicionou testes automatizados em `tests/test_pib_usa.py` e `tests/test_pib_russia.py` cobrindo formato longo, particularidade dos nulos e garantia de idempotência em Delta Lake.
+- Adicionou receitas no `justfile` (`bronze-pib-usa`, `bronze-pib-usa-checar`, `bronze-pib-russia`, `bronze-pib-russia-checar`).
+- Criou as evidências da Entrega 2 em `docs/evidencias/e2/pib_usa.md` e `docs/evidencias/e2/pib_russia.md` e integrou todas as páginas ao menu de navegação em `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Coleta ao vivo na API do Banco Mundial para os dois países (`USA` e `RUS`), gravando com sucesso nas tabelas Delta Lake locais.
+- Demonstração de reexecução e idempotência: segunda execução resultou em 0 linhas novas inseridas em ambos os países.
+- `ruff check` limpo em todos os módulos novos e alterados (0 erros).
+- `pytest` executado com sucesso: 64 testes passando (6 testes dos EUA e Rússia).
+- `mkdocs build --strict` executado e aprovado com código 0 (sem links quebrados).
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_pib_usa`, `stg_pib_russia`) e carga para DuckDB (escopo da E3).
+
 ---
 
 ## Pedro Américo
@@ -1020,6 +1068,34 @@ de tarefas nessa linha.
 - Revisou os arquivos de ingestão e carga, aplicando a separação de responsabilidades para o Dólar (`dolar_olinda.py`, `ingest_dolar.py`, `load_dolar.py`) e Selic (`selic_sgs.py`, `ingest_selic.py`, `load_selic.py`).
 - Criou os arquivos de teste automatizado na pasta `tests/` (`test_dolar_olinda.py` e `test_selic_sgs.py`), inaugurando a cobertura de testes do projeto via `pytest` e *Mocks*.
 - Revisou a documentação no MkDocs para refletir a arquitetura implementada (API Olinda, Forward Fill e DuckDB), analisando as páginas `pipelineMacro.md`, `evidencias_macro.md`, `dicionario/macroeconomia.md` e o `adr_0002_macro.md`.
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Camada Bronze Delta do Dólar e Selic (E2)
+
+**O que a ferramenta fez**
+- Elaborou os módulos da camada Bronze em formato Delta Lake (`src/inflatrack/bronze_dolar.py` e `src/inflatrack/bronze_selic.py`), substituindo os arquivos `.json.gz` por tabelas Delta de respostas (`dolar_resposta`, `selic_resposta`) e tabelas Delta de registros (`dolar_boletim`, `selic_taxa_dia`).
+- No Dólar, implementou a retenção de todos os boletins intradiários (abertura, intermediários e fechamento) com tipagem PyArrow estrita e particionamento anual, viabilizando o cálculo de volatilidade intradiária (consulta C10) sem perda de dados na Bronze.
+- Na Selic, implementou a extração dos valores originais diários publicados pelo Banco Central (série 11 do SGS), sem forward fill prematuro na Bronze, com validação de limites diários e particionamento anual.
+- Implementou mecanismos de idempotência via hash SHA-256 do corpo e filtragem de registros existentes.
+- Desenvolveu fixtures com dados reais em `tests/fixtures/dolar/olinda_amostra.json` e `tests/fixtures/selic/sgs_amostra.json`.
+- Criou as suítes de testes unitários e de idempotência `tests/test_bronze_dolar.py` e `tests/test_bronze_selic.py`.
+- Integrou a gravação Delta Bronze aos ingestores existentes `src/inflatrack/ingest_dolar.py` e `src/inflatrack/ingest_selic.py` com parâmetro `--bronze-dir`.
+- Adicionou as receitas `bronze-dolar`, `bronze-dolar-checar`, `bronze-dolar-importar`, `bronze-selic`, `bronze-selic-checar`, `bronze-selic-importar` e `bronze-macro` no `justfile`.
+- Executou carga histórica real (2020 a 2026): 1.703 boletins no Dólar e 1.701 taxas na Selic, comprovando idempotência na reexecução imediata (`resposta_nova=False`, `novas=0`).
+- Documentou a entrega em `docs/evidencias/e2/macroeconomia.md`, atualizou `docs/dicionario/macroeconomia.md`, cadastrou as páginas no `mkdocs.yml`, corrigiu links do MkDocs em `pib_china.md` e marcou as tarefas 3.2 e 3.3 concluídas em `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execução real contra as APIs do Banco Central (Olinda e SGS) via `just bronze-macro`.
+- Verificação de integridade e esquemas via `just bronze-dolar-checar` e `just bronze-selic-checar` (código 0).
+- Teste de idempotência e reexecução: comprovado que rodar a ingestão consecutivamente resulta em `resposta_nova=False` e `novas=0`.
+- Suíte completa de testes do projeto via `uv run pytest` (68 testes aprovados).
+- `uv run ruff check` e `uv run ruff format --check` limpos nos arquivos da frente.
+- `uv run --group docs mkdocs build --strict` aprovado com código 0.
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver (`stg_dolar_*`, `stg_selic_*`) e migração final do DuckDB para o dbt-duckdb (escopo delimitado para a E3).
+
+**Decisões que continuam sendo da Squad**
+- Definir o cronograma exato de migração do DuckDB transitório para os modelos dbt-duckdb na Entrega 3.
 ---
 
 ---
@@ -1048,4 +1124,48 @@ de tarefas nessa linha.
 - Definir a periodicidade de orquestração automatizada no Dagster/cron (mensal para o DIEESE, diária matinal para o INMET).
 
 
+### 2026-10-12 — Antigravity (Gemini 3.8 Flash) — Bronze em Delta para Salário Mínimo (DIEESE) e Clima (INMET) na Entrega 2
+
+**O que a ferramenta fez**
+- Implementou a camada Bronze em Delta para a fonte Salário Mínimo (`src/inflatrack/bronze_salario_minimo.py`) gerando as tabelas `salario_minimo_resposta` e `salario_minimo_mes` em `data/parquet/salario_minimo/`, com deduplicação por `hash_corpo` e chave composta `(ano_mes, salario_nominal, salario_necessario)`, sem a coluna calculada `multiplo_necessario_nominal` (transferida para o dbt Silver).
+- Diagnosticou e validou a API meteorológica do INMET (`apitempo.inmet.gov.br`), confirmando a estabilidade da listagem de estações (`/estacoes/T` com 671 estações sem autenticação/token), identificando a desativação da rota legada de medições diárias (`/estacao/diaria` retornando HTTP 404 Route not found) e a descontinuação do wrapper comunitário `inmetpy`. Documentou a estratégia para a E3 com base no repositório de arquivos históricos anuais do BDMEP.
+- Implementou a camada Bronze em Delta para a fonte Dados do Clima (`src/inflatrack/bronze_clima.py`) gerando `clima_resposta` e `clima_estacao` em `data/parquet/clima/`, expurgando valores padrão inventados (`tipo="Automatica"` e `situacao="Operante"` agora preservam valor nulo original).
+- Integrou os módulos Bronze aos ingestores existentes `ingest_salario_minimo.py` e `ingest_clima.py`, mantendo a geração concomitante dos Parquets legados para garantir estabilidade da carga DuckDB durante a transição da E2.
+- Desenvolveu testes automatizados em `tests/test_salario_minimo.py` e `tests/test_clima.py` (23 novos testes, expandindo a suíte do projeto para 78 testes passando), alimentados por fixtures reais em `tests/fixtures/salario_minimo/salario_minimo.html` e `tests/fixtures/clima/estacoes.json`.
+- Criou as páginas de evidência `docs/evidencias/e2/salario_minimo.md` e `docs/evidencias/e2/clima.md`, atualizou os esquemas Bronze nos dicionários de dados `docs/dicionario/salario_minimo.md` e `docs/dicionario/clima.md`, adicionou as páginas ao `mkdocs.yml` e configurou as receitas `bronze-salario-minimo`, `bronze-clima`, checagens e importações no `justfile`.
+- Marcou como concluídas todas as tarefas das seções 3.7 e 3.8 do plano de trabalho `tasks_entrega_2.md`.
+
+**O que foi verificado e como**
+- Execuções reais e sucessivas dos comandos `just bronze-salario-minimo`, `just bronze-salario-minimo-checar`, `just bronze-clima` e `just bronze-clima-checar`, atestando a coleta completa das origens, checagens de continuidade e volume e idempotência (0 linhas novas na segunda rodada).
+- Suíte completa de 78 testes executada via `pytest` e aprovada em 1.5s.
+- Conformidade estrita de tipagem e estilo com `ruff check` em todos os arquivos modificados e criados.
+- Compilação estrita da documentação com `just docs-build` (`mkdocs build --strict`) aprovada com código 0 e sem links quebrados.
+
+**O que NÃO foi verificado**
+- Ingestão contínua de medições pluviométricas e de temperatura diárias não foi executada nesta etapa (escopo planejado para a E3), tendo sido validado e entregue integralmente o catálogo cadastral das estações em Delta.
+
+**Decisões que continuam sendo da Squad**
+- Definir para a E3 se a extração de medições meteorológicas consumirá os pacotes anuais do BDMEP ou aplicará filtro por estações de capitais/polos de commodities.
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Carga Bronze no DuckDB (dois modos) e isolamento dos módulos Dagster de Salário Mínimo e Clima
+
+**O que a ferramenta fez**
+- Implementou os dois modos de carga no DuckDB previstos pelo contrato de dados da Bronze (seção 2.3 do plano: modo `substitui` e modo `so_acrescenta`) para as fontes Salário Mínimo (`load_salario_minimo.py` / `bronze_salario_minimo.py`) e Clima (`load_clima.py` / `bronze_clima.py`), espelhando diretamente as tabelas Delta em `bronze.salario_minimo_mes` e `bronze.clima_estacao`.
+- Atualizou os DDLs `setup_duckdb_salario_minimo.sql` e `setup_duckdb_clima.sql` criando o schema `bronze` e as definições físicas exatas das tabelas Bronze Delta.
+- Isolou os módulos de assets do Dagster por fonte, criando `orchestration/assets/salario_minimo.py` e `orchestration/assets/clima.py`, e removeu os assets centralizados de `orchestration/assets/ingestao.py`.
+- Modernizou `orchestration/definitions.py` com carregamento dinâmico via `pkgutil.iter_modules`, permitindo que cada fonte crie seu próprio módulo em `orchestration/assets/` de forma desacoplada.
+- Adicionou testes automatizados para os dois modos de carga DuckDB em `tests/test_salario_minimo.py` e `tests/test_clima.py`, e novas receitas `bronze-salario-minimo-load` e `bronze-clima-load` no `justfile`.
+
+**O que foi verificado e como**
+- Suíte completa de 25 testes das duas fontes (`tests/test_salario_minimo.py` e `tests/test_clima.py`) executada e aprovada com sucesso via `pytest`.
+- `ruff check` e `ruff format` executados e aprovados com código 0 nos módulos criados e alterados.
+- Carregamento dinâmico dos assets do Dagster verificado em execução programática (`15 assets carregados`).
+
+**O que NÃO foi verificado**
+- Execução de pipeline end-to-end com Dagster UI aberto no navegador.
+
+**Decisões que continuam sendo da Squad**
+- Migração dos assets das outras fontes restantes (`ipca`, `dolar`, `selic`, `commodities`, `pib`, `pib_china`) de `ingestao.py` para seus próprios arquivos em `orchestration/assets/`.
+
 ---
+

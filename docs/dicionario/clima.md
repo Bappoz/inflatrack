@@ -89,3 +89,49 @@ WHERE c.data_referencia >= '2024-01-01'
 GROUP BY c.data_referencia, p.preco
 ORDER BY c.data_referencia DESC;
 ```
+
+---
+
+## Bronze em Delta
+
+As tabelas da fonte meteorológica gravadas pelo ingestor em `data/parquet/clima/`, em formato Delta. Ficam no Delta e substituem os arquivos `.json.gz` de `data/raw/inmet/`. Quando necessário, o DuckDB lê com `delta_scan`.
+
+### clima_resposta
+
+Armazena o payload JSON bruto da resposta recebida da API do INMET. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`).
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `id_resposta` | string | Identificador da resposta: o hash SHA-256 do corpo |
+| `_fonte` | string | Sempre `"clima"` |
+| `_requisicao` | string | URL consultada na API do INMET (`/estacoes/T`) |
+| `_ingerido_em` | timestamp (UTC) | Momento do download da resposta |
+| `status_http` | smallint, nulo | Status HTTP da resposta (200, ou nulo se importado do Raw) |
+| `tipo_conteudo` | string, nulo | `Content-Type` do cabeçalho HTTP |
+| `corpo` | string | O JSON original na íntegra |
+| `hash_corpo` | string | SHA-256 do corpo (idempotência) |
+| `tamanho_bytes` | bigint | Tamanho do payload em bytes |
+
+### clima_estacao
+
+Cadastro nacional das estações meteorológicas (automáticas e convencionais) ativas e inativas. Não inventa valores padrão: campos não informados pelo INMET permanecem nulos.
+
+| Campo | Tipo | Origem na API | Descrição |
+|---|---|---|---|
+| `estacao_id` | string | `CD_ESTACAO` | Código alfanumérico identificador único (ex.: `A001`, `A472`) |
+| `nome` | string | `DC_NOME` | Nome do município ou ponto de medição |
+| `estado` | string | `SG_ESTADO` | Sigla da Unidade Federativa (UF) |
+| `tipo` | string, nulo | `TP_ESTACAO` | Tipo da estação (`"Automatica"` ou nulo) |
+| `latitude` | double, nulo | `VL_LATITUDE` | Latitude geográfica decimal (WGS 84) |
+| `longitude` | double, nulo | `VL_LONGITUDE` | Longitude geográfica decimal (WGS 84) |
+| `altitude_m` | double, nulo | `VL_ALTITUDE` | Altitude da estação em metros |
+| `situacao` | string, nulo | `CD_SITUACAO` | Situação operacional (`"Operante"`, `"Pane"` ou nulo) |
+| `data_inicio_operacao` | string, nulo | `DT_INICIO_OPERACAO` | Data/hora de início de operação registrada |
+| `data_fim_operacao` | string, nulo | `DT_FIM_OPERACAO` | Data/hora de desativação (se aplicável) |
+| `_id_resposta` | string | — | Chave estrangeira para `clima_resposta.id_resposta` |
+| `_fonte` | string | — | Sempre `"clima"` |
+| `_requisicao` | string | — | URL da chamada |
+| `_ingerido_em` | timestamp (UTC) | — | Momento da ingestão |
+
+**Granularidade:** uma linha por estação meteorológica × atributos operacionais. Atualizações cadastrais pelo INMET geram uma nova versão rastreável em Delta (*insert-only*).
+

@@ -50,6 +50,34 @@ pib-china: pib-china-ingest pib-china-load
 # Alias mantido para compatibilidade com a documentação anterior do PR.
 seed-pib-china: pib-china
 
+# Bronze do PIB da China em Delta (data/parquet/pib_china/): coleta direta da API do Banco Mundial.
+bronze-pib-china:
+    uv run python -m inflatrack.bronze_pib_china coletar
+
+# Leva os .json.gz antigos de data/raw/pib_china/ para as tabelas Delta. Reexecutável.
+bronze-pib-china-importar:
+    uv run python -m inflatrack.bronze_pib_china importar
+
+# Checagens de integridade e volume das tabelas Delta do PIB da China.
+bronze-pib-china-checar:
+    uv run python -m inflatrack.bronze_pib_china checar
+
+# Bronze do PIB dos EUA em Delta (data/parquet/pib_usa/): coleta da API do Banco Mundial.
+bronze-pib-usa:
+    uv run python -m inflatrack.bronze_pib_usa coletar
+
+# Checagens das tabelas Delta do PIB dos EUA.
+bronze-pib-usa-checar:
+    uv run python -m inflatrack.bronze_pib_usa checar
+
+# Bronze do PIB da Rússia em Delta (data/parquet/pib_russia/): coleta da API do Banco Mundial.
+bronze-pib-russia:
+    uv run python -m inflatrack.bronze_pib_russia coletar
+
+# Checagens das tabelas Delta do PIB da Rússia.
+bronze-pib-russia-checar:
+    uv run python -m inflatrack.bronze_pib_russia checar
+
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
 # (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
 seed:
@@ -123,9 +151,36 @@ docs-build:
 seed-dolar de="2020-01-01":
     uv run python -m inflatrack.ingest_dolar --de {{de}}
 
+# Bronze do Dólar Comercial em Delta (data/parquet/dolar/): coleta direta da API Olinda.
+bronze-dolar de="2020-01-01" ate=datetime("%Y-%m-%d"):
+    uv run python -m inflatrack.bronze_dolar coletar --de {{de}} --ate {{ate}}
+
+# Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta do Dólar. Reexecutável.
+bronze-dolar-importar:
+    uv run python -m inflatrack.bronze_dolar importar
+
+# Checagens de integridade e volume das tabelas Delta do Dólar.
+bronze-dolar-checar:
+    uv run python -m inflatrack.bronze_dolar checar
+
 # Carga isolada da Selic (o fim padrão é a data atual).
 seed-selic de="2020-01-01":
     uv run python -m inflatrack.ingest_selic --de {{de}}
+
+# Bronze da Selic em Delta (data/parquet/selic/): coleta direta da API SGS Série 11.
+bronze-selic de="2020-01-01" ate=datetime("%Y-%m-%d"):
+    uv run python -m inflatrack.bronze_selic coletar --de {{de}} --ate {{ate}}
+
+# Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta da Selic. Reexecutável.
+bronze-selic-importar:
+    uv run python -m inflatrack.bronze_selic importar
+
+# Checagens de integridade e volume das tabelas Delta da Selic.
+bronze-selic-checar:
+    uv run python -m inflatrack.bronze_selic checar
+
+# Bronze de Macroeconomia em Delta (Dólar + Selic).
+bronze-macro: bronze-dolar bronze-selic
 
 # Carga isolada das Commodities (AlphaVantage -> DuckDB)
 seed-commodities:
@@ -159,6 +214,19 @@ salario-minimo-load:
 
 salario-minimo: salario-minimo-ingest salario-minimo-load
 
+# Bronze do Salário Mínimo em Delta (data/parquet/salario_minimo/).
+bronze-salario-minimo:
+    uv run python -m inflatrack.ingest_salario_minimo
+
+bronze-salario-minimo-importar:
+    uv run python -m inflatrack.bronze_salario_minimo importar
+
+bronze-salario-minimo-checar:
+    uv run python -m inflatrack.bronze_salario_minimo checar
+
+bronze-salario-minimo-load modo="substitui":
+    uv run python -m inflatrack.load_salario_minimo --modo {{modo}}
+
 # INMET: Dados de Clima e Estações
 clima-ingest:
     uv run python -m inflatrack.ingest_clima --apenas-estacoes
@@ -167,6 +235,19 @@ clima-load:
     uv run python -m inflatrack.load_clima
 
 clima: clima-ingest clima-load
+
+# Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
+bronze-clima:
+    uv run python -m inflatrack.ingest_clima --apenas-estacoes
+
+bronze-clima-importar:
+    uv run python -m inflatrack.bronze_clima importar
+
+bronze-clima-checar:
+    uv run python -m inflatrack.bronze_clima checar
+
+bronze-clima-load modo="substitui":
+    uv run python -m inflatrack.load_clima --modo {{modo}}
 
 # Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
 orquestrador:
