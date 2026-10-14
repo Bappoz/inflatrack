@@ -159,3 +159,22 @@ def test_checar_tabela(tmp_path: Path, html_real) -> None:
     assert info["linhas"] == 387
     assert info["primeiro_mes"] == "1994-07-01"
     assert info["ultimo_mes"] == "2026-09-01"
+
+
+def test_carregar_duckdb_modos(tmp_path: Path, html_real) -> None:
+    destino = tmp_path / "salario_minimo"
+    bronze_salario_minimo.gravar(destino, html_real)
+
+    db_path = tmp_path / "teste.duckdb"
+
+    # Modo 1: substitui
+    total1 = bronze_salario_minimo.carregar_duckdb(destino, db_path, modo="substitui")
+    assert total1 == 387
+
+    # Reexecução no modo substitui mantém as 387 linhas
+    total1_reexec = bronze_salario_minimo.carregar_duckdb(destino, db_path, modo="substitui")
+    assert total1_reexec == 387
+
+    # Modo 2: so_acrescenta (sem novas linhas, total permanece 387)
+    total2 = bronze_salario_minimo.carregar_duckdb(destino, db_path, modo="so_acrescenta")
+    assert total2 == 387

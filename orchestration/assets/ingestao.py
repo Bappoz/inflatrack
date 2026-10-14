@@ -22,18 +22,14 @@ from dagster import (
 
 from inflatrack import (
     ingest,
-    ingest_clima,
     ingest_commodities,
     ingest_dolar,
     ingest_pib,
     ingest_pib_china,
-    ingest_salario_minimo,
     ingest_selic,
-    load_clima,
     load_commodities,
     load_pib,
     load_pib_china,
-    load_salario_minimo,
 )
 from inflatrack.alphavantage import AlphaVantageClient
 from orchestration.partitions import (
@@ -222,44 +218,3 @@ def pib_china_parquet(context: AssetExecutionContext) -> None:
 )
 def pib_china_duckdb(context: AssetExecutionContext) -> None:
     _executar(context, load_pib_china.main)
-
-
-# --- Salário mínimo (DIEESE → Parquet → DuckDB) -------------------------------------
-
-
-@asset(
-    group_name="dieese",
-    retry_policy=RETRY_REDE,
-    kinds={"python", "parquet"},
-    description="Salário mínimo nominal e necessário (HTML do DIEESE).",
-)
-def salario_minimo_parquet(context: AssetExecutionContext) -> None:
-    _executar(context, ingest_salario_minimo.main)
-
-
-@asset(
-    group_name="dieese",
-    deps=[salario_minimo_parquet],
-    pool=POOL_DUCKDB,
-    kinds={"python", "duckdb"},
-)
-def salario_minimo_duckdb(context: AssetExecutionContext) -> None:
-    _executar(context, load_salario_minimo.main)
-
-
-# --- Clima (INMET → Parquet → DuckDB) -----------------------------------------------
-
-
-@asset(
-    group_name="clima",
-    retry_policy=RETRY_REDE,
-    kinds={"python", "parquet"},
-    description="Cadastro das estações meteorológicas do INMET.",
-)
-def clima_parquet(context: AssetExecutionContext) -> None:
-    _executar(context, ingest_clima.main, "--apenas-estacoes")
-
-
-@asset(group_name="clima", deps=[clima_parquet], pool=POOL_DUCKDB, kinds={"python", "duckdb"})
-def clima_duckdb(context: AssetExecutionContext) -> None:
-    _executar(context, load_clima.main)

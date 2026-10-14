@@ -275,11 +275,7 @@ def _chave(linha: dict) -> tuple:
 def _chaves_existentes(caminho: str) -> set[tuple]:
     if not DeltaTable.is_deltatable(caminho):
         return set()
-    tabela = (
-        DeltaTable(caminho)
-        .to_pyarrow_dataset()
-        .to_table(columns=list(CHAVE_MES))
-    )
+    tabela = DeltaTable(caminho).to_pyarrow_dataset().to_table(columns=list(CHAVE_MES))
     colunas = [tabela.column(coluna).to_pylist() for coluna in CHAVE_MES]
     return set(zip(*colunas, strict=True))
 
@@ -333,9 +329,7 @@ def gravar(
         status_http=status_http,
         tipo_conteudo=tipo_conteudo,
     )
-    novas = acrescentar_meses(
-        destino, _com_metadados(linhas, id_resposta, requisicao, ingerido_em)
-    )
+    novas = acrescentar_meses(destino, _com_metadados(linhas, id_resposta, requisicao, ingerido_em))
     return Gravacao(id_resposta, nova, len(linhas), novas)
 
 
@@ -389,6 +383,22 @@ def checar_tabela(destino: Path) -> dict:
     }
 
 
+def carregar_duckdb(
+    destino: Path,
+    db_caminho: Path | str = "data/duckdb/inflatrack.duckdb",
+    modo: str = "substitui",
+) -> int:
+    """Carrega a tabela Delta salario_minimo_mes no DuckDB nos dois modos do contrato."""
+    import duckdb
+
+    from inflatrack import load_salario_minimo
+
+    db = Path(db_caminho)
+    db.parent.mkdir(parents=True, exist_ok=True)
+    with duckdb.connect(str(db)) as conexao:
+        return load_salario_minimo.carregar_bronze(conexao, destino, modo=modo)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="comando", required=True)
@@ -402,6 +412,16 @@ def main(argv: list[str] | None = None) -> int:
     p_importar = subparsers.add_parser("importar", help="Importa do raw antigo")
     p_importar.add_argument("--raw-dir", default="data/raw/dieese")
     p_importar.add_argument("--destino", default=DIRETORIO_PADRAO)
+
+    p_load = subparsers.add_parser("load", help="Carrega a tabela Delta no DuckDB")
+    p_load.add_argument("--destino", default=DIRETORIO_PADRAO)
+    p_load.add_argument("--db", default="data/duckdb/inflatrack.duckdb")
+    p_load.add_argument(
+        "--modo",
+        choices=["substitui", "so_acrescenta"],
+        default="substitui",
+        help="Modo de carga: 'substitui' ou 'so_acrescenta'",
+    )
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -440,6 +460,14 @@ def main(argv: list[str] | None = None) -> int:
         for f in falhas:
             logger.warning("Falha: %s", f)
         return 0 if not falhas else 1
+    if args.comando == "load":
+        total = carregar_duckdb(destino, db_caminho=args.db, modo=args.modo)
+        logger.info(
+            "Carga no DuckDB concluída (%s): %d meses em bronze.salario_minimo_mes",
+            args.modo,
+            total,
+        )
+        return 0
 
     return 0
 

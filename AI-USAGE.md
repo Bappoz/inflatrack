@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 1 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.6 Flash) (1) |
 | Pedro Américo | 2 | 2026-09-25 a 2026-09-25 | Antigravity (Gemini 3.1 Pro) (2) |
-| Johnnatan Salles | 2 | 2026-09-28 a 2026-10-12 | Antigravity (Gemini 3.8 Flash) (2) |
+| Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
 ## Todas as sessões
 
@@ -49,6 +49,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Delta, fonte que some e tabela de respostas na Bronze |
 | 2026-10-11 | Lucas Zanetti | Claude Code (Opus 5.5) | Bronze do IPCA em Delta (E2), diagramas e organização da documentação |
 | 2026-10-12 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Bronze em Delta para Salário Mínimo (DIEESE) e Clima (INMET) na Entrega 2 |
+| 2026-10-13 | Johnnatan Salles | Antigravity (Gemini 3.8 Flash) | Carga Bronze no DuckDB (dois modos) e isolamento dos módulos Dagster de Salário Mínimo e Clima |
 
 ---
 
@@ -1020,6 +1021,26 @@ de tarefas nessa linha.
 
 **Decisões que continuam sendo da Squad**
 - Definir para a E3 se a extração de medições meteorológicas consumirá os pacotes anuais do BDMEP ou aplicará filtro por estações de capitais/polos de commodities.
+
+### 2026-10-13 — Antigravity (Gemini 3.8 Flash) — Carga Bronze no DuckDB (dois modos) e isolamento dos módulos Dagster de Salário Mínimo e Clima
+
+**O que a ferramenta fez**
+- Implementou os dois modos de carga no DuckDB previstos pelo contrato de dados da Bronze (seção 2.3 do plano: modo `substitui` e modo `so_acrescenta`) para as fontes Salário Mínimo (`load_salario_minimo.py` / `bronze_salario_minimo.py`) e Clima (`load_clima.py` / `bronze_clima.py`), espelhando diretamente as tabelas Delta em `bronze.salario_minimo_mes` e `bronze.clima_estacao`.
+- Atualizou os DDLs `setup_duckdb_salario_minimo.sql` e `setup_duckdb_clima.sql` criando o schema `bronze` e as definições físicas exatas das tabelas Bronze Delta.
+- Isolou os módulos de assets do Dagster por fonte, criando `orchestration/assets/salario_minimo.py` e `orchestration/assets/clima.py`, e removeu os assets centralizados de `orchestration/assets/ingestao.py`.
+- Modernizou `orchestration/definitions.py` com carregamento dinâmico via `pkgutil.iter_modules`, permitindo que cada fonte crie seu próprio módulo em `orchestration/assets/` de forma desacoplada.
+- Adicionou testes automatizados para os dois modos de carga DuckDB em `tests/test_salario_minimo.py` e `tests/test_clima.py`, e novas receitas `bronze-salario-minimo-load` e `bronze-clima-load` no `justfile`.
+
+**O que foi verificado e como**
+- Suíte completa de 25 testes das duas fontes (`tests/test_salario_minimo.py` e `tests/test_clima.py`) executada e aprovada com sucesso via `pytest`.
+- `ruff check` e `ruff format` executados e aprovados com código 0 nos módulos criados e alterados.
+- Carregamento dinâmico dos assets do Dagster verificado em execução programática (`15 assets carregados`).
+
+**O que NÃO foi verificado**
+- Execução de pipeline end-to-end com Dagster UI aberto no navegador.
+
+**Decisões que continuam sendo da Squad**
+- Migração dos assets das outras fontes restantes (`ipca`, `dolar`, `selic`, `commodities`, `pib`, `pib_china`) de `ingestao.py` para seus próprios arquivos em `orchestration/assets/`.
 
 ---
 

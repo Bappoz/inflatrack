@@ -176,3 +176,22 @@ def test_checar_tabela(tmp_path: Path, payload_estacoes) -> None:
     assert info["linhas"] == 671
     assert info["estados"] == 27
     assert "Automatica" in info["tipos"]
+
+
+def test_carregar_duckdb_modos(tmp_path: Path, payload_estacoes) -> None:
+    destino = tmp_path / "clima"
+    bronze_clima.gravar(destino, payload_estacoes)
+
+    db_path = tmp_path / "teste.duckdb"
+
+    # Modo 1: substitui
+    total1 = bronze_clima.carregar_duckdb(destino, db_path, modo="substitui")
+    assert total1 == 671
+
+    # Reexecução no modo substitui mantém as 671 estações
+    total1_reexec = bronze_clima.carregar_duckdb(destino, db_path, modo="substitui")
+    assert total1_reexec == 671
+
+    # Modo 2: so_acrescenta (sem novas estações, total permanece 671)
+    total2 = bronze_clima.carregar_duckdb(destino, db_path, modo="so_acrescenta")
+    assert total2 == 671

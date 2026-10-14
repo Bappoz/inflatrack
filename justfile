@@ -142,6 +142,9 @@ bronze-salario-minimo-importar:
 bronze-salario-minimo-checar:
     uv run python -m inflatrack.bronze_salario_minimo checar
 
+bronze-salario-minimo-load modo="substitui":
+    uv run python -m inflatrack.load_salario_minimo --modo {{modo}}
+
 # INMET: Dados de Clima e Estações
 clima-ingest:
     uv run python -m inflatrack.ingest_clima --apenas-estacoes
@@ -160,6 +163,9 @@ bronze-clima-importar:
 
 bronze-clima-checar:
     uv run python -m inflatrack.bronze_clima checar
+
+bronze-clima-load modo="substitui":
+    uv run python -m inflatrack.load_clima --modo {{modo}}
 
 # Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
 orquestrador:
