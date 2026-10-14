@@ -17,6 +17,7 @@ from typing import Any
 
 import pandas as pd
 
+from inflatrack import bronze_clima
 from inflatrack.inmet import (
     InmetClient,
     InmetError,
@@ -28,6 +29,7 @@ logger = logging.getLogger("inflatrack.ingest_clima")
 
 RAW_DIR_PADRAO = Path("data/raw/inmet")
 PARQUET_DIR_PADRAO = Path("data/parquet/clima")
+DELTA_DIR_PADRAO = Path("data/parquet/clima")
 
 
 def gravar_bruto(destino_dir: Path, nome_arquivo: str, payload: Any) -> Path:
@@ -43,12 +45,25 @@ def processar_estacoes(
     cliente: InmetClient,
     raw_dir: Path = RAW_DIR_PADRAO,
     parquet_dir: Path = PARQUET_DIR_PADRAO,
+    delta_dir: Path = DELTA_DIR_PADRAO,
 ) -> pd.DataFrame:
-    """Coleta e materializa o catálogo cadastral de estações do INMET."""
+    """Coleta e materializa o catálogo cadastral de estações do INMET
+    em Raw, Parquet e Bronze Delta.
+    """
     logger.info("Consultando catálogo de estações ativas do INMET...")
     payload = cliente.listar_estacoes(tipo="T")
     gravar_bruto(raw_dir, "estacoes", payload)
     logger.info("Raw de estações arquivado em %s", raw_dir / "estacoes.json.gz")
+
+    # Bronze em Delta: tabela de respostas e tabela de estações
+    grav = bronze_clima.gravar(delta_dir, payload)
+    logger.info(
+        "Bronze Delta: resposta %s, %d de %d estações novas em %s",
+        "nova" if grav.resposta_nova else "já guardada",
+        grav.linhas_novas,
+        grav.linhas_lidas,
+        delta_dir,
+    )
 
     df = transformar_estacoes(payload)
     parquet_dir.mkdir(parents=True, exist_ok=True)
@@ -78,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO))
     parser.add_argument("--parquet-dir", default=str(PARQUET_DIR_PADRAO))
+    parser.add_argument("--delta-dir", default=str(DELTA_DIR_PADRAO))
     parser.add_argument(
         "--apenas-estacoes",
         action="store_true",
@@ -89,9 +105,14 @@ def main(argv: list[str] | None = None) -> int:
     cliente = InmetClient()
 
     try:
-        processar_estacoes(cliente, raw_dir=Path(args.raw_dir), parquet_dir=Path(args.parquet_dir))
+        processar_estacoes(
+            cliente,
+            raw_dir=Path(args.raw_dir),
+            parquet_dir=Path(args.parquet_dir),
+            delta_dir=Path(args.delta_dir),
+        )
         return 0
-    except InmetError as exc:
+    except (InmetError, bronze_clima.ChecagemError) as exc:
         logger.error("Erro na API do INMET: %s", exc)
         return 1
     except Exception as exc:

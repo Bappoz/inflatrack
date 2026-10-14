@@ -28,7 +28,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/inflatrack"]
+packages = ["src/inflatrack", "orchestration"]
 
 [tool.ruff]
 line-length = 100
@@ -42,3 +42,10 @@ module_name = "orchestration.definitions"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.pyright]
+extraPaths = [".", "src"]
+
+[tool.pyrefly]
+disable-search-path-heuristics = true
+search-path = [".", "src"]

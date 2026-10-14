@@ -99,6 +99,8 @@ nav:
     - Dados do Clima (INMET): dicionario/clima.md
   - Evidências:
     - E2 — IPCA/INPC (SIDRA): evidencias/e2/ipca.md
+    - E2 — Salário Mínimo (DIEESE): evidencias/e2/salario_minimo.md
+    - E2 — Dados do Clima (INMET): evidencias/e2/clima.md
     - E2 — PIB da China: evidencias/e2/pib_china.md
     - E2 — PIB dos EUA: evidencias/e2/pib_usa.md
     - E2 — PIB da Rússia: evidencias/e2/pib_russia.md
