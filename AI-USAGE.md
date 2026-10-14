@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
-| João Pedro Lopes da Cruz | 20 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (1), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 21 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (2), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
@@ -55,6 +55,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
 | 2026-10-13 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes |
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Correção do build do MkDocs e retirada do plano de tarefas do site |
+| 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Consultas de diagnóstico: dbt Semantic Layer e aceite da E2 |
 
 ---
 
@@ -994,6 +995,23 @@ de tarefas nessa linha.
 
 **Decisões que continuam sendo da Squad**
 - O que fazer com a âncora quebrada em `pib_china.md` e com o docstring de `bronze.py`.
+
+### 2026-10-14 — Claude Code (Sonnet 5.5) — Consultas de diagnóstico: dbt Semantic Layer e aceite da E2
+
+**O que a ferramenta fez**
+- Verificou se o repositório usa o dbt Semantic Layer: não há projeto dbt, `semantic_models` nem MetricFlow; o dbt só existe como plano da E3 na documentação.
+- Leu a página da E2 da professora e comparou o checklist de aceite com o repositório (código, `docker-compose.yml`, `justfile`, ADRs, evidências e tags do Git).
+- Detalhou o que falta na ingestão em lote por fonte. Nenhum arquivo do projeto foi alterado, só este registro.
+
+**O que foi verificado e como**
+- Busca por arquivos e termos de dbt, CDC e Delta; leitura das tabelas de situação em `docs/evidencias/e2/`; `git tag -l`.
+
+**O que NÃO foi verificado**
+- O conteúdo da página da E2 veio de um resumo gerado pelo `WebFetch`, não da transcrição literal.
+- Nenhuma ingestão foi executada; a situação de cada fonte vem da documentação, não de uma reexecução.
+
+**Decisões que continuam sendo da Squad**
+- Por onde começar: ADR 0004, CDC ou as evidências restantes.
 
 ---
 

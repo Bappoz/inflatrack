@@ -4,28 +4,37 @@ Uma página por fonte, cada uma com o comando executado, a saída da reexecuçã
 
 ## Situação por fonte
 
-| Fonte | Bronze em Delta | Reexecução sem duplicar | Checagens | Página |
-|---|---|---|---|---|
-| IPCA/INPC (SIDRA) | Feita | Feita | Feitas | [ipca.md](ipca.md) |
-| Commodities (Alpha Vantage) | Feita | Feita | Feitas | [commodities.md](commodities.md) |
-| PIB e setores (SIDRA 1846) | Feita | Feita | Feitas | [pib.md](pib.md) |
-| Dólar, Selic, PIB da China, Salário mínimo, Clima, Transacional (CDC) | Pendente | Pendente | Pendente | — |
+| Fonte | Bronze em Delta | Reexecução sem duplicar | Checagens | Diário de bordo | Página |
+|---|---|---|---|---|---|
+| IPCA/INPC (SIDRA) | Feita | Feita | Feitas | Pendente | [ipca.md](ipca.md) |
+| Commodities (Alpha Vantage) | Feita | Feita | Feitas | Pendente | [commodities.md](commodities.md) |
+| PIB e setores (SIDRA 1846) | Feita | Feita | Feitas | Pendente | [pib.md](pib.md) |
+| PIB da China (Banco Mundial) | Feita | Feita | Feitas | Pendente | [pib_china.md](pib_china.md) |
+| PIB dos EUA (Banco Mundial) | Feita | Feita | Feitas | Pendente | [pib_usa.md](pib_usa.md) |
+| PIB da Rússia (Banco Mundial) | Feita | Feita | Feitas | Pendente | [pib_russia.md](pib_russia.md) |
+| Dólar e Selic (BCB) | Feita | Feita | Feitas | Pendente | [macroeconomia.md](macroeconomia.md) |
+| Salário mínimo (DIEESE) | Feita | Feita | Feitas | Feita | [salario_minimo.md](salario_minimo.md) |
+| Clima (INMET) | Parcial: só o cadastro de estações | Feita | Feitas | Feita | [clima.md](clima.md) |
+| Transacional (Postgres, CDC) | Pendente | Pendente | Pendente | Pendente | — |
 
 ## Reproduzir
 
 ```bash
 cp .env.example .env   # e preencha ALPHAVANTAGE_API_KEY
 uv sync
-just e2                # Bronze de cada fonte, seguida das checagens
+just e2                # Bronze de cada fonte, exceto o IPCA, seguida das checagens
+just e2-ipca           # IPCA: carga completa (~21 min), exige `just up`
 ```
 
-O `just e2` foi testado em 2026-10-13 numa cópia limpa dos arquivos do repositório, sem `data/` e sem `.venv`. Resultados:
+O `just e2` cobre as oito fontes em lote, menos o IPCA, que fica à parte porque a carga completa leva cerca de 21 minutos e grava no Postgres. O CDC do transacional entra na receita quando existir.
+
+O `just e2` foi testado em 2026-10-13 numa cópia limpa dos arquivos do repositório, sem `data/` e sem `.venv`, **quando a receita cobria só o PIB e as commodities**. Resultados:
 
 - `just test` passou;
 - o PIB foi carregado do zero, com a checagem aprovada;
 - sem a chave, as commodities param antes de fazer qualquer requisição.
 
-A versão com a chave não foi repetida na cópia limpa, para não passar da cota diária. O teste oficial a partir de um `git clone`, feito por outra pessoa, continua pendente.
+A receita ampliada para as demais fontes ainda não foi executada do zero, e a versão com a chave não foi repetida na cópia limpa, para não passar da cota diária. O teste oficial a partir de um `git clone`, feito por outra pessoa, continua pendente.
 
 ## Convenções conferidas
 

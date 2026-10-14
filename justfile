@@ -200,7 +200,12 @@ bronze-commodities-checar:
     uv run python -m inflatrack.ingest_commodities checar
 
 # E2 de ponta a ponta: a Bronze de cada fonte e a sua checagem. Cada fonte acrescenta as suas.
-e2: bronze-pib bronze-pib-checar bronze-commodities bronze-commodities-checar
+# O IPCA fica de fora (carga completa: 886 requisições, ~21 min, exige o Postgres no ar): use `just e2-ipca`.
+# O CDC do transacional entra aqui quando existir.
+e2: bronze-pib bronze-pib-checar bronze-commodities bronze-commodities-checar bronze-pib-china bronze-pib-china-checar bronze-pib-usa bronze-pib-usa-checar bronze-pib-russia bronze-pib-russia-checar bronze-dolar bronze-dolar-checar bronze-selic bronze-selic-checar bronze-salario-minimo bronze-salario-minimo-checar bronze-clima bronze-clima-checar
+
+# IPCA/INPC da E2: a carga completa e a checagem. Exige `just up`; ~21 min.
+e2-ipca: seed bronze-ipca-checar
 
 # Macroeconomia de ponta a ponta, em sequência por causa do escritor único do DuckDB.
 seed-macro: seed-dolar seed-selic seed-commodities
