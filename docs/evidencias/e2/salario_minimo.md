@@ -7,7 +7,7 @@ O que a fonte `salario_minimo` entrega na Entrega 2, com o comando que produziu 
 
 ## Situação das tarefas da E2
 
-Itens da seção 3.7 do [plano](../../pipeline/preparacao_bronze.md#37-salario-minimo-dieese).
+Itens da seção 3.7 das tasks que o grupo separou.
 
 | Tarefa | Situação | Evidência |
 |---|---|---|
@@ -125,7 +125,7 @@ Como a ingestão já havia sido executada, o importador reconheceu o hash e não
 
 ## Política de dado atrasado
 
-Texto da fonte `salario_minimo` para o ADR 0004 ([plano, seção 2.6](../../pipeline/preparacao_bronze.md#26-dado-atrasado-e-reprocessamento-de-janela-proposta-de-partida)).
+Texto da fonte `salario_minimo` para o ADR 0004 (seção 2.6 das tasks que o grupo separou).
 
 | Situação | Comportamento da Origem | O que o pipeline faz |
 |---|---|---|

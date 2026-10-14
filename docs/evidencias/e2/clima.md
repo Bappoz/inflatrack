@@ -7,7 +7,7 @@ O que a fonte `clima` entrega na Entrega 2, com o comando que produziu cada núm
 
 ## Situação das tarefas da E2
 
-Itens da seção 3.8 do [plano](../../pipeline/preparacao_bronze.md#38-clima-inmet).
+Itens da seção 3.8 das tasks que o grupo separou.
 
 | Tarefa | Situação | Evidência |
 |---|---|---|
@@ -151,7 +151,7 @@ O importador reconheceu o hash da resposta previamente ingerida e não duplicou 
 
 ## Política de dado atrasado
 
-Texto da fonte `clima` para o ADR 0004 ([plano, seção 2.6](../../pipeline/preparacao_bronze.md#26-dado-atrasado-e-reprocessamento-de-janela-proposta-de-partida)).
+Texto da fonte `clima` para o ADR 0004 (seção 2.6 das tasks que o grupo separou).
 
 | Situação | Comportamento da Origem | O que o pipeline faz |
 |---|---|---|

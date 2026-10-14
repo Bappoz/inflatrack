@@ -84,7 +84,6 @@ nav:
   - Pipeline de Dados:
     - Orquestração (Dagster): pipeline/orquestracao.md
     - Contrato das Etapas: pipeline/contratoEtapas.md
-    - Preparação da Bronze e Silver: pipeline/preparacao_bronze.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md

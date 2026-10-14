@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
-| João Pedro Lopes da Cruz | 19 | 2026-09-14 a 2026-10-13 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 20 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
@@ -54,6 +54,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2) |
 | 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
 | 2026-10-13 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes |
+| 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Correção do build do MkDocs e retirada do plano de tarefas do site |
 
 ---
 
@@ -975,6 +976,24 @@ de tarefas nessa linha.
 - O freshness de D+2 para energia: o atraso medido do WTI foi de 7 dias.
 - Não foram feitos: o ADR 0004 (depende do CDC), o esqueleto do dbt e as tarefas da E3.
 - O diário de bordo das Semanas 7 a 10 não foi escrito pela ferramenta.
+
+### 2026-10-14 — Claude Code (Sonnet 5.5) — Correção do build do MkDocs e retirada do plano de tarefas do site
+
+**O que a ferramenta fez**
+- Leu o log de falha do build (`mkdocs build --strict`) e localizou a causa: dois links quebrados em `docs/evidencias/e2/pib_china.md` (um para `tasks_entrega_2.md`, que está fora de `docs/`, e uma âncora que não existe na página).
+- A pedido, levantou onde `tasks_entrega_2.md` entra no site (a página `docs/pipeline/preparacao_bronze.md`, que o incluía por snippet, e a entrada no `nav`) e quais páginas apontavam para ela.
+- Apagou `docs/pipeline/preparacao_bronze.md`, tirou a entrada do `mkdocs.yml` e trocou os links por texto ("das tasks que o grupo separou") em `ipca.md`, `clima.md`, `salario_minimo.md`, `pib_china.md` e `index.md` de `docs/evidencias/e2/`.
+
+**O que foi verificado e como**
+- Busca por todas as referências a `preparacao_bronze` e `tasks_entrega_2` antes de editar, e `git status` depois.
+
+**O que NÃO foi verificado**
+- `mkdocs build --strict` não foi executado depois das mudanças.
+- A âncora `#importacao-do-raw-antigo` em `pib_china.md` ainda aponta para uma seção que não existe; a Squad ainda não decidiu entre mudar o link ou renomear o título.
+- O docstring de `src/inflatrack/bronze.py` ainda cita `docs/pipeline/preparacao_bronze.md`.
+
+**Decisões que continuam sendo da Squad**
+- O que fazer com a âncora quebrada em `pib_china.md` e com o docstring de `bronze.py`.
 
 ---
 

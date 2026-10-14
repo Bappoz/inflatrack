@@ -1,7 +1,6 @@
 """Helper comum da Bronze: tabela de respostas, tabela extraída e carga no DuckDB.
 
 Cada fonte grava, no mesmo passo, duas tabelas Delta em ``data/parquet/<base>/``
-(seção 2.2 do plano em ``docs/pipeline/preparacao_bronze.md``)::
 
     resposta/   <base>_resposta   uma linha por resposta DIFERENTE da fonte
     <tabela>/   <base>_<tabela>   uma linha por registro extraído da resposta

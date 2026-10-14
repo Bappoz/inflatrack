@@ -7,12 +7,12 @@ O que a fonte `pib_china` entrega na Entrega 2, com os comandos que produziram c
 
 ## Situação das tarefas da E2
 
-Itens da seção 3.6 do [plano de trabalho](../../tasks_entrega_2.md#36-pib-da-china-banco-mundial).
+Itens da seção 3.6 das tasks que o grupo separou.
 
 | Tarefa | Situação | Evidência |
 |---|---|---|
 | `pib_china_resposta` e `pib_china_indicador` em Delta em formato longo | Feita | [Transformação e Esquema](#transformacao-e-esquema-bronze) |
-| Importar o Raw existente para `pib_china_resposta` | Feita | [Importação do Raw](#importacao-do-raw-antigo) |
+| Importar o Raw existente para `pib_china_resposta` | Feita | [Importação do Raw](#carga-historica-e-importacao-do-raw) |
 | Demonstração de reexecução e idempotência | Feita | [Demonstração de Reexecução](#demonstracao-de-reexecucao) |
 | Política de dado atrasado e revisões | Feita | [Política de Dado Atrasado](#politica-de-dado-atrasado) |
 | Checagens de esquema e volume | Feitas | [Checagens de Esquema e Volume](#checagens-de-esquema-e-volume) |

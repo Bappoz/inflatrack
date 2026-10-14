@@ -48,7 +48,7 @@ Cada fonte cria `docs/evidencias/e2/<base>.md` com estas seções, nesta ordem, 
 
 1. **Cabeçalho:** a data da execução, contra o que ela rodou e as versões das bibliotecas.
 2. **Onde está o código:** os módulos, os testes e as fixtures.
-3. **Situação das tarefas da E2:** uma linha por item da seção 3 do [plano](../../pipeline/preparacao_bronze.md).
+3. **Situação das tarefas da E2:** uma linha por item da seção 3 das tasks que o grupo separou.
 4. **Como reproduzir:** as receitas do `just`.
 5. **O que é gravado:** as duas tabelas, o que é uma linha e o volume.
 6. **Demonstração de reexecução:** a versão do Delta e a contagem de linhas antes e depois, e o log da segunda execução.

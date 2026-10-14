@@ -7,7 +7,7 @@ O que a fonte `ipca` entrega na Entrega 2, com o comando que produziu cada núme
 
 ## Situação das tarefas da E2
 
-Itens da seção 3.1 do [plano](../../pipeline/preparacao_bronze.md#31-ipcainpc-sidra).
+Itens da seção 3.1 das tasks que o grupo separou.
 
 | Tarefa | Situação | Evidência |
 |---|---|---|
@@ -160,7 +160,7 @@ Consequência prática: importar o Raw **e** baixar o mesmo mês pela API guarda
 
 ## Política de dado atrasado
 
-Texto da fonte `ipca` para o ADR 0004 ([plano, seção 2.6](../../pipeline/preparacao_bronze.md#26-dado-atrasado-e-reprocessamento-de-janela-proposta-de-partida)).
+Texto da fonte `ipca` para o ADR 0004 (seção 2.6 das tasks que o grupo separou).
 
 | Situação | Como a origem se comporta | O que o pipeline faz |
 |---|---|---|
@@ -178,7 +178,7 @@ A janela de releitura está em `orchestration/partitions.py` (`MESES_RELIDOS = 3
 
 ## Medições para o ADR 0004
 
-Feitas sobre as tabelas reais do IPCA, como contribuição às medições comuns do [plano, seção 4.2](../../pipeline/preparacao_bronze.md#42-e2-tarefas-comuns).
+Feitas sobre as tabelas reais do IPCA, como contribuição às medições comuns da seção 4.2 das tasks que o grupo separou.
 
 **Compressão.** A tabela inteira regravada num único Parquet por codec; leitura pelo DuckDB, melhor de 3.
 
