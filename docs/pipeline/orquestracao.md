@@ -49,9 +49,12 @@ Cada caixa é um **ativo**: uma coisa que precisa existir e estar atualizada. O 
 
 ```
 orchestration/
-├── definitions.py          # Definitions: assets, jobs e schedules
+├── definitions.py          # Definitions: carrega todo módulo de assets/, jobs e schedules
 ├── assets/
-│   ├── ingestao.py         # um asset por etapa, chamando src/inflatrack/ingest_*.py e load_*.py
+│   ├── comum.py            # pool duckdb_writer, retry de rede e a chamada do main(argv)
+│   ├── pib.py              # um módulo por fonte (modelo para as outras)
+│   ├── commodities.py
+│   ├── ingestao.py         # fontes que ainda não têm módulo próprio
 │   ├── dbt.py              # (planejado) @dbt_assets — carrega o manifest do projeto dbt
 │   └── publicacao.py       # (planejado) cópia da Gold lida pelo Streamlit
 ├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado

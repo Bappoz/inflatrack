@@ -106,6 +106,34 @@ Uma linha por mês, sempre no dia 1, com as séries agrícolas e o índice globa
 
     Os nomes das colunas vêm do valor de `symbol`, em maiúsculas. Acrescentar um símbolo novo à tabela **não** o faz aparecer na view: a lista está escrita nos dois `IN (...)` de `scripts/setup_duckdb.sql` e precisa ser editada à mão.
 
+## Bronze em Delta
+
+Desde a E2, `ingest_commodities.py` grava também duas tabelas Delta em `data/parquet/commodities/`. A evidência está em [evidencias/e2/commodities.md](../evidencias/e2/commodities.md).
+
+| Tabela | Uma linha por | Volume (2026-10-13) |
+|---|---|---|
+| `commodities_resposta` | Resposta diferente da API | 18 |
+| `commodities_cotacao` | Data de uma série, inclusive as datas com `"."` | 31.880 |
+
+`commodities_resposta` tem as mesmas colunas de [`ipca_resposta`](sidra.md#ipca_resposta).
+
+### commodities_cotacao
+
+Particionada por `symbol`. Quando a resposta de um símbolo muda, a partição inteira é substituída; a versão anterior fica em `commodities_resposta`.
+
+| Campo | Tipo | Origem na API | Descrição |
+|---|---|---|---|
+| `symbol` | string | parâmetro `function` | WTI, BRENT, NATURAL_GAS, WHEAT, CORN, COTTON, SUGAR, COFFEE ou ALL_COMMODITIES |
+| `data_referencia` | date | `data[].date` | Data da cotação |
+| `preco` | decimal(28,14), nulo | `data[].value` | Nulo quando a API manda `"."`. Pode ser negativo (WTI em 2020-04-20) |
+| `nome` | string | `name` | Nome da série como a API manda |
+| `intervalo` | string | `interval` | `daily` ou `monthly` |
+| `unidade` | string | `unit` | Unidade como a API manda (ex.: `dollars per barrel`) |
+| `_id_resposta` | string | Resposta de onde a linha veio |
+| `_fonte` | string | Sempre `commodities` |
+| `_requisicao` | string | URL pedida à API, **sem a chave** |
+| `_ingerido_em` | timestamp (UTC) | Momento da requisição |
+
 ## Camadas anteriores
 
 O DuckDB é a camada servida. Antes dele:

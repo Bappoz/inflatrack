@@ -13,10 +13,10 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
-| João Pedro Lopes da Cruz | 18 | 2026-09-14 a 2026-10-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (8), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 19 | 2026-09-14 a 2026-10-13 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 3 | 2026-09-28 a 2026-09-28 | Antigravity (Gemini 3.8 Flash) (1) |
+| Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
 ## Todas as sessões
 
@@ -53,6 +53,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB da China em Delta Lake (E2) |
 | 2026-10-13 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Implementação da Bronze do PIB dos EUA e da Rússia em Delta Lake (E2) |
 | 2026-10-13 | Pedro Américo | Antigravity (Gemini 3.8 Flash) | Implementação da Camada Bronze Delta de Dólar e Selic (E2) |
+| 2026-10-13 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes |
 
 ---
 
@@ -924,6 +925,56 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - O tamanho da tabela de respostas com zstd em relação ao `.json.gz` é expectativa; o plano
   deixa a medição como tarefa (2.6).
+
+### 2026-10-13 — Claude Code (Opus 5.5) — Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes
+
+**Pedidos:** (1) executar as tarefas gerais e as da E2 das fontes commodities e PIB do plano
+(`tasks_entrega_2.md`), com documentação curta; (2) fazer as tarefas comuns e de integração
+(seção 4) referentes a essas duas fontes.
+
+**O que a ferramenta fez**
+- Escreveu o helper comum `src/inflatrack/bronze.py` (tabela de respostas, modos "só
+  acrescenta" e "substitui partição" no Delta e no DuckDB) e fez o IPCA usá-lo para a
+  tabela de respostas.
+- Escreveu `bronze_pib.py` e ligou-o ao `ingest_pib.py`: `pib_resposta` e `pib_valor`, com
+  importação do Raw e checagens. Ano passado vazio agora falha.
+- Reescreveu `ingest_commodities.py`: erros e cota esgotada viram falha, Bronze em
+  `commodities_resposta` e `commodities_cotacao`, importação do Raw e checagens. A chave da
+  API não vai para `_requisicao`. Simplificou o asset do Dagster.
+- Escreveu 26 testes (`test_bronze.py`, `test_pib.py`, `test_commodities.py`) com recortes
+  de respostas reais, as receitas `bronze-pib*` e `bronze-commodities*`, as evidências
+  `docs/evidencias/e2/pib.md` e `commodities.md` e as seções "Bronze em Delta" dos dicionários.
+- Seção 4: separou os assets do PIB e das commodities em módulos próprios, com carregamento
+  automático em `definitions.py`; mediu snappy × zstd × gzip; criou `just e2`, `.env.example`
+  e a seção "Como reproduzir a E2" do README; escreveu `docs/evidencias/e2/index.md`, que junta
+  as evidências e traz o modelo da página e as convenções conferidas; testou o grafo único
+  do Dagster. O ingestor das commodities passou a parar antes de pedir qualquer coisa quando
+  falta a chave.
+
+**O que foi verificado e como**
+- Execuções reais contra o SIDRA e a Alpha Vantage: importação, duas ingestões e checagem
+  de cada fonte. A segunda ingestão não gravou nada nas duas fontes (mesma versão do Delta).
+- O volume de referência do plano (26.781 cotações com preço) bateu exatamente.
+- `pib_job` executado pelo Dagster com sucesso; `load_pib` e `load_commodities` continuam
+  funcionando sobre o Parquet antigo.
+- `just test` e `just e2` numa cópia limpa dos arquivos do repositório (sem `data/` e sem
+  `.venv`): 84 testes passam, o PIB carrega do zero, e sem chave as commodities param sem fazer
+  requisição. Esse teste revelou as 9 requisições inúteis sem chave, depois corrigidas.
+- `pytest`: 84 testes passam. `ruff` limpo nos arquivos alterados. `mkdocs build --strict` passa.
+
+**O que NÃO foi verificado**
+- O `commodities_job` pelo Dagster e `just e2` com a chave na cópia limpa, para não passar da
+  cota de 25 requisições do dia.
+- O teste a partir de um `git clone` feito por outra pessoa (o da ferramenta não conta).
+- O hash ao longo de uma semana: medido só num dia.
+- Uma resposta real de cota esgotada: o teste usa o formato documentado.
+- Uma revisão real do IBGE ou da Alpha Vantage; só a simulada nos testes.
+
+**Decisões que continuam sendo da Squad**
+- A janela relida do PIB ficou sendo a série inteira, e não os dois últimos anos do plano.
+- O freshness de D+2 para energia: o atraso medido do WTI foi de 7 dias.
+- Não foram feitos: o ADR 0004 (depende do CDC), o esqueleto do dbt e as tarefas da E3.
+- O diário de bordo das Semanas 7 a 10 não foi escrito pela ferramenta.
 
 ---
 

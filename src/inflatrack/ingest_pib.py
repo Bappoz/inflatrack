@@ -17,6 +17,11 @@ ali quebraria a carga das commodities.
 Idempotente: reexecutar sobrescreve o bruto e o Parquet do mesmo ano. O IBGE
 revisa trimestres antigos a cada divulgação, então reprocessar é o caminho
 normal de atualização, não exceção.
+
+Desde a E2 cada resposta também vai para a Bronze em Delta
+(:mod:`inflatrack.bronze_pib`): ``pib_resposta`` e ``pib_valor``, em
+``data/parquet/pib/resposta/`` e ``data/parquet/pib/valor/``. O Raw e o Parquet por
+ano continuam até a E3.
 """
 
 from __future__ import annotations
@@ -26,13 +31,13 @@ import gzip
 import json
 import logging
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import httpx
 import pandas as pd
 
-from inflatrack import pib, sidra
+from inflatrack import bronze_pib, pib, sidra
 
 logger = logging.getLogger("inflatrack.ingest_pib")
 
@@ -106,9 +111,12 @@ def executar(args: argparse.Namespace) -> int:
     raw_dir, parquet_dir = Path(args.raw_dir), Path(args.parquet_dir)
     parquet_dir.mkdir(parents=True, exist_ok=True)
     total = 0
+    ingerido_em = datetime.now(UTC)
+    respostas: list[tuple[int, sidra.Resposta]] = []
 
     with httpx.Client() as cliente:
-        metadados = sidra.buscar_metadados(cliente, pib.AGREGADO)
+        resposta_metadados = sidra.buscar_metadados_resposta(cliente, pib.AGREGADO)
+        metadados = bronze_pib.guardar_metadados(parquet_dir, resposta_metadados, ingerido_em)
         setores = pib.setores(metadados)
         catalogo = {codigo: (nome, grupo, nucleo) for codigo, nome, grupo, nucleo in setores}
         logger.info(
@@ -119,16 +127,23 @@ def executar(args: argparse.Namespace) -> int:
         )
 
         for ano in range(args.de, args.ate + 1):
-            payload = sidra.buscar_valores(
+            resposta = sidra.buscar_resposta(
                 cliente,
                 pib.AGREGADO,
                 pib.periodo_do_ano(ano),
                 niveis=pib.NIVEIS,
                 classificacao=pib.CLASSIFICACAO,
             )
+            payload = resposta.json()
             if not payload:
-                logger.info("%d: sem dados publicados, ignorado", ano)
-                continue
+                # Só o ano corrente pode estar vazio (o 1º trimestre sai em junho).
+                if ano == ingerido_em.year:
+                    logger.info("%d: sem dados publicados, ignorado", ano)
+                    continue
+                raise ValueError(f"{ano}: resposta vazia para um ano que já passou")
+            # Checa antes de qualquer escrita: ano reprovado não chega a nenhum destino.
+            bronze_pib.checar(bronze_pib.transformar(payload, {}), ano, ingerido_em.date())
+            respostas.append((ano, resposta))
 
             bruto = gravar_bruto(raw_dir, ano, payload)
             quadro = transformar(ler_bruto(bruto), catalogo)
@@ -141,6 +156,16 @@ def executar(args: argparse.Namespace) -> int:
             total += len(quadro)
             logger.info("%d: %d linhas -> %s", ano, len(quadro), destino)
 
+    gravacao = bronze_pib.gravar_anos(
+        parquet_dir, respostas, bronze_pib.nomes_dos_setores(metadados), ingerido_em
+    )
+    logger.info(
+        "bronze: %d respostas novas de %d; pib_valor com %d de %d linhas novas",
+        gravacao.respostas_novas,
+        len(respostas),
+        gravacao.linhas_novas,
+        gravacao.linhas_lidas,
+    )
     logger.info("total transformado: %d linhas em %s", total, parquet_dir)
     return total
 
@@ -160,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--de não pode ser maior que --ate")
     try:
         executar(args)
-    except (sidra.SidraError, ValueError) as erro:
+    except (sidra.SidraError, ValueError, httpx.HTTPError) as erro:
         logger.error("carga abortada: %s", erro)
         return 1
     return 0

@@ -108,6 +108,18 @@ verificar-carga:
 pib-ingest de="1996" ate=datetime("%Y"):
     uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
 
+# Bronze do PIB em Delta (data/parquet/pib/): o mesmo ingestor grava pib_resposta e pib_valor.
+bronze-pib de="1996" ate=datetime("%Y"):
+    uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
+
+# Leva os .json.gz antigos de data/raw/pib_raw/ para as tabelas Delta. Reexecutável.
+bronze-pib-importar:
+    uv run python -m inflatrack.bronze_pib importar
+
+# Trimestres, setores por trimestre e revisões de pib_valor. Sai com erro se houver buraco.
+bronze-pib-checar:
+    uv run python -m inflatrack.bronze_pib checar
+
 # Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
 pib-load:
     uv run python -m inflatrack.load_pib
@@ -174,6 +186,21 @@ bronze-macro: bronze-dolar bronze-selic
 seed-commodities:
     uv run python -m inflatrack.ingest_commodities --commodity ALL --modo historico
     uv run python -m inflatrack.load_commodities
+
+# Bronze das commodities em Delta (data/parquet/commodities/). Gasta 9 das 25 req./dia.
+bronze-commodities:
+    uv run python -m inflatrack.ingest_commodities --commodity ALL
+
+# Leva os .json.gz antigos de data/raw/commodities_raw/ para as tabelas Delta. Sem requisição.
+bronze-commodities-importar:
+    uv run python -m inflatrack.ingest_commodities importar
+
+# Símbolos, volume e datas repetidas de commodities_cotacao.
+bronze-commodities-checar:
+    uv run python -m inflatrack.ingest_commodities checar
+
+# E2 de ponta a ponta: a Bronze de cada fonte e a sua checagem. Cada fonte acrescenta as suas.
+e2: bronze-pib bronze-pib-checar bronze-commodities bronze-commodities-checar
 
 # Macroeconomia de ponta a ponta, em sequência por causa do escritor único do DuckDB.
 seed-macro: seed-dolar seed-selic seed-commodities

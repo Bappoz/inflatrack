@@ -123,6 +123,39 @@ Formato largo, **uma linha por trimestre**, uma coluna DOUBLE por categoria do n
 | `exportacao` | `93407` |
 | `importacao` | `93408` |
 
+## Bronze em Delta
+
+Desde a E2, `ingest_pib.py` grava também duas tabelas Delta em `data/parquet/pib/`. A evidência está em [evidencias/e2/pib.md](../evidencias/e2/pib.md).
+
+| Tabela | Uma linha por | Volume (2026-10-13) |
+|---|---|---|
+| `pib_resposta` | Resposta diferente da API: um ano de valores, ou os metadados do agregado | 63 |
+| `pib_valor` | Valor de um setor num trimestre, inclusive marcador | 2.806 |
+
+`pib_resposta` tem as mesmas colunas de [`ipca_resposta`](sidra.md#ipca_resposta).
+
+### pib_valor
+
+Só acrescenta. A chave é trimestre × setor × `valor_bruto`: uma revisão do IBGE vira linha nova.
+
+| Campo | Tipo | Origem no SIDRA | Descrição |
+|---|---|---|---|
+| `data_referencia` | date | `D3C` | Primeiro dia do trimestre (`202601` → `2026-01-01`) |
+| `codigo_setor` | string | `D4C` | Id da categoria na classificação `c11255` |
+| `nome_setor` | string, nulo | metadados | Nome como os metadados mandam; nulo se o setor não estiver neles |
+| `nivel_territorial` | smallint | `NC` | Sempre 1 (Brasil) |
+| `codigo_localidade` | integer | `D1C` | Sempre 1 |
+| `codigo_variavel` | integer | `D2C` | Sempre 585 |
+| `codigo_unidade` | smallint, nulo | `MC` | 1550 = milhões de reais |
+| `valor` | decimal(20,4), nulo | `V` | Nulo quando `V` é marcador |
+| `valor_bruto` | string | `V` | O texto como veio |
+| `_id_resposta` | string | Resposta de onde a linha veio |
+| `_fonte` | string | Sempre `pib` |
+| `_requisicao` | string | URL pedida à API |
+| `_ingerido_em` | timestamp (UTC) | Momento da requisição |
+
+`grupo`, `nucleo`, `ano` e `trimestre` não estão na Bronze: são regras de negócio e vão para o dbt.
+
 ## Camadas anteriores
 
 O DuckDB é a camada servida. Antes dele:

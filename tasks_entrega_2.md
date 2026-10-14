@@ -69,7 +69,7 @@ O mesmo id aparece em:
 - `models/staging/<base>/`;
 - `just bronze-<base>`.
 
-**Um módulo do Dagster por fonte** é o que permite trabalhar em paralelo sem conflito de merge. Hoje todos os assets estão em `orchestration/assets/ingestao.py`, e qualquer mudança simultânea nesse arquivo conflita.
+**Um módulo do Dagster por fonte** é o que permite trabalhar em paralelo sem conflito de merge. Desde 2026-10-13 o `definitions.py` carrega todo módulo de `orchestration/assets/`; PIB e commodities já têm o seu, e as outras fontes continuam em `ingestao.py`.
 
 **O que hoje fere a separação:**
 
@@ -287,12 +287,14 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] **Parar de engolir erros.** Cota esgotada (resposta 200 com mensagem no lugar dos dados), campo `data` ausente e lista vazia viram falha. Sem isso, a demonstração de reexecução não é confiável.
-- [ ] Gravar `commodities_resposta` e `commodities_cotacao` em Delta em `data/parquet/commodities/`, mantendo as linhas `"."` com valor nulo e guardando `name`, `interval` e `unit`.
-- [ ] Importar `data/raw/commodities_raw/` para `commodities_resposta`.
-- [ ] Demonstração de reexecução: a segunda execução não grava resposta nova para séries que não mudaram. **Cada execução completa gasta 9 das 25 requisições diárias.**
-- [ ] Política: a série chega inteira; cada versão diferente fica na tabela de respostas.
-- [ ] Checagens: 9 símbolos, `(symbol, data_referencia)` único, volume de referência de 26.781 linhas.
+- [x] **Parar de engolir erros.** Cota esgotada (resposta 200 com mensagem no lugar dos dados), campo `data` ausente e lista vazia viram falha. Sem isso, a demonstração de reexecução não é confiável.
+- [x] Gravar `commodities_resposta` e `commodities_cotacao` em Delta em `data/parquet/commodities/`, mantendo as linhas `"."` com valor nulo e guardando `name`, `interval` e `unit`.
+- [x] Importar `data/raw/commodities_raw/` para `commodities_resposta`.
+- [x] Demonstração de reexecução: a segunda execução não grava resposta nova para séries que não mudaram. **Cada execução completa gasta 9 das 25 requisições diárias.**
+- [x] Política: a série chega inteira; cada versão diferente fica na tabela de respostas.
+- [x] Checagens: 9 símbolos, `(symbol, data_referencia)` único, volume de referência de 26.781 linhas.
+
+Evidência: [evidencias/e2/commodities.md](../evidencias/e2/commodities.md).
 
 **E3:**
 
@@ -308,14 +310,16 @@ Evidência de cada item, com comando e saída: [evidencias/e2/ipca.md](../eviden
 
 **E2:**
 
-- [ ] Primeira fonte a usar o helper: `pib_resposta` e `pib_valor` em Delta, com código e nome do setor como o SIDRA manda, todas as linhas e `valor_bruto`.
-- [ ] Importar `data/raw/pib_raw/` para `pib_resposta`.
-- [ ] Demonstração de reexecução e política: cada divulgação revisa trimestres anteriores, então a janela relida é o ano corrente e o anterior.
-- [ ] Checagens: 23 categorias por trimestre; 2.806 linhas em 1996T1–2026T2.
+- [x] Primeira fonte a usar o helper: `pib_resposta` e `pib_valor` em Delta, com código e nome do setor como o SIDRA manda, todas as linhas e `valor_bruto`.
+- [x] Importar `data/raw/pib_raw/` para `pib_resposta`.
+- [x] Demonstração de reexecução e política: cada divulgação revisa trimestres anteriores, então a janela relida é o ano corrente e o anterior.
+- [x] Checagens: 23 categorias por trimestre; 2.806 linhas em 1996T1–2026T2.
+
+Evidência: [evidencias/e2/pib.md](../evidencias/e2/pib.md). A janela relida ficou sendo a série inteira (32 requisições, ~10 s), e não só os dois últimos anos.
 
 **E3:**
 
-- [ ] Pular só o ano corrente sem dados e falhar num ano passado vazio.
+- [x] Pular só o ano corrente sem dados e falhar num ano passado vazio.
 - [ ] `bronze.pib_valor`; `tests/test_pib.py` (hoje não existe).
 - [ ] dbt:
   - _seed_ `grupo`/`nucleo` com teste de relacionamento;
@@ -416,7 +420,7 @@ Evidência de cada item, com comando e saída: [evidencias/e2/clima.md](../evide
 
 ### 4.1 Contratos que destravam o trabalho em paralelo (fazer primeiro)
 
-- [ ] **`inflatrack/bronze.py`** (com a fonte piloto, 3.5):
+- [x] **`inflatrack/bronze.py`** (com a fonte piloto, 3.5):
   - gravar a tabela de respostas: corpo, `hash_corpo`, sem repetir resposta igual;
   - gravar a tabela extraída com os metadados;
   - importar arquivos antigos de `data/raw/`;
@@ -424,8 +428,10 @@ Evidência de cada item, com comando e saída: [evidencias/e2/clima.md](../evide
 
   Usa Delta (ou Iceberg, conforme o ADR 0004).
 
-- [ ] **Um módulo Dagster por fonte:** `orchestration/definitions.py` passa a carregar automaticamente todo módulo de `orchestration/assets/`, e cada fonte cria o seu sem mexer nos outros. Um exemplo pronto (o PIB) serve de modelo.
-- [ ] **Modelo da evidência** `docs/evidencias/e2/<base>.md`: comando executado, saída da reexecução, contagens antes e depois, checagens.
+- [x] **Um módulo Dagster por fonte:** `orchestration/definitions.py` passa a carregar automaticamente todo módulo de `orchestration/assets/`, e cada fonte cria o seu sem mexer nos outros. Um exemplo pronto (o PIB) serve de modelo.
+  - Feito: `assets/pib.py`, `assets/commodities.py` e `assets/comum.py`. As outras fontes continuam em `ingestao.py`.
+- [x] **Modelo da evidência** `docs/evidencias/e2/<base>.md`: comando executado, saída da reexecução, contagens antes e depois, checagens.
+  - Em [evidencias/e2/index.md](../evidencias/e2/index.md#modelo-da-evidencia).
 - [ ] **Esqueleto do projeto dbt-duckdb:**
   - `dbt_project.yml` e `profiles.yml`;
   - schemas `silver` e `gold`;
@@ -449,11 +455,16 @@ Evidência de cada item, com comando e saída: [evidencias/e2/clima.md](../evide
   - número de arquivos por esquema de partição (IPCA por mês daria ~900 arquivos; Clima por dia, centenas por ano);
   - quantas respostas iguais o hash evita em uma semana de commodities e dólar;
   - `.json.gz` × tabela de respostas em espaço.
+
+  Feito para IPCA, PIB e commodities, nas evidências de cada fonte. O hash foi medido num dia só, não numa semana.
 - [ ] **Subir do zero com um comando:**
   - `docker compose up` traz o Postgres com `wal_level=logical`, as migrations e o CDC;
   - uma receita (`just e2`) roda a ingestão de todas as fontes e o consumidor do CDC;
   - um README "Como reproduzir a E2" lista o que precisa de configuração (chave da Alpha Vantage, cota de 25 req./dia, API do INMET).
+
+  Iniciado: `just e2`, `.env.example` e o README cobrem o PIB e as commodities.
 - [ ] **Teste a partir de um `git clone` limpo** antes de criar a tag, por alguém que não escreveu o código.
+  - Teste prévio, numa cópia limpa e por quem escreveu o código: ver [evidencias/e2/index.md](../evidencias/e2/index.md#reproduzir).
 - [ ] **Consolidar o diário de bordo** das Semanas 7 a 10 e criar a tag `e2` no commit entregue.
 
 ### 4.3 E3 — tarefas comuns
@@ -488,13 +499,16 @@ O ADR fixa ainda o nome das colunas de metadado (o [Contrato das Etapas](contrat
 Ao fim de cada Entrega, depois que as fontes terminam em paralelo:
 
 - [ ] **Conferir as convenções em todas as fontes:** nomes de tabela, colunas de metadado, local dos arquivos e módulo Dagster.
+  - Conferidas no IPCA, no PIB e nas commodities ([evidencias/e2/index.md](../evidencias/e2/index.md#convencoes-conferidas)).
 - [ ] **Rodar tudo do zero** numa máquina limpa: `docker compose up`, a receita de todas as fontes e o CDC. Conferir as checagens de cada fonte.
-- [ ] **Grafo único no Dagster:** todos os grupos carregados, sem asset duplicado, e o pool `duckdb_writer` serializando as escritas.
+- [x] **Grafo único no Dagster:** todos os grupos carregados, sem asset duplicado, e o pool `duckdb_writer` serializando as escritas.
+  - Coberto por `tests/test_orchestration.py`.
 - [ ] **Conexões entre fontes** (E3):
   - modelos de _marts_ que cruzam fontes, como IPCA × dólar (C6), IPCA × clima com o de-para (C7), IPCA × PIB (C8) e IPCA × salário mínimo;
   - chaves de junção por `data_referencia`;
   - testes de integridade entre fontes.
-- [ ] **Juntar as evidências** de `docs/evidencias/e2/` numa página só, ligada no menu da documentação.
+- [x] **Juntar as evidências** de `docs/evidencias/e2/` numa página só, ligada no menu da documentação.
+  - [evidencias/e2/index.md](../evidencias/e2/index.md).
 - [ ] **Criar a tag** da Entrega no commit integrado.
 
 ### 4.5 Decisões que ficam com a Squad

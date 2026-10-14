@@ -1,9 +1,12 @@
+import logging
 import os
 import time
+from urllib.parse import urlencode
+
 import requests
-import logging
-from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+
+from inflatrack import bronze
 
 load_dotenv()
 
@@ -11,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
 
+
 class AlphaVantageClient:
     BASE_URL = "https://www.alphavantage.co/query"
-    
-    def __init__(self, api_key: Optional[str] = None):
+
+    def __init__(self, api_key: str | None = None):
         self.api_key = api_key or ALPHAVANTAGE_API_KEY
         if not self.api_key:
             logger.warning("ALPHAVANTAGE_API_KEY is not set. Requests may fail.")
@@ -30,25 +34,25 @@ class AlphaVantageClient:
             time.sleep(sleep_time)
         self.last_request_time = time.time()
 
-    def buscar_commodity(self, function: str, interval: str = "daily") -> Dict[str, Any]:
-        """
-        Busca dados de uma commodity específica na Alpha Vantage.
+    @classmethod
+    def url_publica(cls, function: str, interval: str) -> str:
+        """URL da requisição SEM a chave: é o que vai para ``_requisicao`` na Bronze."""
+        return f"{cls.BASE_URL}?{urlencode({'function': function, 'interval': interval})}"
+
+    def buscar_resposta(self, function: str, interval: str = "daily") -> bronze.Resposta:
+        """Busca uma commodity e devolve a resposta como veio, sem interpretar o corpo.
+
+        Erro HTTP vira exceção. A cota esgotada chega com status 200 e é tratada por
+        quem interpreta o corpo (``ingest_commodities.validar``).
         """
         self._rate_limit()
-        
-        params = {
-            "function": function,
-            "interval": interval,
-            "apikey": self.api_key
-        }
-        
+        params = {"function": function, "interval": interval, "apikey": self.api_key}
         logger.info(f"Buscando commodity: {function} (intervalo: {interval})")
-        response = requests.get(self.BASE_URL, params=params)
+        response = requests.get(self.BASE_URL, params=params, timeout=60)
         response.raise_for_status()
-        
-        data = response.json()
-        
-        if "Information" in data and "rate limit" in data["Information"].lower():
-            raise Exception(f"Rate limit exceeded: {data['Information']}")
-            
-        return data
+        return bronze.Resposta(
+            url=self.url_publica(function, interval),
+            status_http=response.status_code,
+            tipo_conteudo=response.headers.get("content-type"),
+            corpo=response.text,
+        )

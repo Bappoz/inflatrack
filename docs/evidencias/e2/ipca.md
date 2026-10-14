@@ -216,7 +216,7 @@ A tabela é particionada só por `agregado` (5 partições). No regime mensal s�
     `observacao.valor` é `numeric(16,7)`. O número-índice do 1737 (base dez/1993 = 100) chega com 13 casas e é minúsculo antes do Plano Real: dez/1979 vale `0.0000000076183`. No PostgreSQL, **33 meses (dez/1979 a ago/1982) estão gravados como `0.0000000`**, e 168 valores até nov/1993 perderam casas. A Bronze guarda `decimal(28,13)` e o texto original. A consulta C3 parte de 2006 e não é afetada; qualquer razão entre índices anterior a 1994 é. Não foi corrigido nesta entrega: exige migration sobre a tabela do ADR 0001.
 
 - **O acumulado em 12 meses do 7060 não existe em 2020.** De jan a nov/2020 a variável 2265 vem como `...` para todas as categorias (5.027 linhas só no nível Brasil). A união 1419 → 7060 no dbt precisa buscar o acumulado de 2020 em outra fonte ou derivá-lo.
-- **O helper comum `inflatrack/bronze.py` ainda não existe.** A gravação em Delta está num módulo da própria fonte (`bronze_ipca.py`), com os nomes de coluna da seção 2.2 do plano. Quando o helper sair, `gravar_resposta` e `acrescentar_observacoes` passam a delegar para ele.
+- **Helper comum.** Desde 2026-10-13, `ipca_resposta` é gravada pelo helper `inflatrack/bronze.py`. `ipca_observacao` continua em `bronze_ipca.py`, que filtra as chaves por agregado e mês.
 - **Delta foi assumido** como formato, seguindo as decisões de partida do plano. A escolha Delta × Iceberg continua sendo do ADR 0004.
 - **A escrita no PostgreSQL e o `.json.gz` continuam**, como o plano pede para a E2. Saem na E3.
 - **Fora desta entrega (E3):** `load_ipca.py` e `bronze.ipca_observacao` no DuckDB, `ipca_metadados`, download do 1737 em uma requisição, renomear `ingest.py`, módulo Dagster próprio e os modelos dbt.

@@ -71,3 +71,26 @@ def test_agendamento_do_ipca_rele_uma_vez_por_ciclo():
     assert novo_dia_9.run_key != novo_dia_10.run_key
     assert [p.run_key for p in relidos_dia_9] == [p.run_key for p in relidos_dia_10]
     assert len({p.run_key for p in relidos_dia_9}) == 3
+
+
+def test_grafo_unico_carrega_todos_os_modulos_sem_ativo_duplicado():
+    """Cada fonte em seu módulo; o carregamento automático não pode perder nem repetir ativo."""
+    from dagster import load_assets_from_package_module
+
+    from orchestration import assets
+
+    ativos = load_assets_from_package_module(assets)
+    chaves = [chave.to_user_string() for ativo in ativos for chave in ativo.keys]
+    assert len(chaves) == len(set(chaves))
+    grupos = {ativo.group_names_by_key[chave] for ativo in ativos for chave in ativo.keys}
+    assert {"sidra", "macro", "commodities", "pib", "pib_china", "dieese", "clima"} <= grupos
+
+
+def test_todo_ativo_que_escreve_no_duckdb_usa_o_pool():
+    from orchestration.assets.comum import POOL_DUCKDB
+
+    repositorio = defs.get_repository_def()
+    for chave in repositorio.asset_graph.get_all_asset_keys():
+        no = repositorio.asset_graph.get(chave)
+        if "duckdb" in no.kinds:
+            assert no.pools == {POOL_DUCKDB}, chave.to_user_string()
