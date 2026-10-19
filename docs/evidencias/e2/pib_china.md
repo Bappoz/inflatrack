@@ -7,7 +7,7 @@ O que a fonte `pib_china` entrega na Entrega 2, com os comandos que produziram c
 
 ## Situação das tarefas da E2
 
-Itens da seção 3.6 das tasks que o grupo separou.
+Itens da seção 3.6 do [plano de trabalho](../../pipeline/preparacao_bronze.md#36-pib-da-china-banco-mundial).
 
 | Tarefa | Situação | Evidência |
 |---|---|---|

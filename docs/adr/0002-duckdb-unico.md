@@ -1,8 +1,9 @@
 # 0002 — Um único arquivo DuckDB para todas as fontes analíticas
 
-- **Status:** proposto
+- **Status:** adotado; loaders existentes usam o arquivo único
 - **Data:** 2026-09-25
-- **Decisores:** _(a definir pela Squad)_
+- **Revisado em:** 2026-10-18
+- **Decisores:** Squad InflaTrack
 
 ## Contexto
 
@@ -56,17 +57,19 @@ volume que este projeto não tem.
 Regras que tornam B sustentável:
 
 1. **Prefixo por fonte** em toda tabela: `commodity_*`, `pib_*`.
-2. **Um Parquet por fonte em subpasta própria** (`data/parquet/pib/`). O glob
-   raso `data/parquet/*.parquet` da carga de commodities pressupõe o esquema
-   `(symbol, data_referencia, preco)` — misturar esquemas na mesma pasta quebra
-   a carga da outra fonte. Esta foi a única armadilha concreta encontrada.
+2. **Separar os formatos e esquemas de Bronze por caminho.** A carga legada de
+   commodities lê `data/parquet/*.parquet` e espera `(symbol,
+   data_referencia, preco)`. Novas fontes ficam em caminhos próprios, como
+   `data/parquet/pib/`; as fontes em Delta Lake também usam uma pasta por
+   tabela. Não misturar esquemas no glob legado.
 3. **Cargas em sequência**, nunca em paralelo, enquanto o escritor for único.
 
 ## Consequências
 
 - Uma nova fonte analítica entra com: um `setup_duckdb_<fonte>.sql`, uma
-  subpasta em `data/parquet/`, um módulo `ingest_<fonte>.py` e um
-  `load_<fonte>.py`. Nenhum arquivo novo de banco.
-- Se alguma fonte futura passar da casa das dezenas de milhões de linhas, ou se
-  as cargas precisarem rodar em paralelo, o ponto 4 deixa de valer e este ADR
-  deve ser revisitado.
+  pasta de Bronze isolada, um módulo de ingestão e um módulo de carga. Nenhum
+  arquivo novo de banco é criado.
+- O arquivo compartilhado simplifica `JOIN`s entre fontes, mas também concentra
+  risco de corrupção e exige serializar escritores. Se houver necessidade de
+  alta disponibilidade, isolamento de falhas ou escritas concorrentes, este
+  ADR deve ser revisto; volume de linhas sozinho não é o único gatilho.
