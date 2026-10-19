@@ -12,7 +12,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
-| Lucas Zanetti | 4 | 2026-09-08 a 2026-10-11 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (1) |
+| Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 21 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (2), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
@@ -56,6 +56,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-13 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Helper da Bronze, E2 das commodities e do PIB e tarefas comuns dessas fontes |
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Correção do build do MkDocs e retirada do plano de tarefas do site |
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Consultas de diagnóstico: dbt Semantic Layer e aceite da E2 |
+| 2026-10-18 | Lucas Zanetti | Codex (GPT-6) | Revisão dos ADRs e da stack tecnológica; guia detalhado em PDF para apresentação |
 
 ---
 
@@ -190,6 +191,28 @@ separados e um PR.
   respostas, com a mesma leitura). As tabelas estão em Delta com snappy, o padrão da biblioteca.
 - O helper comum `inflatrack/bronze.py` não existia; a gravação ficou num módulo do IPCA.
 - O diário de bordo das Semanas 7 a 10 não foi escrito pela ferramenta.
+
+### 2026-10-18 — Codex (GPT-6) — revisão dos ADRs, justificativas da stack e guia de apresentação
+
+**O que a ferramenta fez**
+- Comparou ADRs, documentação arquitetural, plano E2/E3, migrations e evidências das fontes para alinhar as justificativas tecnológicas ao estado documentado.
+- Moveu o registro geral da stack para `docs/arquitetura/stackTecnologica.md`, fora da numeração de ADRs. O plano reserva ADR 0004 para CDC/ingestão e Delta Lake versus Iceberg.
+- Corrigiu o estado do ADR 0003: o calendário civil e o `forward fill` existem nos loaders legados do BCB, enquanto a Bronze Delta guarda só as observações publicadas e a migração para Silver ainda está pendente.
+- Explicitou que commits/versões são registrados pelo Delta Lake, enquanto idempotência depende também de hashes e chaves da lógica de ingestão. Atualizou as páginas de arquitetura que descrevem essa fronteira.
+- Apontou a implementação parcial do ADR 0001: observações são preservadas, mas o nome da classificação ainda é sobrescrito e a vigência histórica não pode ser reconstruída.
+- Gerou `output/pdf/guia-apresentacao-inflatrack.pdf`, com arquitetura, justificativas e limites da stack, entregáveis documentados, evidências quantitativas, pendências, glossário, exemplo técnico e roteiro de apresentação.
+
+**O que foi verificado e como**
+- `uv run --group docs mkdocs build --strict` passou após corrigir o link do ADR 0002 na nova página da stack. O build ainda informa que três páginas existentes estão fora do menu; não são warnings de link.
+- O PDF foi extraído com `pdftotext`, contém 14 páginas e foi renderizado com `pdftoppm`; todas as páginas foram inspecionadas visualmente.
+- Os volumes quantitativos foram comparados com as nove páginas por fonte em `docs/evidencias/e2/` e o estado das tarefas com `tasks_entrega_2.md` e o índice `docs/evidencias/e2/index.md`.
+
+**O que NÃO foi verificado**
+- Nenhuma carga foi reexecutada contra as APIs nem banco/migration foi alterado.
+- Não foram executados testes automatizados, benchmarks, protótipo de CDC ou experimento dbt; esses itens continuam fora da revisão documental.
+
+**Decisões que continuam sendo da Squad**
+- Concluir o ADR 0004 sobre Delta/Iceberg e mecanismo de CDC, e planejar Silver/Gold, histórico de classificação, clima diário e integração limpa da E2 conforme o plano.
 
 ---
 

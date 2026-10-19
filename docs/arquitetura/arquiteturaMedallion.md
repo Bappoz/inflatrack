@@ -1,67 +1,81 @@
 # Arquitetura Medallion
 
-Organização progressiva do dado em quatro camadas: cada uma só lê da anterior, e a crua nunca é alterada. A regra vale para **todas** as fontes do repositório, do IPCA ao clima.
+O Medallion é a arquitetura **alvo** do pipeline analítico do InflaTrack. A
+implementação está em transição: Raw e partes da Bronze já existem, enquanto
+Silver e Gold comuns ainda dependem da criação do projeto dbt. Alguns
+carregadores legados também levam Parquet diretamente ao DuckDB. Portanto, não
+se deve entender o diagrama como se todas as fontes já percorressem as quatro
+camadas.
 
-O PostgreSQL roda **em paralelo** a essa trilha, e não dentro dela: ele guarda o lado transacional, que tem escrita de usuário e não é dado derivado de origem pública. Medallion descreve o pipeline analítico.
+O PostgreSQL roda em paralelo e guarda o lado transacional — cadastro e
+histórico de reajustes — além da referência atual do IPCA/INPC. Ele não é uma
+camada do Medallion.
 
 ## As quatro camadas
 
-| Camada | Tecnologia | Papel |
-|---|---|---|
-| **Raw** | `.json.gz` (e `.html.gz` no DIEESE) em `data/raw/<fonte>/` | Resposta da origem exatamente como veio, comprimida e nunca reescrita |
-| **Bronze** | Parquet em `data/parquet/<fonte>/` | Payload parseado e tipado, ainda por fonte, sem regra de negócio |
-| **Silver** | Modelos `dbt-duckdb` em `models/staging/` | Modelagem e tratamento: limpeza, deduplicação, chaves resolvidas |
-| **Gold** | Tabelas tratadas no DuckDB, a partir de `models/marts/` | Fato, dimensão e métricas — recorte pronto para painel e modelo |
+| Camada | Tecnologia | Papel | Estado no repositório |
+|---|---|---|---|
+| **Raw** | Respostas JSON/HTML comprimidas com gzip em `data/raw/<fonte>/` | Preservar a entrada para auditoria e reprocessamento. | Em uso; cargas históricas importadas podem conter respostas reserializadas pelo fluxo antigo. |
+| **Bronze** | Tabelas Delta Lake sobre Parquet em `data/parquet/<fonte>/`; há também Parquet simples nos fluxos legados. | Guardar payload tipado por fonte, ainda sem regra analítica comum. | Parcialmente migrada; fontes e comandos indicam qual formato usam. |
+| **Silver** | Modelos SQL em `dbt-duckdb` | Limpar, deduplicar e conformar cada fonte. | Planejada; dbt e `models/` ainda não estão no projeto. |
+| **Gold** | Tabelas analíticas no DuckDB produzidas a partir de `models/marts/` | Cruzar as fontes e fornecer métricas para painel e análise. | Planejada como camada comum. Já existem tabelas e views DuckDB específicas por fonte, mas não a Gold dimensional descrita aqui. |
 
 <div class="diagrama">
 --8<-- "docs/assets/diagramas/medallion.svg"
 </div>
 
-## A trilha de cada fonte
+## Bronze atual por fonte
 
-| Fonte | Raw | Bronze |
+O diretório `data/parquet/` é o nome histórico compartilhado. Nas fontes
+migradas, as subpastas contêm tabelas Delta (arquivos Parquet e log
+`_delta_log`); não são necessariamente arquivos `.parquet` independentes.
+
+| Fonte | Raw | Bronze implementada |
 |---|---|---|
-| [IPCA/INPC (SIDRA)](../fontes/sidra.md) | `data/raw/ipca-inpc/{agregado}-{AAAAMM}.json.gz` | `data/parquet/ipca-inpc/` |
-| [Commodities e Energia](../fontes/commodities.md) | `data/raw/commodities_raw/` | `data/parquet/*.parquet` |
-| [Dólar Comercial](../fontes/dolar.md) | `data/raw/bcb/dolar_*.json.gz` | `data/parquet/bcb/` |
-| [Taxa SELIC](../fontes/selic.md) | `data/raw/bcb/selic_*.json.gz` | `data/parquet/bcb/` |
-| [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | `data/raw/pib_raw/` (um JSON gzip por ano) | `data/parquet/pib/` |
-| [PIB da China](../fontes/pib_china.md) | `data/raw/pib_china/` | `data/parquet/pib_china/` |
-| [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `data/raw/dieese/salario_minimo_*.html.gz` | `data/parquet/dieese/` |
-| [Dados do Clima (INMET)](../fontes/clima.md) | `data/raw/inmet/` | `data/parquet/clima/` |
+| [IPCA/INPC (SIDRA)](../fontes/sidra.md) | `data/raw/ipca-inpc/` | Delta em `data/parquet/ipca/` (`ipca_resposta`, `ipca_observacao`) |
+| [Commodities e Energia](../fontes/commodities.md) | `data/raw/commodities_raw/` | Parquet simples em `data/parquet/`; o glob legado espera o esquema de commodities |
+| [Dólar Comercial](../fontes/dolar.md) | `data/raw/bcb/` | Delta em `data/parquet/dolar/`; há também carga legada direta ao DuckDB |
+| [Taxa SELIC](../fontes/selic.md) | `data/raw/bcb/` | Delta em `data/parquet/selic/`; há também carga legada direta ao DuckDB |
+| [PIB e Setores (SIDRA 1846)](../fontes/pib.md) | `data/raw/pib_raw/` | Parquet simples em `data/parquet/pib/`, carregado diretamente no DuckDB |
+| [PIB da China](../fontes/pib_china.md) | `data/raw/pib_china/` | Delta em `data/parquet/pib_china/`; o fluxo legado também grava Parquet simples |
+| [PIB dos EUA](../fontes/pib_usa.md) | `data/raw/pib_usa/` | Delta em `data/parquet/pib_usa/` |
+| [PIB da Rússia](../fontes/pib_russia.md) | `data/raw/pib_russia/` | Delta em `data/parquet/pib_russia/` |
+| [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `data/raw/dieese/` | Delta em `data/parquet/salario_minimo/`; o fluxo legado usou `data/parquet/dieese/` |
+| [Dados do Clima (INMET)](../fontes/clima.md) | `data/raw/inmet/` | Delta em `data/parquet/clima/` |
 
-Da Bronze para cima a trilha deixa de ser por fonte: as oito entram como *sources* do dbt e saem como um modelo dimensional só.
+## Fluxo alvo
 
-## O que cada passagem faz
+**Origem → Raw.** A resposta é guardada comprimida antes de ser interpretada,
+para que uma transformação possa ser refeita sem consultar a API. O histórico
+importado pode ter limitações: por exemplo, parte dos arquivos antigos do SIDRA
+foi reserializada pelo ingestor anterior, conforme a [evidência da E2](../evidencias/e2/ipca.md#importacao-do-raw-antigo).
 
-**Origem → Raw** — nenhuma transformação. O ingestor grava a resposta comprimida antes de olhar para o conteúdo. É o que permite reprocessar tudo sem chamar a API de novo, e é a única cópia do HTML do DIEESE, cuja extração depende do layout da página.
+**Raw → Bronze.** O ingestor interpreta o formato de cada origem, tipa os
+campos e registra procedência. Nas fontes migradas na E2, Delta Lake registra
+commits e versões sobre os arquivos Parquet; hashes e chaves na lógica de
+ingestão permitem reexecuções idempotentes. Algumas fontes ainda usam o caminho
+legado de Parquet simples.
 
-**Raw → Bronze** — só parsing e tipagem: valor para numérico, período para data, cada origem com seu formato (`AAAAMM` no SIDRA, `DD/MM/YYYY` no SGS, `MM-DD-YYYY` no Olinda, ISO no resto; no DIEESE, a tabela HTML decodificada em `ISO-8859-1`). Cada linha sai com a data de ingestão e o arquivo de origem. Nenhuma regra de negócio entra aqui.
+**Bronze → Silver (planejado).** O dbt deverá tratar marcadores de ausência,
+deduplicar revisões e alinhar chaves. Os carregadores legados de dólar e Selic
+já aplicam calendário civil e `forward fill`; a Bronze Delta da E2 guarda apenas
+as observações publicadas, e a regra ainda precisa ser migrada para Silver.
+Ver [ADR 0003](../adr/0003-bcb-macro.md).
 
-**Bronze → Silver** — é onde o dbt trabalha. Um modelo de *staging* por fonte, que assume o tratamento:
+**Silver → Gold (planejado).** Os modelos deverão cruzar as fontes em fatos,
+dimensões e métricas com granularidade declarada, preparando as tabelas para o
+painel e para experimentos. Os loaders atuais criam estruturas específicas por
+fonte e ainda não equivalem a esse modelo dimensional comum.
 
-- **Marcadores de ausência:** o SIDRA usa `...`, `..`, `-` e `X`, e a Alpha Vantage usa `.`; todos são descartados, sem apagar valores negativos, que são deflação.
-- **Deduplicação:** quando a origem devolve mais de um registro para a mesma data, fica o mais recente (no Olinda, o maior `dataHoraCotacao`).
-- **Calendário civil:** nas séries diárias, a última observação útil é esticada sobre fins de semana e feriados, e a coluna `observado` distingue publicação real de valor preenchido.
-- **Atributos derivados:** razões que sempre acompanham o fato, como `multiplo_necessario_nominal` no salário mínimo.
-- **Testes na própria transformação:** esquema, unicidade, integridade referencial, volume e ao menos um de distribuição.
+## Qualidade e limites atuais
 
-**Silver → Gold** — cruzamento e recorte, em tabelas materializadas no DuckDB: fato com granularidade declarada, dimensão de variação lenta para a cesta do IPCA, transposição para formato largo nas features e a matriz de treino dos modelos.
-
-## Gold: o que a camada entrega
-
-| Tabela | Grão | Serve a |
-|---|---|---|
-| Fato do IPCA/INPC | uma linha por subitem, por localidade, por mês | painel e alvo do modelo |
-| Dimensão da cesta | uma linha por código, por vigência (variação lenta) | resolver o nome vigente sob renomeação |
-| Dimensão de localidade | uma linha por localidade medida pelo IPCA | recorte por praça |
-| Features macro | uma linha por mês, colunas por série | treino e explicação |
-| Matriz de treino | uma linha por mês, alvo + features defasadas | notebooks e MLflow |
-
-## Qualidade
-
-- **Testes do dbt** em cada camada, dentro da transformação: esquema, volume, unicidade, integridade referencial e distribuição. Substituem a verificação ad-hoc que hoje vive em `sql/verificar_carga.sql`.
-- **Linhagem** gerada por `dbt docs generate`: o grafo mostra de qual Parquet cada tabela da Gold descende.
-- **Freshness** declarada por *source*, com SLA para as tabelas de consumo.
-- **Falha explícita em vez de sucesso falso:** payload inesperado, layout HTML alterado, resposta vazia ou data inválida encerram a etapa com código diferente de zero, e o Dagster marca o ativo como não atualizado.
-- **Idempotência:** rodar a mesma janela cem vezes converge para o mesmo estado, na Raw (nome de arquivo por janela) e na Silver (modelo reconstruído a partir da Bronze).
+- Existem checagens específicas por fonte, como esquema, volume, meses ausentes
+  e idempotência; os comandos `just bronze-*-checar` documentam as que estão
+  implementadas.
+- Testes e linhagem de dbt, freshness checks e matriz Gold permanecem
+  planejados; não são controles que a pipeline atual já execute.
+- O Dagster orquestra ingestões e mantém histórico de execução. A integração
+  `dagster-dbt` depende da criação dos modelos dbt.
+- A camada IPCA no PostgreSQL preserva valores revisados, mas ainda substitui
+  nomes de categorias quando recebe uma renomeação. A dimensão histórica está
+  pendente no [ADR 0001](../arquitetura.md).

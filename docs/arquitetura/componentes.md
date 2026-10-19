@@ -10,9 +10,9 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 | Aspecto | Detalhe |
 |---|---|
-| Módulos | `src/inflatrack/<origem>.py` (`sidra`, `alphavantage`, `dolar_olinda`, `selic_sgs`, `pib`, `dieese`, `inmet`) |
+| Módulos | `src/inflatrack/<origem>.py` (`sidra`, `alphavantage`, `dolar_olinda`, `selic_sgs`, `pib`, `dieese`, `inmet`, Banco Mundial) |
 | Bibliotecas | `httpx`, `requests` |
-| Origens | 6 provedores, 8 conjuntos de dados |
+| Origens | 6 provedores, 10 conjuntos de dados |
 | Autenticação | Só Alpha Vantage (chave gratuita com cota diária) |
 | Resiliência | Timeout explícito e retry com backoff |
 | Status | Em uso |
@@ -31,9 +31,9 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 | Aspecto | Detalhe |
 |---|---|
 | Módulos | `src/inflatrack/ingest_<fonte>.py` |
-| Bibliotecas | `pandas`, `pyarrow` |
+| Bibliotecas | `pandas`, `pyarrow`, `deltalake` |
 | Entrada | Payload do cliente de origem |
-| Saída | `data/raw/<fonte>/*.json.gz` e `data/parquet/<fonte>/*.parquet` |
+| Saída | `data/raw/<fonte>/` e tabelas em `data/parquet/<fonte>/`; alguns fluxos legados gravam Parquet diretamente |
 | Interface | CLI com janela (`--de`, `--ate`) e caminhos sobrescrevíveis |
 | Status | Em uso |
 
@@ -64,22 +64,22 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 * Preservar o HTML do DIEESE, cuja extração depende do layout e quebra sozinha
 * Sustentar a retenção permanente que as fontes exigem
 
-## Camada Bronze (Parquet)
+## Camada Bronze (Delta Lake sobre Parquet)
 
 **Papel**: Primeira materialização estruturada, ainda por fonte.
 
 | Aspecto | Detalhe |
 |---|---|
-| Formato | Parquet (colunar, comprimido) |
+| Formato | Tabelas Delta Lake, cujos dados são arquivos Parquet |
 | Caminho | `data/parquet/<fonte>/` |
 | Transformação | Só parsing e tipagem — nenhuma regra de negócio |
-| Interface | Lida pelo dbt como *source*, via `read_parquet()` |
-| Volumetria | 6,4 mi de linhas do IPCA ocupam ~39 MB |
-| Status | Em uso |
+| Interface | Lida pelas APIs Delta/Arrow nos ingestores; dbt como *source* é planejado |
+| Volumetria | A carga E2 medida contém 9,1 mi de linhas Delta do SIDRA; os arquivos Parquet compactados ocupam dezenas de MB |
+| Status | Em uso em fontes migradas para E2; ainda há fluxos legados em Parquet direto |
 
 **Responsabilidades**:
 
-* Oferecer ao dbt um contrato estável, independente do formato da origem
+* Oferecer uma tabela estruturada por fonte, independente do formato da origem
 * Recarregar o banco analítico sem tráfego de rede
 * Isolar uma subpasta por fonte, para que esquemas diferentes não se misturem
 * Levar a procedência de cada linha até a Silver
@@ -93,10 +93,10 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 | Versão | dbt-core |
 | Adapter | `dbt-duckdb` |
 | Models | `models/staging/` (Silver), `models/marts/` (Gold) |
-| Sources | Parquet da Bronze, via `read_parquet()` |
+| Sources | Tabelas Delta/Parquet da Bronze |
 | Tests | Esquema, unicidade, integridade referencial, volume e distribuição |
 | Docs | `dbt docs generate` (grafo de linhagem) |
-| Status | Planejado |
+| Status | Planejado; `dbt-core`, `dbt-duckdb` e `models/` ainda não existem no projeto |
 
 **Responsabilidades**:
 
@@ -107,23 +107,22 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 ## DuckDB
 
-**Papel**: Banco analítico embarcado — Silver e Gold.
+**Papel**: Banco analítico embarcado para as cargas e consultas analíticas atuais; Silver e Gold conformadas são o alvo futuro.
 
 | Aspecto | Detalhe |
 |---|---|
 | Deploy | Embarcado, arquivo único |
 | Caminho | `data/duckdb/inflatrack.duckdb` |
-| Schemas | `silver`, `gold` |
-| Conexão | dbt, Dagster, notebooks, Streamlit |
+| Estruturas | Tabelas e views por fonte criadas por `scripts/setup_duckdb*.sql` e módulos `load_*` |
+| Conexão | Ingestores e Dagster; dbt, notebooks e Streamlit são planejados |
 | Concorrência | **Um escritor por arquivo, por vez** |
 | Status | Em uso |
 
 **Responsabilidades**:
 
-* Materializar os modelos que o dbt declara
-* Servir consulta analítica sobre as 8 fontes no mesmo `JOIN`
-* Entregar a matriz de treino aos modelos preditivos
-* Manter as tabelas da Gold como recorte pronto para consumo
+* Armazenar tabelas e views analíticas de fontes no mesmo arquivo
+* Permitir cruzamentos entre fontes com SQL
+* Servir como destino planejado para modelos dbt e matriz de treino
 
 ## PostgreSQL
 
@@ -142,8 +141,9 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 * Garantir A, C e I ao aplicar um reajuste
 * Sustentar as FKs de `produto` e `lojista` para a cesta e a localidade do IPCA
-* Guardar a dimensão de variação lenta `classificacao_versao`, com vigência
-* Servir de alvo do `EXPLAIN (ANALYZE, BUFFERS)` na otimização de consulta
+* Guardar referências e a tabela insert-only de observações do IBGE
+* Aplicar restrições e transações no cadastro e no histórico de reajustes
+* Nota: a dimensão `classificacao_versao` ainda não preserva renomeações; ver [ADR 0001](../arquitetura.md)
 
 ### Quando usar DuckDB vs PostgreSQL
 
@@ -163,7 +163,7 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 |---|---|
 | Deploy | Local (`just orquestrador`, que roda `dagster dev`) |
 | Código | `orchestration/` — um asset por etapa, chamando `src/inflatrack/` |
-| Integração | `dagster-dbt` — cada modelo dbt vira um asset (quando o dbt existir) |
+| Integração | `dagster-dbt` planejado; dbt ainda não está instalado |
 | Partições | Mensais no IPCA/INPC, acompanhando a divulgação do IBGE |
 | Confiabilidade | Retry por asset e backfill por partição |
 | Concorrência | Pool `duckdb_writer` com limite 1 |
@@ -171,10 +171,10 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 **Responsabilidades**:
 
-* Executar ingestores e `dbt build` num grafo de dependência único
+* Executar os assets de ingestão implementados num grafo de dependência
 * Repetir o que falhou sem reprocessar o que já passou
 * Rodar backfill de janela histórica, por partição
-* Expor freshness e o estado de cada ativo de dado
+* Expor o estado de execução dos assets; freshness checks ainda estão planejados
 
 ## Jupyter Notebooks
 

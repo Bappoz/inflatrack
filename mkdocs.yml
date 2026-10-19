@@ -63,6 +63,7 @@ nav:
     - Cronograma: visaoGeral/cronograma.md
   - Arquitetura: 
     - Visão Geral: arquitetura/visaoGeral.md
+    - Stack Tecnológica: arquitetura/stackTecnologica.md
     - Fluxo de Dados: arquitetura/fluxoDados.md
     - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
     - Componentes: arquitetura/componentes.md

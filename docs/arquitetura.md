@@ -1,13 +1,15 @@
 # 0001 — Modelar a origem como insert-only, com a cesta do IPCA em dimensão de vigência
 
-- **Status:** proposto
+- **Status:** implementação parcial; dimensão histórica pendente
 - **Data:** 2026-09-08
-- **Decisores:** _(a definir pela Squad)_
+- **Revisado em:** 2026-10-18
+- **Decisores:** Squad InflaTrack; aprovação formal da dimensão histórica pendente
 
-> **Estado deste ADR.** Contexto, restrições, padrões de acesso e alternativas
-> estão levantados com dado medido. Faltam a **Medição** (exige o banco
-> populado), a **Decisão** e as **Consequências** — que são da Squad, não do
-> levantamento. Ver `AI-USAGE.md`.
+> **Estado deste ADR.** O histórico de valores está implementado como append-only
+> no PostgreSQL. A dimensão de nomes com vigência ainda não está implementada:
+> o esquema e o ingestor atual substituem o nome anterior. Portanto, a decisão
+> completa continua pendente e esta página não afirma que a cesta histórica já
+> pode ser consultada com fidelidade.
 
 ## Contexto
 
@@ -76,7 +78,7 @@ Cobra o histórico de decisão: depois de um `UPDATE`, não há como responder "
 que número a plataforma sugeriu aquele reajuste em março". Para um produto cuja
 razão de existir é justificar reajuste, isso é perder a prova.
 
-### C. Insert-only com cesta em dimensão de vigência _(a proposta)_
+### C. Insert-only com cesta em dimensão de vigência _(proposta)_
 
 `observacao` só recebe `INSERT`; revisão do IBGE entra como linha nova. O nome
 da categoria mora em `classificacao_versao` com `vigencia_inicio`/`vigencia_fim`,
@@ -89,8 +91,9 @@ como dimensão de variação lenta.
 
 ## Medição
 
-**Pendente.** Exige o banco populado. O que precisa ser medido, com dado do
-próprio domínio e script no repositório:
+O comportamento de gravação dos valores foi verificado na carga histórica. A
+comparação de desempenho entre B e C continua pendente; deve usar o banco
+populado e os scripts de consulta versionados:
 
 1. `EXPLAIN (ANALYZE, BUFFERS)` das cinco consultas sobre B e sobre C, com a
    série completa carregada.
@@ -105,16 +108,45 @@ próprio domínio e script no repositório:
 
 ## Decisão
 
-_(a escrever pela Squad, depois da medição)_
+A proposta é a **alternativa C**, porque uma revisão do IBGE não deve apagar o
+valor que fundamentou uma sugestão anterior de reajuste. A escolha é por
+auditabilidade e continuidade da série, não por uma medição de desempenho.
+
+O estado real do código é parcial:
+
+- `observacao` preserva valores distintos para a mesma chave e mês; uma
+  reexecução do mesmo valor é idempotente.
+- `classificacao_versao` ainda **não é uma dimensão tipo 2**. A migration
+  restringe a tabela a uma linha por `(codigo, id_fonte)`, e
+  `sincronizar_cesta()` atualiza `nome` em conflito. Uma renomeação apaga o
+  nome anterior e sua vigência.
+
+Assim, o histórico de valores é uma decisão já materializada; a modelagem de
+vigência permanece proposta até que o esquema permita múltiplas versões e a
+ingestão feche a vigência anterior em vez de sobrescrevê-la. A avaliação de
+latência e disco também continua pendente e não deve ser apresentada como
+resultado medido.
 
 ## Consequências
 
-**O que ganhamos:** _(a escrever)_
+**O que ganhamos:** preservação dos valores publicados em cada carga e
+idempotência quando o mesmo conteúdo é ingerido novamente. A FK mantém a
+classificação referenciada por produtos.
 
-**O que perdemos:** _(a escrever — seção que separa 7–8 de 9–10; nomear perda concreta, não "aumento de complexidade")_
+**O que perdemos:** até a dimensão tipo 2 ser concluída, não é possível
+reconstruir pelo banco o nome que o IBGE usava quando uma observação antiga foi
+carregada. Quando concluída, consultas que precisem do nome terão de filtrar a
+versão válida para o período.
 
-**O que se torna irreversível:** _(a escrever)_
+**O que se torna difícil de reverter:** consumidores que usem apenas o valor
+mais recente deixarão de ver a revisão anterior; por isso relatórios de
+auditoria precisam escolher explicitamente uma versão. Os valores anteriores
+continuam preservados no fato.
 
 ## Gatilho de revisão
 
-_(a escrever — métrica e limiar)_
+Revisar após a migration e a sincronização de cesta passarem a preservar duas
+versões para um mesmo `(codigo, id_fonte)`, com períodos sem sobreposição. Nesse
+ponto, medir `EXPLAIN (ANALYZE, BUFFERS)` das cinco consultas e o espaço em disco
+com a carga completa. Reabrir a decisão se a consulta 1 exceder 300 ms p95 ou
+qualquer relatório exceder 5 s, os limites definidos para o produto.
