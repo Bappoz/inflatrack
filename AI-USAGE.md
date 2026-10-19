@@ -205,7 +205,7 @@ separados e um PR.
 **O que foi verificado e como**
 - `uv run --group docs mkdocs build --strict` passou após corrigir o link do ADR 0002 na nova página da stack. O build ainda informa que três páginas existentes estão fora do menu; não são warnings de link.
 - O PDF foi extraído com `pdftotext`, contém 14 páginas e foi renderizado com `pdftoppm`; todas as páginas foram inspecionadas visualmente.
-- Os volumes quantitativos foram comparados com as sete páginas `docs/evidencias/e2/` e o estado das tarefas com `docs/pipeline/preparacao_bronze.md`.
+- Os volumes quantitativos foram comparados com as nove páginas por fonte em `docs/evidencias/e2/` e o estado das tarefas com `tasks_entrega_2.md` e o índice `docs/evidencias/e2/index.md`.
 
 **O que NÃO foi verificado**
 - Nenhuma carga foi reexecutada contra as APIs nem banco/migration foi alterado.

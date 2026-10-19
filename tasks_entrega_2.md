@@ -527,6 +527,6 @@ Ao fim de cada Entrega, depois que as fontes terminam em paralelo:
 
 Estas tarefas da seção 4 não têm um pacote, porque são feitas por quem estiver disponível ou pela Squad junta:
 
-- [ ] **Subir do zero com um comando** e o README de reprodução da E2 ([plano, 4.2](preparacao_bronze.md#42-e2-tarefas-comuns)). O P8 garante que o `docker compose up` traz o CDC, e cada pessoa acrescenta a sua fonte à receita `just e2`.
+- [ ] **Subir do zero com um comando** e o README de reprodução da E2 ([seção 4.2](#42-e2-tarefas-comuns)). O P8 garante que o `docker compose up` traz o CDC, e cada pessoa acrescenta a sua fonte à receita `just e2`.
 - [ ] **Teste a partir de um `git clone` limpo** antes de criar a tag `e2`, feito por alguém que não escreveu o código. Sugestão: o P2 testa a entrega do P1, e assim por diante.
-- [ ] **Integração** ([plano, 4.4](preparacao_bronze.md#44-integracao-juntar-e-conectar)): a Squad junta, ao fim de cada Entrega.
+- [ ] **Integração** ([seção 4.4](#44-integracao-juntar-e-conectar)): a Squad junta, ao fim de cada Entrega.

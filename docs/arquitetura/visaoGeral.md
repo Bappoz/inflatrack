@@ -67,5 +67,5 @@ O racional da stack e das alternativas está no [registro de decisões tecnológ
 - [ADR 0001 — origem insert-only e dimensão de vigência](../arquitetura.md) (implementação parcial; histórico de nomes pendente).
 - [ADR 0002 — um único arquivo DuckDB](../adr/0002-duckdb-unico.md) (adotado e em uso).
 - [ADR 0003 — calendário civil para séries diárias do BCB](../adr/0003-bcb-macro.md) (implementado nos carregadores legados; migração para Silver pendente).
-- [Plano do ADR 0004 — mecanismo de ingestão, CDC e formato Bronze](../pipeline/preparacao_bronze.md#42-e2-tarefas-comuns) (decisão pendente).
+- [Plano do ADR 0004 — mecanismo de ingestão, CDC e formato Bronze](https://github.com/Bappoz/inflatrack/blob/main/tasks_entrega_2.md#42-e2-tarefas-comuns) (decisão pendente).
 - [Registro de decisões tecnológicas](stackTecnologica.md) (stack atual e propostas futuras, sem substituir os ADRs do projeto).
