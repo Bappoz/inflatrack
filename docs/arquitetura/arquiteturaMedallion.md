@@ -51,14 +51,16 @@ importado pode ter limitações: por exemplo, parte dos arquivos antigos do SIDR
 foi reserializada pelo ingestor anterior, conforme a [evidência da E2](../evidencias/e2/ipca.md#importacao-do-raw-antigo).
 
 **Raw → Bronze.** O ingestor interpreta o formato de cada origem, tipa os
-campos e registra procedência. Na E2, Delta Lake adiciona log de versões e
-escritas idempotentes sobre os arquivos Parquet. Algumas fontes ainda usam o
-caminho legado de Parquet simples.
+campos e registra procedência. Nas fontes migradas na E2, Delta Lake registra
+commits e versões sobre os arquivos Parquet; hashes e chaves na lógica de
+ingestão permitem reexecuções idempotentes. Algumas fontes ainda usam o caminho
+legado de Parquet simples.
 
 **Bronze → Silver (planejado).** O dbt deverá tratar marcadores de ausência,
-deduplicar revisões e alinhar chaves. O preenchimento de dias sem publicação do
-BCB é uma proposta do [ADR 0003](../adr/0003-bcb-macro.md), não um comportamento
-atual.
+deduplicar revisões e alinhar chaves. Os carregadores legados de dólar e Selic
+já aplicam calendário civil e `forward fill`; a Bronze Delta da E2 guarda apenas
+as observações publicadas, e a regra ainda precisa ser migrada para Silver.
+Ver [ADR 0003](../adr/0003-bcb-macro.md).
 
 **Silver → Gold (planejado).** Os modelos deverão cruzar as fontes em fatos,
 dimensões e métricas com granularidade declarada, preparando as tabelas para o

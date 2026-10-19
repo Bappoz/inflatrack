@@ -1,6 +1,6 @@
 # Fluxo de Dados
 
-Da fonte até a tela do lojista. As camadas estão em [Arquitetura Medallion](arquiteturaMedallion.md), as peças em [Componentes](componentes.md) e o detalhe de cada etapa em [Contrato das Etapas](../pipeline/contratoEtapas.md).
+Do dado de origem ao consumo planejado pelo lojista. As camadas estão em [Arquitetura Medallion](arquiteturaMedallion.md), as peças em [Componentes](componentes.md) e o detalhe de cada etapa em [Contrato das Etapas](../pipeline/contratoEtapas.md).
 
 <div class="diagrama">
 --8<-- "docs/assets/diagramas/fluxo-dados.svg"
@@ -10,8 +10,8 @@ Da fonte até a tela do lojista. As camadas estão em [Arquitetura Medallion](ar
 
 1. **Extração** — o cliente de origem (`sidra.py`, `alphavantage.py`, `dolar_olinda.py`, `selic_sgs.py`, `pib.py`, `dieese.py`, `inmet.py`) fala com uma origem só e devolve o payload sem interpretá-lo.
 2. **Raw** — o ingestor grava a resposta comprimida em `data/raw/<fonte>/`, antes de qualquer transformação.
-3. **Bronze** — o mesmo ingestor parseia e tipa, e materializa Parquet em `data/parquet/<fonte>/`, com data de ingestão e procedência em cada linha.
-4. **Silver** — o dbt lê o Parquet como *source* e constrói um modelo de staging por fonte: limpeza, deduplicação, calendário civil, chaves resolvidas, tudo testado na própria transformação.
+3. **Bronze** — o mesmo ingestor parseia e tipa, e materializa tabelas em `data/parquet/<fonte>/`: Delta Lake sobre Parquet nas fontes migradas e Parquet simples nos fluxos legados, com data de ingestão e procedência em cada linha.
+4. **Silver (alvo)** — quando o projeto dbt estiver criado, os modelos de staging farão limpeza, deduplicação, calendário civil e resolução de chaves. Hoje os loaders legados do BCB preenchem o calendário diretamente; a Bronze Delta mantém as observações originais.
 5. **Gold** — os modelos de *marts* materializam no DuckDB o fato do IPCA, a dimensão de variação lenta da cesta, as features macro e a matriz de treino.
 6. **Consumo** — notebooks treinam e comparam modelos, com MLflow registrando cada execução; o painel Streamlit responde às cinco perguntas de gestão.
 

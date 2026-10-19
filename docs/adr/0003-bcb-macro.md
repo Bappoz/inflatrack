@@ -1,9 +1,9 @@
 # 0003 — Calendário civil para séries diárias do Banco Central
 
-- **Status:** proposto
+- **Status:** implementado nos carregadores legados; migração da Bronze para Silver pendente
 - **Data:** 2026-09-25
 - **Revisado em:** 2026-10-18
-- **Decisores:** Squad InflaTrack; proposta ainda sem implementação no calendário Silver
+- **Decisores:** Squad InflaTrack
 
 ## Contexto
 
@@ -16,11 +16,11 @@ ficam no mesmo `data/duckdb/inflatrack.duckdb`.
 
 ## Decisão
 
-**Proposta:** manter calendário civil para permitir que vendas em fins de
-semana e feriados encontrem o último câmbio e a última Selic publicados. Uma
-tabela apenas com dias úteis exigiria que cada consumidor repetisse a regra de
-"último valor conhecido", com risco de cada consulta tratar lacunas de um jeito.
-O `forward fill` centraliza essa regra; `observado` permite distinguir dado
+Manter calendário civil permite que vendas em fins de semana e feriados
+encontrem o último câmbio e a última Selic publicados. Uma tabela apenas com
+dias úteis exigiria que cada consumidor repetisse a regra de "último valor
+conhecido", com risco de cada consulta tratar lacunas de um jeito. O
+`forward fill` centraliza essa regra; `observado` permite distinguir dado
 publicado de valor carregado. Dez dias de lookback cobrem fins de semana e
 feriados comuns no início da janela; se não houver cotação anterior, a carga
 deve falhar explicitamente.
@@ -46,8 +46,10 @@ deve falhar explicitamente.
 
 ## Estado de implementação
 
-Este ADR ainda é uma proposta. Os ingestores atuais gravam as observações
-publicadas em dias úteis; o preenchimento do calendário civil e a coluna
-`observado` pertencem à Silver planejada e ainda não estão implementados. Não
-apresentar o `forward fill` como comportamento atual até a camada de
-transformação existir e ser verificada.
+Os carregadores legados `ingest_dolar.py` e `ingest_selic.py` já geram o
+calendário civil, aplicam `forward fill`, registram `observado` e falham se não
+houver valor anterior para completar o início da janela. A Bronze Delta da E2
+guarda as observações publicadas pelo BCB sem preencher dias; a transformação
+equivalente na Silver ainda depende do projeto dbt. Portanto, o comportamento
+existe no caminho legado, mas não foi migrado para a nova trilha Bronze →
+Silver.

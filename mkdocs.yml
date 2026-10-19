@@ -63,6 +63,7 @@ nav:
     - Cronograma: visaoGeral/cronograma.md
   - Arquitetura: 
     - Visão Geral: arquitetura/visaoGeral.md
+    - Stack Tecnológica: arquitetura/stackTecnologica.md
     - Fluxo de Dados: arquitetura/fluxoDados.md
     - Arquitetura Medallion: arquitetura/arquiteturaMedallion.md
     - Componentes: arquitetura/componentes.md
@@ -81,7 +82,6 @@ nav:
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
-    - ADR 0004 (Stack tecnológica): adr/0004-stack-tecnologica.md
   - Pipeline de Dados:
     - Orquestração (Dagster): pipeline/orquestracao.md
     - Contrato das Etapas: pipeline/contratoEtapas.md

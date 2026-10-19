@@ -1,16 +1,20 @@
-# 0004 — Stack tecnológica e fronteiras da plataforma
+# Stack tecnológica e fronteiras da plataforma
 
-- **Status:** adotado parcialmente; decisões planejadas identificadas abaixo
+- **Status:** registro da stack atual e das escolhas propostas para etapas futuras
 - **Data:** 2026-10-18
-- **Decisores:** Squad InflaTrack
+
+> Esta página organiza as justificativas tecnológicas da arquitetura; não é um
+> ADR numerado. O plano de trabalho reserva o ADR 0004 para comparar mecanismos
+> de ingestão/CDC e registrar a escolha entre Delta Lake e Iceberg. Essas
+> decisões continuam pendentes.
 
 ## Contexto
 
 O projeto combina duas cargas diferentes: séries públicas, ingeridas em lote e
 consultadas para análise, e dados próprios do lojista, que exigem transações e
 integridade. Também precisa rodar localmente com ferramentas livres, preservar
-respostas das fontes e permitir reprocessamento. Este ADR registra o motivo da
-stack visível no repositório e distingue o que já roda do que ainda é plano.
+respostas das fontes e permitir reprocessamento. Este registro explica a stack
+visível no repositório e distingue o que já roda do que ainda é plano.
 
 ## Decisões em uso
 
@@ -18,8 +22,8 @@ stack visível no repositório e distingue o que já roda do que ainda é plano.
 |---|---|---|
 | **Python 3.12** | Linguagem comum para clientes HTTP, ingestão, tabelas Arrow/Delta e Dagster. Mantém as etapas no mesmo runtime e dá acesso às bibliotecas de dados usadas pelo projeto. | Em uso. Há `httpx` e `requests` nos clientes; os dois não representam uma decisão arquitetural distinta. Consolidar em `httpx` reduziria dependências, mas exige migração dos clientes BCB existentes. |
 | **PostgreSQL 16.4** | Banco transacional para lojista, produto, reajuste e referências com chaves estrangeiras. `CHECK`, `UNIQUE`, FK e transações protegem a escrita que altera preço. A equipe já trabalha com SQL/PostgreSQL e o serviço roda localmente no Compose. | Em uso. Custa manter migrations e um serviço local; fica limitado ao papel OLTP, sem ser o destino da análise multifonte. |
-| **DuckDB** | Banco analítico embarcado para consultas e tabelas de fontes públicas. SQL sobre o mesmo arquivo simplifica cruzamentos, sem administrar um servidor analítico separado para o volume atual. | Em uso. Arquivo único concentra o risco e permite apenas um processo escritor por vez; as cargas são serializadas. Ver [ADR 0002](0002-duckdb-unico.md). |
-| **Delta Lake sobre Parquet** | Formato Bronze por fonte. Parquet é colunar e interoperável; o log Delta acrescenta versões transacionais para reexecução, detecção de duplicatas e auditoria de revisões. As respostas originais ficam separadas em JSON/HTML gzip na Raw. | Em uso nas tabelas Bronze da E2, em `data/parquet/`; alguns comandos legados ainda carregam Parquet diretamente. O projeto não deve chamar toda Bronze de Parquet simples. |
+| **DuckDB** | Banco analítico embarcado para consultas e tabelas de fontes públicas. SQL sobre o mesmo arquivo simplifica cruzamentos, sem administrar um servidor analítico separado para o volume atual. | Em uso. Arquivo único concentra o risco e permite apenas um processo escritor por vez; as cargas são serializadas. Ver [ADR 0002](../adr/0002-duckdb-unico.md). |
+| **Delta Lake sobre Parquet** | Formato Bronze por fonte. Parquet é colunar e interoperável; o log Delta registra commits e versões. Com hashes e chaves implementados na ingestão, as cargas podem ser reexecutadas sem duplicação e revisões ficam rastreáveis. As respostas originais ficam separadas em JSON/HTML gzip na Raw. | Em uso nas tabelas Bronze da E2, em `data/parquet/`; alguns comandos legados ainda carregam Parquet diretamente. O projeto não deve chamar toda Bronze de Parquet simples. |
 | **PyArrow** | Formato de intercâmbio entre DataFrames, tabelas Arrow, Delta Lake e leitores analíticos. Evita criar um formato privado para cada ingestão. | Em uso como dependência e ponte entre essas APIs. |
 | **pandas** | Estrutura tabular usada pelos clientes e ingestores para tipagem e conversão de payloads. Facilita transformar respostas heterogêneas em lotes consistentes. | Em uso. Não é requisito para consultas no DuckDB e pode ser reduzido se uma carga futura operar diretamente em Arrow. |
 | **Dagster** | Orquestra ativos de dados, dependências, retries e partições. A unidade “dado que precisa estar atualizado” corresponde ao pipeline; a interface local também permite backfill e histórico das execuções. | Em uso para ingestões. A integração `dagster-dbt` ainda não está instalada, pois o projeto dbt não existe. Serializar DuckDB reduz paralelismo de escrita. |
@@ -47,9 +51,10 @@ stack visível no repositório e distingue o que já roda do que ainda é plano.
 - **DuckDB também para transações:** rejeitado porque o arquivo analítico tem
   escritor serializado e não é a fronteira adequada para alterações concorrentes
   de preço e cadastro.
-- **Parquet simples para toda a Bronze:** insuficiente para o histórico de
-  versões e a idempotência transacional que a E2 precisa. Parquet continua sendo
-  o formato físico; Delta Lake é a tabela e o log de transações.
+- **Parquet simples para toda a Bronze:** não registra commits e versões como o
+  log Delta. A idempotência continua dependendo dos hashes e das chaves da
+  ingestão; Parquet é o formato físico, enquanto Delta Lake organiza as tabelas
+  e o log de transações.
 - **Airflow no lugar de Dagster:** não escolhido porque o pipeline é descrito
   por ativos de dados, com partições e backfills. O projeto não precisa hoje de
   um serviço separado para rotinas operacionais genéricas.
