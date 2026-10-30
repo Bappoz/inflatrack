@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 21 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (2), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
@@ -57,6 +57,9 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Correção do build do MkDocs e retirada do plano de tarefas do site |
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Consultas de diagnóstico: dbt Semantic Layer e aceite da E2 |
 | 2026-10-18 | Lucas Zanetti | Codex (GPT-6) | Revisão dos ADRs e da stack tecnológica; guia detalhado em PDF para apresentação |
+| 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Metabase para visualizar o DuckDB e o Postgres |
+| 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
+| 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
 
 ---
 
@@ -1035,6 +1038,72 @@ de tarefas nessa linha.
 
 **Decisões que continuam sendo da Squad**
 - Por onde começar: ADR 0004, CDC ou as evidências restantes.
+
+### 2026-10-29 — Claude Code (Sonnet 5.5) — Metabase para visualizar o DuckDB e o Postgres
+
+**O que a ferramenta fez**
+- Acrescentou ao `docker-compose.yml` os serviços `metabase` (imagem `ghcr.io/motherduckdb/metabase-duckdb`, Debian, com o driver comunitário de DuckDB) e `metabase-db` (Postgres só para os metadados do Metabase), ambos no profile `bi`. A pasta `data/duckdb` é montada somente leitura por causa do escritor único do DuckDB.
+- Acrescentou `METABASE_PORT` e `METABASE_DB_PASSWORD` ao `.env.example`. O arquivo estava deletado na árvore de trabalho; a ferramenta o recriou por engano só com as linhas novas, percebeu e restaurou o conteúdo de `HEAD`.
+- Orientou o preenchimento do formulário de conexão do Metabase (host `db` para o Postgres, `/duckdb/inflatrack.duckdb` para o DuckDB).
+
+**O que foi verificado e como**
+- `docker compose --profile bi config -q` valida a sintaxe do compose.
+- O uso da imagem Debian e o caminho do `.jar` vieram de uma leitura do README do driver via `WebFetch` (resumo gerado, não transcrição).
+
+**O que NÃO foi verificado**
+- Os contêineres não foram subidos: não se sabe se o driver abre o arquivo DuckDB em modo somente leitura, nem se o Metabase enxerga as tabelas.
+- A tag `:latest` não está fixada; compatibilidade entre versões do Metabase e do driver não foi conferida.
+
+**Decisões que continuam sendo da Squad**
+- Fixar a versão da imagem e decidir se o Metabase entra na documentação de arquitetura e na E3 (camada de consumo).
+
+### 2026-10-29 — Claude Code (Opus 5.5) — diagnóstico e desenho da Silver do PIB e das commodities
+
+**O que a ferramenta fez**
+- Leu o `PLANO.md` inteiro e levantou o que existe de Silver no repositório: nada (sem dbt, sem schema `silver`). Achou também que o PIB está no Delta mas não em `bronze.pib_valor` no DuckDB, o que é pré-requisito da Silver.
+- Criou `CHECKLIST_IMPLEMENTACAO_E3.md` com as tarefas da Seção 5.3 do plano.
+- Pesquisou na web como economistas alinham dado trimestral a modelo mensal: *ragged edge*, defasagem de divulgação, MIDAS e *bridge equations*, desagregação temporal, e viés de revisão (Croushore e Stark; Garcia, Medeiros e Vasconcelos, 2017). Apresentou as opções ao integrante.
+- Explicou o papel de Silver (views por fonte) e Gold (`JOIN` por mês e localidade, defasagens para o modelo).
+
+**Decisões tomadas pelo integrante**
+- PIB mensal: valor do trimestre de referência para o painel e opção B (último trimestre divulgado e dois anteriores) para o modelo.
+- Revisões do IBGE: usar a versão mais recente por `_ingerido_em`, **sem ADR**.
+- A base do dbt fica com o Pedro; commodities na Silver em formato longo, em view.
+
+**O que foi verificado e como**
+- Consultas ao DuckDB e ao Delta: contagens, esquemas e o fato de as 2.806 linhas do PIB virem de uma única coleta (28/10/2026), o que torna o *vintage* inviável hoje.
+
+**O que NÃO foi verificado**
+- As fontes da pesquisa foram lidas por resumo do `WebSearch`, não na íntegra. A regra "PIB disponível 3 meses após o fim do trimestre" é uma aproximação, não o calendário oficial do IBGE.
+- Nenhum código de Silver foi escrito ainda.
+
+### 2026-10-30 — Claude Code (Opus 5.5) — revisão do PLAN_E3_E4, conflito de merge, base do dbt e Silver do PIB e das commodities
+
+**O que a ferramenta fez**
+- Comparou o `PLAN_E3_E4.md` (versão do Pedro) com o `CHECKLIST_IMPLEMENTACAO_E3.md` e corrigiu o plano onde o código contradizia: os loaders de PIB e commodities não tinham `DROP TABLE`, o problema era lerem Parquets legados.
+- Auditou a entrega do Pedro rodando os testes numa cópia limpa do commit `4b6d0ef` (128 passam). Faltavam os arquivos de projeto do dbt, que o integrante assumiu.
+- Resolveu o conflito do `git stash pop` em `load_commodities.py` e no teste, removendo a carga legada por decisão do integrante.
+- Reescreveu `load_commodities.py` e `load_pib.py` para ler só do Delta e espelhar em `bronze.*` com `common.bronze.carregar_duckdb`. Aposentou `setup_duckdb.sql`, `setup_duckdb_commodities.sql` e `setup_duckdb_pib.sql`, e criou `tests/integration/test_load_pib.py`.
+- Criou a base do dbt (`dbt_project.yml`, `profiles.yml`, macro de schema, `.gitignore`, `just dbt`), os seeds de setores do PIB e de commodities, `gold.dim_calendario`, `stg_pib__valor`, `int_pib__mensal`, `stg_commodities__cotacao`, `int_commodities__mensal` e 7 testes singulares.
+
+**Decisões tomadas pelo integrante**
+- A branch parte da do Pedro; a carga legada de commodities sai.
+- O integrante assume só a parte do dbt que bloqueia os colegas, não as fontes de Dólar e Selic.
+- Nenhum arquivo apagado pode fazer a Bronze se perder.
+
+**O que foi verificado e como**
+- `pytest` (138 passam), `ruff check` e `ruff format --check` limpos, e `dbt build` com 54/54 OK.
+- Cargas reais nos dois loaders, rodadas duas vezes cada, sem duplicar. Antes, foi feito backup do `.duckdb`.
+- A Silver foi comparada com as views legadas (nenhuma divergência no PIB; a média mensal do WTI bate 100%) e com fatos conhecidos (WTI negativo em abr/2020, divulgação do 2T/2026 em setembro).
+
+**Erros encontrados e corrigidos na sessão**
+- O `xfail` do teste do stash ("Delta falha no Windows") estava errado e foi removido.
+- A unidade do COTTON no código (`USD/metric ton`) divergia da API (`cents per pound`) e foi corrigida.
+- A própria ferramenta rodou sem querer um `git stash` no meio de um comando; ele foi recusado pelo Git por causa do conflito, e nada mudou.
+
+**O que NÃO foi verificado**
+- Dagster com dbt, retry, backfill e Metabase: ainda não implementados.
+- A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
 
 ---
 
