@@ -1,6 +1,8 @@
-import duckdb
 import os
 from pathlib import Path
+
+import duckdb
+
 
 def get_db_path():
     base_dir = Path(os.getcwd())
@@ -10,7 +12,7 @@ def get_db_path():
 
 def init_db():
     db_path = get_db_path()
-    scripts_dir = Path(os.getcwd()) / "scripts"
+    scripts_dir = Path(os.getcwd()) / "scripts" / "sql"
 
     # Uma fonte por arquivo (setup_duckdb.sql = commodities,
     # setup_duckdb_pib.sql = contas nacionais). Todos são idempotentes:
