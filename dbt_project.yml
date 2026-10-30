@@ -1,0 +1,47 @@
+# Projeto dbt do InflaTrack: transforma a Bronze do DuckDB (bronze.*, escrita pelos
+# loaders em src/inflatrack/loaders/) nas camadas Silver e Gold. Ver PLAN_E3_E4.md, Seção 1.
+#
+#   staging/       silver.stg_<fonte>__<entidade>  views 1:1 por fonte
+#   intermediate/  silver.int_<fonte>__mensal      views no grão mes_referencia = YYYY-MM-01
+#   marts/         gold.dim_* / gold.fct_*         tabelas do esquema estrela
+#   semantic/      gold.sem_*                      métricas da E4
+#
+# O dbt só lê bronze.* (como source) e nunca escreve lá.
+
+name: inflatrack
+version: "1.0.0"
+profile: inflatrack
+
+model-paths: ["dbt/models"]
+seed-paths: ["dbt/seeds"]
+macro-paths: ["dbt/macros"]
+test-paths: ["dbt/tests"]
+analysis-paths: ["dbt/analyses"]
+snapshot-paths: ["dbt/snapshots"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  inflatrack:
+    staging:
+      +schema: silver
+      +materialized: view
+    intermediate:
+      +schema: silver
+      +materialized: view
+    marts:
+      +schema: gold
+      +materialized: table
+    semantic:
+      +schema: gold
+      +materialized: table
+
+# Catálogos estáticos (CSV) ficam junto da Silver: são dado limpo e conformado,
+# lido pela staging e pelas dimensões da Gold.
+seeds:
+  inflatrack:
+    +schema: silver

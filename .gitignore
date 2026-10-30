@@ -27,3 +27,10 @@ site/
 
 
 data_old
+
+# dbt (artefatos gerados por dbt build/compile e pacotes)
+target/
+dbt_packages/
+logs/
+.user.yml
+package-lock.yml

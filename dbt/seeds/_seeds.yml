@@ -1,0 +1,54 @@
+version: 2
+
+seeds:
+  - name: seed_pib_setor_catalogo
+    description: >
+      As 23 categorias da classificação c11255 da tabela 1846 do SIDRA (Contas Nacionais
+      Trimestrais). Uma linha por setor. Gerado de inflatrack.clients.pib (GRUPOS e
+      NUCLEO) com o nome mais recente que o SIDRA devolveu na Bronze.
+    config:
+      column_types:
+        codigo_setor: varchar
+        nome_setor: varchar
+        grupo: varchar
+        nucleo: boolean
+    columns:
+      - name: codigo_setor
+        description: Id interno da categoria no SIDRA (o mesmo devolvido em D4C).
+        data_tests: [unique, not_null]
+      - name: nome_setor
+        data_tests: [not_null]
+      - name: grupo
+        description: >
+          Família da categoria. As três não se somam entre si: atividade (valor
+          adicionado), demanda (ótica da despesa) e agregado (PIB, VA, impostos).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [atividade, demanda, agregado]
+      - name: nucleo
+        description: Entra no recorte de pressão direta sobre o preço ao consumidor.
+        data_tests: [not_null]
+
+  - name: seed_commodity_catalogo
+    description: >
+      As 9 séries da Alpha Vantage coletadas pelo InflaTrack. Uma linha por commodity.
+      A unidade segue a que a própria API devolve na Bronze.
+    config:
+      column_types:
+        symbol: varchar
+        nome: varchar
+        categoria: varchar
+        unidade: varchar
+        intervalo: varchar
+    columns:
+      - name: symbol
+        data_tests: [unique, not_null]
+      - name: intervalo
+        description: Frequência da série na origem.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [daily, monthly]

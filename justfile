@@ -139,6 +139,15 @@ test:
 # O gate antes de dizer "pronto".
 check: fmt lint test
 
+# Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
+# Os loaders precisam ter rodado antes: o dbt só lê bronze.*.
+dbt:
+    uv run dbt build
+
+# Só os testes analíticos (Nível 3 da pirâmide).
+dbt-test:
+    uv run dbt test
+
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
     uv run --group docs mkdocs serve

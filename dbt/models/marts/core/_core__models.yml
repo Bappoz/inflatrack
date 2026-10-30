@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: dim_calendario
+    description: >
+      Uma linha por mês, de jan/1979 até dezembro do ano seguinte ao do build.
+      mes_referencia (sempre o dia 01) é a chave que todas as Silvers mensais usam e
+      por onde elas se encontram na Gold (PLAN_E3_E4.md, Seções 1.3 e 6.1).
+    columns:
+      - name: mes_referencia
+        description: Primeiro dia do mês (YYYY-MM-01).
+        data_tests: [unique, not_null]
+      - name: ano
+        data_tests: [not_null]
+      - name: mes
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      - name: trimestre
+        data_tests: [not_null]
+      - name: trimestre_inicio
+        description: Primeiro dia do trimestre do mês (chave do PIB trimestral).
+        data_tests: [not_null]
