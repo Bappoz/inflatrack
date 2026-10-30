@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: bronze_pib
+    description: Bronze do PIB (SIDRA 1846) espelhada do Delta por inflatrack.loaders.load_pib.
+    schema: bronze
+    tables:
+      - name: pib_valor
+        description: >
+          Uma linha por valor de cada resposta do SIDRA. Só acrescenta: a revisão do IBGE
+          de um trimestre antigo entra como linha nova, com o valor na chave.
+        columns:
+          - name: data_referencia
+            description: Primeiro dia do trimestre.
+            data_tests: [not_null]
+          - name: codigo_setor
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: ref('seed_pib_setor_catalogo')
+                    field: codigo_setor
+          - name: valor_bruto
+            description: Texto original do SIDRA (marcadores como "..." ficam aqui).
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

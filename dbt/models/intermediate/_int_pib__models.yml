@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: int_pib__mensal
+    description: >
+      Uma linha por setor x mês (mes_referencia = YYYY-MM-01). Dois blocos de colunas
+      (decisão de 2026-10-29):
+      PAINEL — o trimestre a que o mês pertence (abr, mai e jun mostram o 2T);
+      MODELO — o que já tinha sido divulgado até o mês, sem vazar futuro. Regra de
+      divulgação: o IBGE publica cerca de 2 meses depois do fim do trimestre, então o
+      trimestre conta como disponível a partir do 3º mês após o fim dele (2T -> setembro).
+    columns:
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: codigo_setor
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_pib_setor_catalogo')
+                field: codigo_setor
+      - name: trimestre_referencia
+        description: "[painel] Primeiro dia do trimestre a que o mês pertence."
+      - name: valor_trimestre_referencia
+        description: "[painel] Valor do trimestre do mês, em milhões de R$ correntes."
+      - name: var_anual_pct
+        description: "[painel] Variação % contra o mesmo trimestre do ano anterior."
+      - name: participacao_pib_pct
+        description: "[painel] % do PIB a preços de mercado no mesmo trimestre."
+      - name: trimestre_referencia_disponivel_em
+        description: "[painel] Primeiro mês em que o trimestre de referência já estava publicado."
+      - name: trimestre_ultimo_divulgado
+        description: "[modelo] Último trimestre já publicado no mês (regra de divulgação acima)."
+      - name: valor_ultimo_divulgado
+        description: "[modelo] Valor do último trimestre divulgado."
+      - name: valor_penultimo_divulgado
+        description: "[modelo] Valor do trimestre anterior ao último divulgado."
+      - name: valor_antepenultimo_divulgado
+        description: "[modelo] Valor de dois trimestres antes do último divulgado."
+      - name: var_anual_pct_ultimo_divulgado
+        description: "[modelo] Variação anual do último trimestre divulgado."

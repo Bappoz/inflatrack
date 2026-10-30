@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: bronze_commodities
+    description: Bronze das commodities (Alpha Vantage), espelhada do Delta por inflatrack.loaders.load_commodities.
+    schema: bronze
+    tables:
+      - name: commodities_cotacao
+        description: >
+          Uma linha por symbol x data, como a Alpha Vantage devolve. O marcador "." vira
+          preco NULL e a linha fica. A cada coleta a série inteira do symbol é substituída.
+        columns:
+          - name: symbol
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: ref('seed_commodity_catalogo')
+                    field: symbol
+          - name: data_referencia
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

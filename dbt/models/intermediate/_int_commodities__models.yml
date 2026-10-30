@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: int_commodities__mensal
+    description: >
+      Uma linha por commodity x mês (mes_referencia = YYYY-MM-01), do primeiro ao último
+      mês com preço, sem buraco. Preços na unidade da origem (seed_commodity_catalogo);
+      nada aqui depende do câmbio. As variações, médias móveis e a volatilidade são
+      calculadas sobre a média do mês, e as janelas só olham para trás.
+    columns:
+      - name: symbol
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_commodity_catalogo')
+                field: symbol
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: mes_fechado
+        description: >
+          false no mês ainda em curso na data da coleta (média de mês parcial). A Gold
+          e o modelo devem usar só meses fechados.
+        data_tests: [not_null]
+      - name: dias_observados
+        description: Pregões com preço no mês (séries mensais têm 1). 0 = mês sem preço na origem.
+        data_tests: [not_null]
+      - name: media
+        description: Média dos preços observados no mês. NULL quando dias_observados = 0.
+      - name: fechamento
+        description: Último preço observado no mês.
+      - name: desvio_intramensal
+        description: Desvio-padrão dos pregões do mês (só séries diárias; mês calmo x instável).
+      - name: var_mensal_pct
+        description: Variação % da média do mês contra o mês anterior.
+      - name: var_12m_pct
+        description: Variação % da média do mês contra o mesmo mês do ano anterior.
+      - name: mm3
+        description: Média móvel de 3 meses da média mensal (o próprio mês e os 2 anteriores).
+      - name: desvio_movel_12m_pct
+        description: Desvio-padrão da variação mensal nos últimos 12 meses (volatilidade).
+      - name: z_score_var_mensal
+        description: >
+          Quantos desvios a variação do mês fica acima da média dos 12 meses anteriores
+          (excluindo o próprio mês).
+      - name: alta_forte
+        description: z_score_var_mensal >= 2, a convenção de dois desvios-padrão.
+        data_tests: [not_null]
