@@ -6,6 +6,10 @@ sources:
     schema: bronze
     tables:
       - name: commodities_cotacao
+        config:
+          meta:
+            dagster:
+              asset_key: ["commodities_duckdb"]  # loader que escreve esta tabela
         description: >
           Uma linha por symbol x data, como a Alpha Vantage devolve. O marcador "." vira
           preco NULL e a linha fica. A cada coleta a série inteira do symbol é substituída.

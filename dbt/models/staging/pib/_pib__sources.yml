@@ -6,6 +6,10 @@ sources:
     schema: bronze
     tables:
       - name: pib_valor
+        config:
+          meta:
+            dagster:
+              asset_key: ["pib_duckdb"]  # loader que escreve esta tabela
         description: >
           Uma linha por valor de cada resposta do SIDRA. Só acrescenta: a revisão do IBGE
           de um trimestre antigo entra como linha nova, com o valor na chave.
