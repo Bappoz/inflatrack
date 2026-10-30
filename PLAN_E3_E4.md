@@ -13,7 +13,7 @@
 3. **Seção 3 — Reorganização Geral e Profissional de Todas as Pastas do Repositório**
 4. **Seção 4 — Estratégia de Testes (Pirâmide de 5 Níveis)**
 5. **Seção 5 — O que Cada Um Vai Fazer (Divisão das Tarefas do Grupo)**
-6. **Seção 6 — Protocolo de Trabalho em Equipe, Git e Uso de IA**
+6. **Seção 6 — Protocolo de Trabalho em Equipe, Git, Uso de IA e Lições Já Aprendidas**
 
 ---
 
@@ -25,14 +25,14 @@ Para que todos os 5 integrantes (e seus assistentes de IA) trabalhem em paralelo
 
 | Camada | Tecnologia | Onde Fica | Responsabilidade Exata (O que faz) | O que é PROIBIDO fazer nela |
 | :--- | :--- | :--- | :--- | :--- |
-| **0. Banco do Comerciante e Vitrine do Resultado (`OLTP` + série servida)** | PostgreSQL `16` (+ `pgvector` opcional na E4) | Container `db` (`migrations/`) | **Início da esteira (schema `public`):** guarda o que o lojista cadastra (`lojista`, `produto`, `produto_preco_atual`, `reajuste`, `venda_mensal`) e a FK `produto.codigo_subitem_ipca`; suas mudanças saem para a Bronze via **CDC**.<br/>**Vitrine do resultado (schema `serie`, E3/E4):** recebe do DuckDB, já calculada, a série histórica mensal (média, média móvel, desvio, variação) para o lojista consultar e para o `EXPLAIN` da E3.<br/>**Retorno (E4):** `public.recomendacao_reajuste` via **ETL Reverso**. | O Postgres **nunca calcula** nada: só guarda e serve o que o dbt/DuckDB calculou. O CDC lê **apenas** o schema `public` (nunca `serie`). Só o pipeline escreve em `serie`. Proibido jogar dados brutos das APIs externas nele e proibido `UPDATE` em tabelas históricas (`reajuste`, `venda_mensal`, `observacao`). |
+| **0. Banco do Comerciante e Vitrine do Resultado (`OLTP` + série servida)** | PostgreSQL `16` (+ `pgvector` opcional na E4) | Container `db` (`migrations/`) | **Início da esteira (schema `public`):** guarda o que o lojista cadastra (`lojista`, `produto`, `produto_preco_atual`, `reajuste`, `venda_mensal`) e a FK `produto.codigo_subitem_ipca`; suas mudanças saem para a Bronze via **CDC**.<br/>**Vitrine do resultado (schema `serie`, E3/E4):** recebe do DuckDB, já calculadas, as tabelas da Gold que o painel e o lojista consultam (cópia feita por `reverse_etl/exportar_serie.py`, ativo `serie_postgres`), e serve de base para o `EXPLAIN` da E3. **É a única fonte do Metabase.**<br/>**Retorno (E4):** `public.recomendacao_reajuste` via **ETL Reverso**. | O Postgres **nunca calcula** nada: só guarda e serve o que o dbt/DuckDB calculou. O CDC lê **apenas** o schema `public` (nunca `serie`). Só o pipeline escreve em `serie`. Proibido jogar dados brutos das APIs externas nele e proibido `UPDATE` em tabelas históricas (`reajuste`, `venda_mensal`, `observacao`). |
 | **1A. Bronze — Respostas Brutas (`Delta Lake`)** | `deltalake` + `pyarrow` | `data/parquet/<fonte>/resposta/` | Guarda o arquivo/resposta original da coleta (JSON, HTML ou conteúdo de ZIP) com a data da coleta e o hash SHA-256 (`id_resposta = hash_corpo`). Se a API devolver o mesmo conteúdo na reexecução, o hash bloqueia a duplicata. | Proibido apagar versões antigas (`VACUUM`) ou gravar respostas vazias/com erro HTTP. |
 | **1B. Bronze — Dados Extraídos (`Delta Lake`)** | `deltalake` + `pyarrow` | `data/parquet/<fonte>/<tabela>/` e `data/parquet/transacional/mudanca/` | Transforma a resposta bruta em linhas e colunas tipadas com PyArrow, mantendo **100% dos registros** (marcadores como `...` ou `-` ficam com `valor = NULL` e texto original em `valor_bruto`) mais as 4 colunas de rastreabilidade (`_id_resposta`, `_fonte`, `_requisicao`, `_ingerido_em`). | Proibido filtrar linhas, proibido fazer *forward fill* de calendário aqui e **proibido salvar o `cnpj` do lojista no CDC (LGPD)**. |
 | **1C. Bronze no DuckDB (`schema bronze.*`)** | DuckDB `1.1+` | `data/duckdb/inflatrack.duckdb` (`bronze.<fonte>_<tabela>`) | Faz o merge/upsert (ou substituição de partição) levando apenas as informações novas/alteradas do Delta Lake para dentro do DuckDB via `loaders/load_<fonte>.py`, sem nenhuma regra de negócio. | Proibido criar views analíticas, calcular médias ou alterar valores durante a carga para o schema `bronze`. |
 | **2A. Silver — Staging (`dbt-duckdb`)** | `dbt-core` + `dbt-duckdb` | `dbt/models/staging/<fonte>/` (`schema silver.*`) | Views SQL 1:1 por fonte que limpam marcadores, preenchem fins de semana/feriados quando necessário (*forward fill* com flag `observado`), tratam datas e preparam as colunas limpas daquela fonte. | Proibido fazer `JOIN` entre fontes diferentes dentro da pasta `staging/`. |
 | **2B. Silver — Consolidação Mensal (`dbt-duckdb`)** | `dbt-core` + `dbt-duckdb` | `dbt/models/intermediate/` (`schema silver.*`) | **Crava todas as fontes no grão MENSAL (`mes_referencia = YYYY-MM-01`)**: calcula médias mensais, variações percentuais, médias móveis de 3/6/12 meses, desvio-padrão/volatilidade e defasagens temporais (*lags*). | Proibido expor tabelas `int_*` diretamente para o painel final sem passar pelos Marts da Gold. |
 | **3. Gold — Marts Dimensionais (`dbt-duckdb`)** | `dbt-core` + `dbt-duckdb` | `dbt/models/marts/` (`schema gold.*`) | Tabelas materializadas em **Esquema Estrela (*Star Schema*)**: Dimensões (`dim_calendario`, `dim_localidade`, `dim_cesta_ipca_scd2`, `dim_produto_preco_scd2`, `dim_setor_pib`, `dim_commodity`), Fato de Mercado Puro (`fct_inflacao_mensal`) e Fato Comparativo do Lojista (`fct_reajuste_lojista`). A **Gold é a fonte única da verdade**; o Postgres só recebe cópia. | Proibido misturar os produtos privados do lojista dentro da `fct_inflacao_mensal` (o cruzamento do lojista ocorre exclusivamente em `fct_reajuste_lojista`). |
-| **4. Consumo, Predição e ETL Reverso (`E4`)** | Camada Semântica + `XGBoost`/`LightGBM` + **Metabase** | `dbt/models/semantic/`, `src/inflatrack/predicao/`, `src/inflatrack/reverse_etl/`, `docker-compose.yml` (Metabase) | Centraliza as métricas oficiais (`gold.sem_*`), treina o modelo preditivo com validação temporal (*walk-forward*), devolve o preço sugerido para o PostgreSQL (ETL Reverso) e exibe os dashboards no **Metabase**. | Proibido usar divisão aleatória (`train_test_split` comum) no treino do modelo preditivo, pois destrói a ordem cronológica das séries temporais. |
+| **4. Consumo, Predição e ETL Reverso (`E4`)** | Camada Semântica + `XGBoost`/`LightGBM` + **Metabase** | `dbt/models/semantic/`, `src/inflatrack/predicao/`, `src/inflatrack/reverse_etl/`, `docker-compose.yml` (Metabase) | Centraliza as métricas oficiais (`gold.sem_*`), treina o modelo preditivo com validação temporal (*walk-forward*), devolve o preço sugerido para o PostgreSQL (ETL Reverso) e exibe os dashboards no **Metabase**, que lê só o PostgreSQL (`serie` e, na E4, `public.recomendacao_reajuste`). | Proibido usar divisão aleatória (`train_test_split` comum) no treino do modelo preditivo, pois destrói a ordem cronológica das séries temporais. Proibido conectar o Metabase ao arquivo do DuckDB: uma conexão aberta trava o dbt e os loaders. |
 
 ---
 
@@ -95,7 +95,7 @@ flowchart TB
         Semantica["Camada Semântica (gold.sem_*) - E4"]
         ML["Modelo Preditivo (XGBoost / LightGBM)<br/>Walk-Forward - E4"]
         PG_Rec[("PostgreSQL 16 - public.recomendacao_reajuste")]
-        Metabase["Metabase (painel)<br/>E3: lê da Gold | E4: lê também do Postgres"]
+        Metabase["Metabase (painel)<br/>lê só o PostgreSQL"]
         Vet["pgvector (opcional, E4)<br/>produto do lojista x subitem do IPCA"]
     end
 
@@ -104,12 +104,11 @@ flowchart TB
     Delta -->|"loaders/load_*.py"| DuckBronze
     DuckBronze -->|"dbt (staging + intermediate)"| DuckSilver
     DuckSilver -->|"dbt (marts)"| DuckGold
-    DuckGold -->|"carga da série mensal"| PG_Serie
+    DuckGold -->|"cópia das tabelas da Gold (serie_postgres)"| PG_Serie
     DuckGold --> Semantica
     DuckGold --> ML
-    DuckGold --> Metabase
     ML -->|"ETL Reverso (Upsert)"| PG_Rec
-    Semantica --> Metabase
+    Semantica -->|"copiada para serie"| PG_Serie
     PG_Serie --> Metabase
     PG_Rec --> Metabase
     PG_In -.->|"vínculo opcional"| Vet
@@ -155,7 +154,7 @@ inflatrack/
 ├── README.md                                       # Manual principal: como subir tudo do zero com 1 comando
 ├── dbt_project.yml                                 # [NOVO E3] Configuração do projeto dbt apontando para a pasta dbt/
 ├── profiles.yml                                    # [NOVO E3] Conexão do dbt com data/duckdb/inflatrack.duckdb
-├── docker-compose.yml                              # [ATUALIZAR] PostgreSQL 16 (wal_level=logical; imagem com pgvector só se a E4 confirmar), Adminer e Metabase
+├── docker-compose.yml                              # [ATUALIZAR] PostgreSQL 16 (wal_level=logical; imagem com pgvector só se a E4 confirmar), Adminer e Metabase (profile bi, porta 3001, sem acesso ao DuckDB)
 ├── justfile                                        # Automação: just check, just bronze, just dbt, just e3, just e4
 ├── mkdocs.yml                                      # Menu completo da documentação sem páginas órfãs
 ├── pyproject.toml                                  # Dependências gerenciadas pelo uv
@@ -185,8 +184,9 @@ inflatrack/
 │       └── transacional/      (mudanca/)           # Mudanças capturadas do PostgreSQL via CDC (sem CNPJ)
 │
 ├── dbt/                                            # [NOVO E3] Transformação e Modelagem Analítica (dbt-duckdb)
+│   ├── README.md                                   # [PRONTO] Guia curto: como levar a sua fonte até a Silver
 │   ├── macros/
-│   │   ├── gerar_schema_name.sql                   # Garante criação limpa nos schemas silver e gold
+│   │   ├── gerar_schema_name.sql                   # [PRONTO] Macro generate_schema_name: schemas silver e gold sem prefixo main_
 │   │   └── forward_fill_calendario.sql             # Preenchimento de dias sem cotação (ADR 0003)
 │   ├── seeds/                                      # Tabelas estáticas de domínio e amarração (CSV)
 │   │   ├── _seeds.yml
@@ -286,9 +286,9 @@ inflatrack/
 │       │   ├── __init__.py
 │       │   ├── modelo_reajuste.py                  # XGBoost / LightGBM com Walk-Forward Validation
 │       │   └── casamento_produto_subitem.py        # Sugere o subitem do IPCA para o produto do lojista (similaridade de nomes)
-│       └── reverse_etl/                            # [E4] Retorno operacional para o PostgreSQL do comerciante
+│       └── reverse_etl/                            # [E3/E4] Retorno da Gold para o PostgreSQL
 │           ├── __init__.py
-│           ├── exportar_serie.py                   # Copia a série mensal da Gold (DuckDB) para o schema serie do Postgres
+│           ├── exportar_serie.py                   # [PRONTO] Copia as tabelas da Gold listadas em TABELAS para o schema serie (o que o Metabase lê)
 │           └── exportar_recomendacoes.py           # Grava a sugestão de preço e defasagem em recomendacao_reajuste
 │
 ├── orchestration/                                  # Orquestração Dagster (Rotinas automáticas, Retry e Backfill)
@@ -308,16 +308,19 @@ inflatrack/
 │       ├── clima.py
 │       ├── pib_internacional.py
 │       ├── transacional.py
-│       ├── dbt_assets.py                           # [NOVO E3] Roda os modelos e testes do dbt dentro do Dagster
+│       ├── dbt_assets.py                           # [PRONTO] Roda os modelos e testes do dbt dentro do Dagster
+│       ├── serie.py                                # [PRONTO] Ativo serie_postgres: copia a Gold para o Postgres depois do dbt
 │       ├── predicao_reverso.py                     # [NOVO E4] Roda o modelo XGBoost/LightGBM e o ETL Reverso
 │       └── checks.py                               # [NOVO E3] Checagens automáticas de volume e atualização
 │
 ├── scripts/
 │   ├── gerar_diagramas.py
+│   ├── metabase_painel.py                          # [PRONTO] Recria o painel no Metabase pela API a partir de scripts/sql/metabase/
 │   ├── init_db.py                                  # Inicialização manual temporária do DuckDB (a ser aposentado pelo dbt)
 │   ├── verificar_clone_limpo.sh                    # Testa se o projeto sobe do zero em pasta limpa
 │   ├── benchmarks/                                 # Scripts reproduzíveis que geram os números das ADRs
 │   └── sql/                                        # Queries de EXPLAIN (antes/depois) e verificação OLTP
+│       └── metabase/                               # [PRONTO] Painel versionado: um .sql por pergunta + painel.toml
 │
 ├── tests/                                          # Pirâmide de Testes em Python (pytest: Níveis 1, 2, 4 e 5; o Nível 3 analítico fica em dbt/tests/)
 │   ├── conftest.py
@@ -358,7 +361,7 @@ Nomes reais do repositório hoje (`cc8c4ef`) e para onde cada um vai:
 | `load_<fonte>.py` | `src/inflatrack/loaders/` | Todos passam a ler **só do Delta** e a fazer merge/upsert. |
 | `orchestration/` (já na raiz) | continua na raiz | Ganha `dbt_assets.py` e `checks.py`. |
 | `tests/test_*.py` (planos) | `tests/unit/`, `tests/integration/`, `tests/orchestration/` | Cada teste vai para o nível correspondente (Seção 4). |
-| `scripts/setup_duckdb_*.sql`, `sql/verificar_carga.sql` | `scripts/sql/` ou removidos | Os `setup_duckdb_*` ficam obsoletos quando o dbt assumir as camadas. |
+| `scripts/setup_duckdb_*.sql`, `sql/verificar_carga.sql` | `scripts/sql/` | Um `setup_duckdb_*` só é apagado quando nenhum loader o usa mais. Os de PIB e commodities já saíram; os loaders criam a `bronze.*` a partir do Delta. |
 | `data/raw/` e Parquets legados | **descontinuar** | Só `data/parquet/<fonte>/` (Delta) permanece. |
 | `tasks_entrega_2.md` (raiz) | `planos/tasks_entrega_2.md` | Mantém histórico da E2 sem poluir a raiz nem vazar para o GitHub Pages. |
 
@@ -374,7 +377,7 @@ Para seguir uma **Arquitetura Modular Limpa**, o código dentro de `src/inflatra
 | **`loaders/`** | **Carga Analítica (Delta $\rightarrow$ DuckDB)** | Lê **exclusivamente** das tabelas Delta Lake da Bronze e faz o merge/upsert incremental no DuckDB (`data/duckdb/inflatrack.duckdb`) no schema `bronze.*`. Não faz download e não acessa a internet. |
 | **`cdc/`** *(E3)* | **Captura de Mudanças (Postgres Lojista)** | Captura alterações na base transacional do comerciante (preço, produto, venda), anonimiza o CNPJ (LGPD) e despeja na Bronze. |
 | **`predicao/`** *(E4)* | **Modelos Preditivos de ML** | Treinamento dos modelos de Machine Learning (XGBoost/LightGBM) com validação temporal (*walk-forward*) e similaridade semântica de produtos. |
-| **`reverse_etl/`** *(E4)* | **Retorno Operacional ao Lojista** | Pega as recomendações de reajuste calculadas na Gold e grava de volta no PostgreSQL do lojista. |
+| **`reverse_etl/`** *(E3/E4)* | **Retorno da Gold para o PostgreSQL** | `exportar_serie.py` copia as tabelas da Gold para o schema `serie` (o que o Metabase lê); na E4, `exportar_recomendacoes.py` grava as recomendações de reajuste no PostgreSQL do lojista. **NÃO** calcula nada: só copia o que o dbt calculou. |
 
 ### 3.5 Propósito Arquitetural da Pasta `scripts/`
 
@@ -383,7 +386,7 @@ A pasta `scripts/` e suas subpastas concentram os **scripts utilitários de apoi
 | Subpasta / Arquivo | Propósito Arquitetural | O que faz / O que NÃO faz |
 | :--- | :--- | :--- |
 | **`scripts/`** *(raiz)* | **Ferramental Operacional e de Apoio** | Scripts executáveis diretos (CLI/Bash/Python) para tarefas de desenvolvimento, compilação de diagramas de arquitetura (`gerar_diagramas.py`), inicialização de transição (`init_db.py`) e validação de clone limpo (`verificar_clone_limpo.sh`). **NÃO** contém regras de negócio ou de extração de dados. |
-| **`scripts/sql/`** | **Auditorias SQL e Planos de Execução** | Armazena scripts SQL de auditoria da base transacional (`verificar_carga.sql`), queries de análise de desempenho (`EXPLAIN (ANALYZE, BUFFERS)`) e os DDLs legados de preparação do DuckDB (`setup_duckdb_*.sql`). **NÃO** contém migrações do PostgreSQL (que ficam em `migrations/`) nem modelos do dbt (que ficam em `dbt/models/`). |
+| **`scripts/sql/`** | **Auditorias SQL e Planos de Execução** | Armazena scripts SQL de auditoria da base transacional (`verificar_carga.sql`), queries de análise de desempenho (`EXPLAIN (ANALYZE, BUFFERS)`) os DDLs legados de preparação do DuckDB (`setup_duckdb_*.sql`, que só saem quando nenhum loader os usa) e, em `scripts/sql/metabase/`, o painel do Metabase versionado (um `.sql` por pergunta e o `painel.toml`). **NÃO** contém migrações do PostgreSQL (que ficam em `migrations/`) nem modelos do dbt (que ficam em `dbt/models/`). |
 | **`scripts/benchmarks/`** | **Estudos de Desempenho e Validação de ADRs** | Scripts reproduzíveis para medição de latência, vazão, concorrência e tempos de resposta que fundamentam numericamente as decisões arquiteturais (ADRs). **NÃO** roda em produção contínua no Dagster nem faz parte da pipeline diária. |
 
 ### 3.6 Propósito Arquitetural da Pasta `tests/` (Pirâmide de Testes)
@@ -410,7 +413,8 @@ A pasta `orchestration/` centraliza a automação, agendamento temporal e tratam
 | **`orchestration/schedules.py`** | **Gatilhos Temporais e Cron** | Declara os jobs (`define_asset_job`) e agendamentos cron por fonte (ex.: dias 9 a 13 às 10h para IPCA, dias úteis às 19h para macroeconomia/BCB após fechamento do mercado). Vincula ao fuso `America/Sao_Paulo`. **NÃO** implementa a lógica do ativo; apenas define quando ele deve rodar. |
 | **`orchestration/assets/comum.py`** | **Infraestrutura Compartilhada** | Define o pool de escrita exclusiva do DuckDB (`POOL_DUCKDB`, limite 1 escritor por vez), a política de retentativa automática com recuo exponencial (`RETRY_REDE`) e o wrapper seguro de execução de CLI (`executar`). **NÃO** possui assets de dados econômicos específicos. |
 | **`orchestration/assets/<fonte>.py`** | **Definições de Ativos por Fonte (1 por Fonte)** | Declara os ativos `@asset` individuais de cada fonte (`ipca.py`, `dolar.py`, `selic.py`, `pib.py`, `commodities.py`, `salario_minimo.py`, `clima.py`, `pib_internacional.py`). Cada ativo atua como uma casca declarativa chamando o ponto de entrada canônico em `src/inflatrack/`. **NÃO** reimplementa lógica de rede ou de banco. |
-| **`orchestration/assets/dbt_assets.py`** *(E3)* | **Integração dbt com Dagster** | Executa os modelos e testes do dbt dentro do grafo de dependências do Dagster via `@dbt_assets`, permitindo disparar transformações Silver/Gold após a conclusão da Bronze. |
+| **`orchestration/assets/dbt_assets.py`** *(E3)* | **Integração dbt com Dagster** | Executa os modelos e testes do dbt dentro do grafo de dependências do Dagster via `@dbt_assets`, permitindo disparar transformações Silver/Gold após a conclusão da Bronze. A ligação com o loader de cada fonte vem do `meta.dagster.asset_key` da `source` no dbt. |
+| **`orchestration/assets/serie.py`** *(E3)* | **Vitrine no Postgres** | Ativo `serie_postgres`: depois do dbt, copia para o schema `serie` as tabelas da Gold listadas em `exportar_serie.TABELAS`. |
 | **`orchestration/assets/checks.py`** *(E3)* | **Asset Checks (Qualidade e Frescura)** | Implementa verificações automatizadas de volume e alertas de dados desatualizados (SLA/Freshness) no Dagster. |
 
 ### 3.8 Propósito Arquitetural da Pasta `dbt/` (Modelagem Silver, Gold e Testes Analíticos)
@@ -499,11 +503,11 @@ Para que todos sigam rigorosamente a mesma esteira de ponta a ponta e saibam o q
 
 1. **Coleta na Fonte:** Baixar os dados brutos da API/site externo usando o cliente Python isolado em `src/inflatrack/clients/`.
 2. **Bronze no Delta Lake:** Salvar os dados brutos originais em Parquet na pasta `data/parquet/<sua_fonte>/` (preservando o histórico sem filtros analíticos e com hash SHA-256).
-3. **Bronze no DuckDB:** Criar/executar o carregador em `src/inflatrack/loaders/load_<sua_fonte>.py` para inserir os dados na tabela `bronze.<sua_fonte>` do DuckDB via merge/upsert.
-4. **Silver Staging (`dbt`):** Criar a view SQL de limpeza 1:1 em `dbt/models/staging/<sua_fonte>/` (`silver.stg_<sua_fonte>__...`), tratando tipos, marcadores e nulos.
+3. **Bronze no DuckDB:** Criar/executar o carregador em `src/inflatrack/loaders/load_<sua_fonte>.py` para inserir os dados na tabela `bronze.<sua_fonte>` do DuckDB via merge/upsert (o jeito mais simples é `common.bronze.carregar_duckdb`, como em `load_pib.py`).
+4. **Silver Staging (`dbt`):** Criar a view SQL de limpeza 1:1 em `dbt/models/staging/<sua_fonte>/` (`silver.stg_<sua_fonte>__...`), tratando tipos, marcadores e nulos. O passo a passo está em `dbt/README.md`.
 5. **Silver Intermediária (`dbt`):** Consolidar os dados no grão mensal em `dbt/models/intermediate/` (`silver.int_<sua_fonte>__mensal`), fixando a chave sempre no 1º dia do mês (`mes_referencia = YYYY-MM-01`) e calculando médias móveis, variações e lags.
 6. **Gold Marts (`dbt`):** Cruzar os dados nas tabelas finais em `dbt/models/marts/` (Dimensões e Fatos da camada `gold.*`).
-7. **Postgres e Metabase:** A série calculada na Gold é copiada para o schema `serie` do PostgreSQL, de onde o Metabase consome para montar os painéis gerenciais.
+7. **Postgres e Metabase:** As tabelas da Gold que o painel usa são copiadas para o schema `serie` do PostgreSQL (basta pôr o nome em `exportar_serie.TABELAS`), e o Metabase lê só de lá. Cada pergunta do painel é um `.sql` em `scripts/sql/metabase/` (veja o `README.md` dessa pasta).
 
 **O que cada integrante deve verificar e testar na sua parte:**
 * Se o download roda de forma isolada e grava com sucesso no Delta Lake.
@@ -543,7 +547,7 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
   * **Deixar o IPCA e os dados do lojista limpos por mês na Silver.**
   * **Guardar o histórico de mudanças de preços e pesos (SCD Tipo 2):** uma tabela para quando o IBGE muda o peso de um produto na cesta e outra para cada vez que o lojista altera preço ou custo.
   * **Montar as tabelas principais da Gold**, cada uma com a frase do que uma linha representa: a de inflação mensal (perguntas 1, 2 e 4) e a de reajuste do lojista (pergunta 5).
-  * **Preparar a vitrine no Postgres:** criar o schema `serie` com a primeira série (IPCA mensal) vinda da Gold.
+  * **Preparar a vitrine no Postgres:** a cópia da Gold para o schema `serie` já existe (`exportar_serie.py`). Falta pôr as suas tabelas da Gold na lista `TABELAS` (é isso que faz as perguntas 1, 2, 4 e 5 aparecerem no painel) e criar a migration `0005` com as permissões e o índice que você vai medir no `EXPLAIN`.
   * **Comparar a consulta antes e depois (`EXPLAIN (ANALYZE, BUFFERS)`):** rodar no PostgreSQL, sobre a série, sem índice e com índice, salvar os scripts/queries em `scripts/sql/` e guardar os dois planos em `docs/evidencias/e3/`.
 * **Para a Entrega 4 (até 24/11):**
   * **Travar o acesso no banco do lojista:** cada lojista só enxerga os próprios produtos e recomendações, com privilégio mínimo, e uma demonstração disso.
@@ -552,7 +556,7 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 
 ---
 
-### 5.2 Pedro — *Dólar, Selic, Organização do Repositório, Base do `dbt`, Rotinas do Dagster e Métricas*
+### 5.2 Pedro — *Dólar, Selic, Organização do Repositório, Rotinas do Dagster e Métricas*
 
 * **O que ficou pendente de antes:**
   * **Arrumar a casa:** mover os arquivos para as pastas certas seguindo o mapa da Seção 3.3, confirmar a remoção de `dados_duck.py` e deixar o `ruff` sem nenhum erro.
@@ -562,10 +566,9 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
   * **Em `bronze/`:** Fundir `ingest_dolar.py` + `bronze_dolar.py` → `dolar.py`, e `ingest_selic.py` + `bronze_selic.py` → `selic.py`, para que cada fonte tenha um ponto único de entrada gravando direto em Delta Lake.
   * **Em `loaders/`:** Criar os loaders `loaders/load_dolar.py` e `loaders/load_selic.py` (hoje não existem carregadores Delta → DuckDB para eles).
   * **Em `orchestration/assets/`:** Extrair os assets de Dólar e Selic de `orchestration/assets/ingestao.py` para seus próprios módulos `assets/dolar.py` e `assets/selic.py`.
-  * **Aposentar o inicializador manual:** apagar o `scripts/init_db.py` e os arquivos `scripts/sql/setup_duckdb*.sql` assim que a base do `dbt` estiver criando as tabelas e views no DuckDB.
+  * **Aposentar o inicializador manual:** apagar cada `scripts/sql/setup_duckdb*.sql` só quando nenhum loader o usar mais (o dbt não cria a Bronze), e o `scripts/init_db.py` quando não sobrar nenhum.
   * Rever o ADR do calendário civil diário, que agora convive com a regra de "tudo mensal".
 * **Para a Entrega 3 (até 03/11):**
-  * **Deixar o `dbt` pronto para o grupo e criar a tabela de Calendário mensal** (chave de data que todo mundo usa para juntar as tabelas).
   * **Transformar Dólar e Selic em resumos mensais na Silver**, com média, fechamento, variação, média móvel e desvio-padrão.
   * **Cruzar câmbio e juros na Gold** (pressão macroeconômica sobre a inflação).
   * **Deixar as rotinas do Dagster redondas:** quanto em quanto tempo cada fonte roda, na ordem certa de dependência.
@@ -578,20 +581,15 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 
 ---
 
-### 5.3 João Pedro — *PIB Setorial, Commodities, Dagster com dbt, Painel no Metabase e Modelo Preditivo*
+### 5.3 João Pedro — *PIB Setorial, Commodities, Base do `dbt`, Dagster com dbt, Painel no Metabase e Modelo Preditivo*
 
 * **O que ficou pendente de antes:**
   * **Em `bronze/`:** Fundir `ingest_pib.py` + `bronze_pib.py` → `pib.py`, e padronizar `ingest_commodities.py` → `commodities.py` para gravar direto nas tabelas Delta sem depender de `data/raw/` e apontando para os extratores modulares (`inflatrack.clients.pib` e `inflatrack.clients.alphavantage`).
-  * **Em `loaders/`:** Já tem `load_pib.py` e `load_commodities.py` (só precisará trocar o `DROP TABLE` por carga incremental).
   * **Em `tests/`:** Separar os testes de `test_pib.py` e `test_commodities.py`: parsing e regras de colunas em `tests/unit/` e gravação/substituição de partições Delta Lake em `tests/integration/`.
-  * Arrumar os dois avisos simples de formatação no script de commodities.
 * **Para a Entrega 3 (até 03/11):**
-  * **Ajustar as datas do PIB na Silver:** como o PIB divulgado em outubro fala de trimestres que **já passaram**, colocar cada resultado nos meses a que ele se refere, sem misturar com datas futuras.
-  * **Resumir as Commodities por mês na Silver**, com média móvel e desvio-padrão para mostrar altas fortes lá fora.
-  * **Ligar o `dbt` ao Dagster e mostrar a recuperação de falhas:** modelos do `dbt` rodando no Dagster, tentativa automática quando uma API falha (*retry*), reprocessamento de meses passados (*backfill*) e uma demonstração em que você derruba uma dependência de propósito e mostra o que acontece.
-  * **Subir o primeiro painel no Metabase**, lendo a Gold, respondendo a pelo menos uma das 5 perguntas (a E3 exige painel).
+  * **Subir o primeiro painel no Metabase**, respondendo a pelo menos uma das 5 perguntas. Hoje a pergunta 1 lê o IPCA direto do Postgres, de forma provisória; quando a `fct_inflacao_mensal` do Lucas chegar ao `serie`, ela passa a ler de lá.
 * **Para a Entrega 4 (até 24/11):**
-  * **Completar o painel no Metabase** para responder às 5 perguntas de forma clara, lendo também a série do Postgres.
+  * **Completar o painel no Metabase** para responder às 5 perguntas de forma clara, uma pergunta por arquivo em `scripts/sql/metabase/`.
   * **Criar o modelo preditivo (XGBoost ou LightGBM):** prever a tendência de inflação e do reajuste usando médias móveis, câmbio, juros, commodities e efeito do clima, **sempre treinando no passado para prever o futuro** (*walk-forward*, previsão direta e recursiva) e entregando a previsão numa tabela da Gold.
 
 ---
@@ -600,7 +598,7 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 
 * **O que ficou pendente de antes:**
   * **Em `bronze/`:** Fundir `ingest_salario_minimo.py` + `bronze_salario_minimo.py` → `salario_minimo.py`, e `ingest_clima.py` + `bronze_clima.py` → `clima.py`, garantindo um arquivo único por fonte que consome os extratores (`clients/dieese.py` e `clients/inmet.py`) e grava direto em Delta Lake.
-  * **Em `loaders/`:** Já tem `load_salario_minimo.py` e `load_clima.py` prontos e configurados.
+  * **Em `loaders/`:** Já tem `load_salario_minimo.py` e `load_clima.py` prontos e configurados. Eles ainda usam `scripts/sql/setup_duckdb_salario_minimo.sql` e `setup_duckdb_clima.sql`: não apague esses arquivos.
   * **Em `tests/`:** Separar os testes de `test_salario_minimo.py` e `test_clima.py`: parsing de HTML (DIEESE) e JSON (INMET) em `tests/unit/` e gravação Delta de `estacao/`, `medicao/` e `mes/` em `tests/integration/`.
   * **Baixar as medições diárias do INMET:** hoje só o cadastro das estações é baixado e a tabela diária está vazia. Sem isso, o clima não pode virar média mensal nem *lags*. Precisa ser feito primeiro.
   * **Corrigir o bug do `0.0 °C`**, para que zero real continue `0.0` e só leitura vazia vire nulo.
@@ -613,12 +611,12 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 
 ---
 
-### 5.5 Artur — *PIB Internacional (China, EUA e Rússia), Diário de Bordo, Série no Postgres, Catálogo, Linhagem e LGPD*
+### 5.5 Artur — *PIB Internacional (China, EUA e Rússia), Diário de Bordo, Teste da Série no Postgres, Catálogo, Linhagem e LGPD*
 
 * **O que ficou pendente de antes:**
   * **Em `clients/`:** Criar `clients/worldbank.py` extraindo o cliente comum do Banco Mundial.
   * **Em `bronze/`:** Fundir os 6 arquivos de China, EUA e Rússia em um único `pib_internacional.py`.
-  * **Em `loaders/`:** Expandir `loaders/load_pib_china.py` para carregar também EUA e Rússia no DuckDB.
+  * **Em `loaders/`:** Expandir `loaders/load_pib_china.py` para carregar também EUA e Rússia no DuckDB (ele ainda usa `scripts/sql/setup_duckdb_pib_china.sql`: não apague o arquivo enquanto isso for verdade).
   * **Em `tests/`:** Consolidar os testes de `test_pib_china.py`, `test_pib_usa.py` e `test_pib_russia.py`: transformações comuns em `tests/unit/test_pib_internacional.py` e testes de gravação Delta/DuckDB em `tests/integration/test_pib_internacional.py`.
   * **Em `orchestration/assets/`:** Extrair o asset da China de `orchestration/assets/ingestao.py` e criar `orchestration/assets/pib_internacional.py` (cobrindo China, EUA e Rússia de forma unificada com retry e backfill), permitindo a exclusão definitiva do arquivo legado `ingestao.py`.
   * Incluir também as rotinas do Dagster de EUA e Rússia, que estão pendentes.
@@ -626,7 +624,7 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
   * **Organizar o PIB Internacional na Silver e na Gold**, como indicador do cenário externo.
   * **Criar o diário de bordo** (`docs/diario/`) e reconstruir as semanas já passadas com o que cada um registrou, mantendo a documentação do site (`MkDocs`) sem erros.
 * **Para a Entrega 4 (até 24/11):**
-  * **Copiar as séries mensais calculadas para o Postgres (`serie`):** estender a carga que o Lucas começou com o IPCA para as demais séries, com um teste de que os valores são iguais nos dois bancos.
+  * **Garantir que o Postgres mostra o mesmo número que a Gold:** a cópia para o `serie` já existe e cada um coloca as próprias tabelas na lista; a sua parte é conferir que nenhuma tabela da Gold usada pelo painel ficou de fora e escrever o teste de que os valores são iguais nos dois bancos (Seção 4, Nível 5).
   * **Fazer o Catálogo de Dados e o Mapa de Linhagem:** cada tabela e coluna com significado, origem e responsável, e o caminho completo: fonte pública → Bronze → Gold → Postgres → painel, e de volta ao lojista.
   * **Escrever a análise de LGPD:** quais dados são pessoais, a base legal, por quanto tempo ficam e como são descartados; o CNPJ escondido é pseudonimização (e não anonimização); e o risco de reidentificar alguém cruzando duas bases anonimizadas.
   * **Fechar a retrospectiva do semestre** no diário.
@@ -666,3 +664,20 @@ Sempre que qualquer integrante utilizar ferramentas de IA (Claude, Gemini, ChatG
 1. Qual tarefa ou arquivo foi auxiliado pela IA;
 2. O resumo do que foi pedido;
 3. **O que o integrante precisou corrigir ou validar manualmente** (por exemplo: ajustar datas de divulgação do PIB, corrigir tratamento de `0.0 °C` no clima ou trocar validação aleatória por validação temporal no modelo preditivo).
+
+### 6.3 Lições Já Aprendidas (contexto para quem for implementar, pessoa ou agente)
+
+Decisões e armadilhas confirmadas na prática. Antes de mudar algo destes pontos, entenda por quê:
+
+* **O DuckDB aceita um escritor por vez, e o arquivo inteiro trava.** Com uma conexão do Metabase aberta no `inflatrack.duckdb`, mesmo somente leitura, o dbt e os loaders falham com "arquivo já está sendo usado por outro processo". Por isso o Metabase lê **só o PostgreSQL** (`serie`), e o contêiner dele nem monta a pasta `data/duckdb`. No Dagster, todo ativo que abre o arquivo entra no pool `duckdb_writer`.
+* **A Bronze de verdade é o Delta** (`data/parquet/<fonte>/`, só acrescenta e sem `VACUUM`); a `bronze.*` do DuckDB é uma cópia que o loader refaz. Apagar um `.sql` não apaga dado.
+* **Os `scripts/sql/setup_duckdb_*.sql` só saem quando nenhum loader os usa** (`grep` no repositório antes). O dbt não cria a Bronze. Para o loader não depender desses arquivos, use `common.bronze.carregar_duckdb`, que cria a tabela com o esquema do Delta.
+* **A cópia Gold → `serie` apaga e insere sem recriar a tabela:** índices, permissões e RLS criados por migration continuam valendo. Se a estrutura de uma tabela da Gold mudar, a cópia falha sem alterar nada.
+* **O painel mora no Git:** o Metabase gratuito não exporta dashboards. `scripts/metabase_painel.py` recria tudo pela API a partir de `scripts/sql/metabase/`; mudança feita só na interface é sobrescrita.
+* **dbt:** `dbt_project.yml` e `profiles.yml` ficam na raiz; os schemas `silver` e `gold` saem da macro `generate_schema_name`. No dbt 1.12, testes com parâmetros vão dentro de `arguments:`. O `avg` e o `stddev` do DuckDB devolvem `DOUBLE`: faça `cast` para `DECIMAL`.
+* **Um erro de sintaxe em qualquer loader quebra o import do pacote inteiro** (atalhos em `src/inflatrack/__init__.py`): se todos os testes caírem de uma vez, procure o arquivo com erro.
+* **Gravar Delta em pasta temporária funciona no Windows:** não marque teste como `xfail` por isso.
+* **Testes do Dagster que materializam ativos** passam uma instância explícita (`instance_for_test()`): a efêmera quebra quando roda depois dos testes de agendamento.
+* **Git Bash no Windows converte caminhos** como `/duckdb` em `C:/Program Files/Git/...` nos argumentos do `docker`. Use `MSYS_NO_PATHCONV=1`.
+* **No Postgres, `public.observacao` só acrescenta:** com revisão do IBGE, vale a linha mais recente (`ingerido_em`).
+* **Portas:** Dagster em `localhost:3000`, Metabase em `localhost:3001`.
