@@ -81,7 +81,7 @@ COMMODITY_CONFIGS = {
     "COTTON": {
         "interval": "monthly",
         "category": "Agrícola",
-        "unit": "USD/metric ton",
+        "unit": "cents/pound",  # a API devolve "cents per pound" (conferido na Bronze)
         "name": "Algodão",
     },
     "SUGAR": {

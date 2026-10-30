@@ -1,83 +1,92 @@
-import duckdb
-import os
-from pathlib import Path
+"""Carga da Bronze Delta de Commodities (Alpha Vantage) no DuckDB analítico compartilhado.
+
+A tabela Delta ``data/parquet/commodities/cotacao/`` (particionada por ``symbol``) é
+espelhada em ``bronze.commodities_cotacao``, sem nenhuma regra de negócio. A tabela é
+criada na primeira carga com o esquema do próprio Delta (``bronze.carregar_duckdb``),
+então não depende de nenhum ``setup_duckdb_*.sql``.
+
+* ``substitui`` (padrão): troca as linhas de cada ``symbol`` presente no Delta, como o
+  próprio Delta faz a cada coleta (a Alpha Vantage devolve a série inteira).
+* ``acrescenta``: insere só as cotações que ainda não estão lá (chave com o preço).
+
+Uso::
+
+    uv run python -m inflatrack.loaders.load_commodities
+    uv run python -m inflatrack.loaders.load_commodities --modo acrescenta
+"""
+
+from __future__ import annotations
+
+import argparse
 import logging
+import sys
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+import duckdb
+from deltalake import DeltaTable
 
-COMMODITY_CONFIGS = {
-    "WTI": {"category": "Energia", "unit": "USD/barrel", "name": "Petróleo WTI"},
-    "BRENT": {"category": "Energia", "unit": "USD/barrel", "name": "Petróleo Brent"},
-    "NATURAL_GAS": {"category": "Energia", "unit": "USD/MMBtu", "name": "Gás Natural"},
-    "WHEAT": {"category": "Agrícola", "unit": "USD/metric ton", "name": "Trigo"},
-    "CORN": {"category": "Agrícola", "unit": "USD/metric ton", "name": "Milho"},
-    "COTTON": {"category": "Agrícola", "unit": "USD/metric ton", "name": "Algodão"},
-    "SUGAR": {"category": "Agrícola", "unit": "cents/pound", "name": "Açúcar"},
-    "COFFEE": {"category": "Agrícola", "unit": "cents/pound", "name": "Café"},
-    "ALL_COMMODITIES": {"category": "Geral", "unit": "index (2016=100)", "name": "Índice Global"}
+from inflatrack.common import bronze
+
+logger = logging.getLogger("inflatrack.load_commodities")
+
+DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
+DELTA_PADRAO = Path("data/parquet/commodities")
+TABELA_DELTA = "cotacao"
+TABELA_DUCKDB = "bronze.commodities_cotacao"
+
+# Colunas que identificam o que é "a mesma linha" em cada modo de bronze.carregar_duckdb.
+COLUNAS_POR_MODO = {
+    "substitui": ("symbol",),
+    "acrescenta": ("symbol", "data_referencia", "preco"),
 }
 
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb.sql"
 
-def get_db_path():
-    base_dir = Path(os.getcwd())
-    db_dir = base_dir / "data" / "duckdb"
-    db_dir.mkdir(parents=True, exist_ok=True)
-    return db_dir / "inflatrack.duckdb"
+def carregar_bronze(
+    conexao: duckdb.DuckDBPyConnection,
+    delta_dir: Path,
+    modo: str = "substitui",
+) -> int:
+    """Espelha a tabela Delta ``cotacao`` em ``bronze.commodities_cotacao``.
 
-def get_parquet_dir():
-    base_dir = Path(os.getcwd())
-    return base_dir / "data" / "parquet"
+    Devolve o total de linhas da tabela no DuckDB depois da carga.
+    """
+    if modo not in COLUNAS_POR_MODO:
+        modos = tuple(COLUNAS_POR_MODO)
+        raise ValueError(f"Modo de carga inválido: {modo!r}. Escolha entre {modos}")
 
-def load_data():
-    db_path = get_db_path()
-    parquet_dir = get_parquet_dir()
-    
-    logger.info(f"Conectando ao banco de dados: {db_path}")
-    conn = duckdb.connect(str(db_path))
+    caminho = bronze.caminho(delta_dir, TABELA_DELTA)
+    if not DeltaTable.is_deltatable(caminho):
+        raise FileNotFoundError(f"Tabela Delta de cotações não encontrada em {caminho}")
 
-    # Esquema idempotente (CREATE ... IF NOT EXISTS), como nas cargas das outras fontes:
-    # o banco não precisa ter sido preparado por scripts/init_db.py.
-    conn.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
+    origem = DeltaTable(caminho).to_pyarrow_table()
+    conexao.execute("CREATE SCHEMA IF NOT EXISTS bronze")
+    inseridas = bronze.carregar_duckdb(conexao, origem, TABELA_DUCKDB, modo, COLUNAS_POR_MODO[modo])
+    total = conexao.execute(f"SELECT count(*) FROM {TABELA_DUCKDB}").fetchone()[0]
+    logger.info("%s (%s): %d linhas inseridas, %d no total", TABELA_DUCKDB, modo, inseridas, total)
+    return total
 
-    # Atualizar a tabela de dimensões (commodity)
-    logger.info("Atualizando tabela 'commodity'...")
-    for symbol, config in COMMODITY_CONFIGS.items():
-        conn.execute("""
-            INSERT INTO commodity (symbol, name, category, unit)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT (symbol) DO UPDATE SET
-                name = EXCLUDED.name,
-                category = EXCLUDED.category,
-                unit = EXCLUDED.unit
-        """, (symbol, config["name"], config["category"], config["unit"]))
-    
-    # Carregar todos os parquets
-    parquet_pattern = str(parquet_dir / "*.parquet")
-    logger.info(f"Carregando dados dos arquivos parquet: {parquet_pattern}")
-    
-    # Verifica se existem arquivos parquet
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db", default=str(DB_PADRAO), help="Caminho do banco DuckDB")
+    parser.add_argument(
+        "--delta-dir", default=str(DELTA_PADRAO), help="Diretório da Bronze Delta de commodities"
+    )
+    parser.add_argument("--modo", choices=tuple(COLUNAS_POR_MODO), default="substitui")
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    db = Path(args.db)
+    db.parent.mkdir(parents=True, exist_ok=True)
+
     try:
-        # Tenta contar para ver se a tabela/arquivos existem e estão legíveis
-        count = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{parquet_pattern}')").fetchone()[0]
-        logger.info(f"Encontrados {count} registros nos arquivos parquet.")
-    except Exception as e:
-        logger.warning(f"Nenhum arquivo parquet encontrado ou erro ao ler: {e}")
-        return
+        with duckdb.connect(str(db)) as conexao:
+            carregar_bronze(conexao, Path(args.delta_dir), modo=args.modo)
+    except FileNotFoundError as erro:
+        logger.error("%s — rode `just bronze-commodities` antes", erro)
+        return 1
+    return 0
 
-    # Fazer o UPSERT na commodity_cotacao
-    logger.info("Executando UPSERT na tabela 'commodity_cotacao'...")
-    conn.execute(f"""
-        INSERT INTO commodity_cotacao (symbol, data_referencia, preco)
-        SELECT symbol, data_referencia, preco
-        FROM read_parquet('{parquet_pattern}')
-        ON CONFLICT (symbol, data_referencia) DO UPDATE SET
-            preco = EXCLUDED.preco
-    """)
-    
-    logger.info("Carga concluída com sucesso.")
-    conn.close()
 
 if __name__ == "__main__":
-    load_data()
+    sys.exit(main())

@@ -14,9 +14,9 @@ def init_db():
     db_path = get_db_path()
     scripts_dir = Path(os.getcwd()) / "scripts" / "sql"
 
-    # Uma fonte por arquivo (setup_duckdb.sql = commodities,
-    # setup_duckdb_pib.sql = contas nacionais). Todos são idempotentes:
-    # só CREATE ... IF NOT EXISTS e CREATE OR REPLACE VIEW.
+    # Uma fonte por arquivo (setup_duckdb_clima.sql, setup_duckdb_macro.sql...). Todos
+    # são idempotentes: só CREATE ... IF NOT EXISTS e CREATE OR REPLACE VIEW. PIB e
+    # commodities não têm arquivo: o loader cria bronze.* com o esquema do Delta.
     sql_paths = sorted(scripts_dir.glob("setup_duckdb*.sql"))
 
     print(f"Inicializando banco de dados DuckDB em: {db_path}")

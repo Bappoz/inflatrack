@@ -1,17 +1,16 @@
-"""Carga do Parquet das Contas Nacionais Trimestrais para o DuckDB.
+"""Carga da Bronze Delta do PIB (SIDRA 1846) no DuckDB analítico compartilhado.
+
+A tabela Delta ``data/parquet/pib/valor/`` é espelhada em ``bronze.pib_valor``, sem
+nenhuma regra de negócio. A tabela é criada na primeira carga com o esquema do próprio
+Delta (``bronze.carregar_duckdb``), então não depende de nenhum ``setup_duckdb_*.sql``.
+
+Só acrescenta, como o Delta: cada divulgação do IBGE revisa trimestres anteriores, e a
+revisão chega como linha nova (o valor está na chave). Escolher a versão mais recente é
+trabalho da Silver (``stg_pib__valor``), não da carga.
 
 Uso::
 
-    uv run python -m inflatrack.load_pib
-
-Vai para o **mesmo** ``data/duckdb/inflatrack.duckdb`` das commodities, em
-tabelas próprias (``pib_setor``, ``pib_valor``). O racional está no cabeçalho
-de ``scripts/setup_duckdb_pib.sql``: a pergunta do projeto cruza fontes, e
-cruzar dentro de um arquivo é JOIN; entre arquivos, ATTACH em toda sessão.
-
-Idempotente: UPSERT por ``(codigo_setor, data_referencia)``. Revisão do IBGE
-em trimestre antigo sobrescreve o valor, que é o comportamento certo — a série
-revisada é a série oficial.
+    uv run python -m inflatrack.loaders.load_pib
 """
 
 from __future__ import annotations
@@ -22,76 +21,49 @@ import sys
 from pathlib import Path
 
 import duckdb
+from deltalake import DeltaTable
+
+from inflatrack.bronze import bronze_pib
+from inflatrack.common import bronze
 
 logger = logging.getLogger("inflatrack.load_pib")
 
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
-PARQUET_DIR_PADRAO = Path("data/parquet/pib")
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb_pib.sql"
+DELTA_PADRAO = Path(bronze_pib.DIRETORIO_PADRAO)
+TABELA_DUCKDB = "bronze.pib_valor"
 
 
-def aplicar_esquema(conexao: duckdb.DuckDBPyConnection, caminho: Path) -> None:
-    """Cria tabelas e views do PIB. Só usa CREATE IF NOT EXISTS / OR REPLACE."""
-    conexao.execute(caminho.read_text(encoding="utf-8"))
+def carregar(conexao: duckdb.DuckDBPyConnection, delta_dir: Path) -> int:
+    """Espelha a tabela Delta ``valor`` em ``bronze.pib_valor``. Devolve linhas inseridas."""
+    caminho = bronze.caminho(delta_dir, bronze_pib.TABELA)
+    if not DeltaTable.is_deltatable(caminho):
+        raise FileNotFoundError(f"Tabela Delta do PIB não encontrada em {caminho}")
 
-
-def carregar(conexao: duckdb.DuckDBPyConnection, parquet_dir: Path) -> int:
-    padrao = str(parquet_dir / "*.parquet").replace("\\", "/")
-
-    total = conexao.execute("SELECT count(*) FROM read_parquet(?)", [padrao]).fetchone()[0]
-    logger.info("%d linhas em %s", total, padrao)
-    if not total:
-        return 0
-
-    # A dimensão nasce do próprio Parquet: nome e grupo vêm dos metadados do
-    # SIDRA na ingestão, então renomear um setor na origem se propaga sozinho.
-    conexao.execute(
-        f"""
-        INSERT INTO pib_setor (codigo, nome, grupo, nucleo)
-        SELECT DISTINCT ON (codigo_setor) codigo_setor, setor, grupo, nucleo
-        FROM read_parquet('{padrao}')
-        ORDER BY codigo_setor, data_referencia DESC
-        ON CONFLICT (codigo) DO UPDATE SET
-            nome = EXCLUDED.nome,
-            grupo = EXCLUDED.grupo,
-            nucleo = EXCLUDED.nucleo
-        """
-    )
-
-    conexao.execute(
-        f"""
-        INSERT INTO pib_valor (codigo_setor, data_referencia, ano, trimestre, valor_milhoes_brl)
-        SELECT codigo_setor, data_referencia, ano, trimestre, valor_milhoes_brl
-        FROM read_parquet('{padrao}')
-        ON CONFLICT (codigo_setor, data_referencia) DO UPDATE SET
-            valor_milhoes_brl = EXCLUDED.valor_milhoes_brl
-        """
-    )
-    return conexao.execute("SELECT count(*) FROM pib_valor").fetchone()[0]
+    origem = DeltaTable(caminho).to_pyarrow_table()
+    conexao.execute("CREATE SCHEMA IF NOT EXISTS bronze")
+    return bronze.carregar_duckdb(conexao, origem, TABELA_DUCKDB, "acrescenta", bronze_pib.CHAVE)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--db", default=str(DB_PADRAO))
-    parser.add_argument("--parquet-dir", default=str(PARQUET_DIR_PADRAO))
-    parser.add_argument("--schema", default=str(SCHEMA_SQL))
+    parser.add_argument("--db", default=str(DB_PADRAO), help="Caminho do banco DuckDB")
+    parser.add_argument(
+        "--delta-dir", default=str(DELTA_PADRAO), help="Diretório da Bronze Delta do PIB"
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
-    parquet_dir = Path(args.parquet_dir)
-    if not any(parquet_dir.glob("*.parquet")):
-        logger.error("nenhum Parquet em %s — rode `just pib-ingest` antes", parquet_dir)
-        return 1
-
     db = Path(args.db)
     db.parent.mkdir(parents=True, exist_ok=True)
-    logger.info("conectando em %s", db)
-    with duckdb.connect(str(db)) as conexao:
-        aplicar_esquema(conexao, Path(args.schema))
-        linhas = carregar(conexao, parquet_dir)
-        setores = conexao.execute("SELECT count(*) FROM pib_setor").fetchone()[0]
-    logger.info("carga concluída: %d setores, %d observações em pib_valor", setores, linhas)
+
+    try:
+        with duckdb.connect(str(db)) as conexao:
+            novas = carregar(conexao, Path(args.delta_dir))
+            total = conexao.execute(f"SELECT count(*) FROM {TABELA_DUCKDB}").fetchone()[0]
+    except FileNotFoundError as erro:
+        logger.error("%s — rode `just bronze-pib` antes", erro)
+        return 1
+    logger.info("%s: %d linhas novas, %d no total", TABELA_DUCKDB, novas, total)
     return 0
 
 

@@ -20,6 +20,12 @@ def pib_parquet(context: AssetExecutionContext) -> None:
     executar(context, ingest_pib.main)
 
 
-@asset(group_name="pib", deps=[pib_parquet], pool=POOL_DUCKDB, kinds={"python", "duckdb"})
+@asset(
+    group_name="pib",
+    deps=[pib_parquet],
+    pool=POOL_DUCKDB,
+    kinds={"python", "duckdb"},
+    description="Espelha o Delta do PIB em bronze.pib_valor no DuckDB (só acrescenta).",
+)
 def pib_duckdb(context: AssetExecutionContext) -> None:
     executar(context, load_pib.main)
