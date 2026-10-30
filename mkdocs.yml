@@ -108,6 +108,7 @@ nav:
     - E2 — PIB dos EUA: evidencias/e2/pib_usa.md
     - E2 — PIB da Rússia: evidencias/e2/pib_russia.md
     - E2 — Macroeconomia (Dólar e Selic): evidencias/e2/macroeconomia.md
+    - E3 — Dagster (retry, backfill e falha): evidencias/e3/dagster_recuperacao.md
     - Uso de IA: evidencias/uso_ia.md
 
 extra_css:
