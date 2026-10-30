@@ -1,7 +1,9 @@
 """Partições dos ativos e a regra que liga cada mês ao agregado do SIDRA.
 
-Só o IPCA/INPC é particionado: o código de ingestão das demais fontes já baixa a
-janela inteira e faz *upsert*, então partição ali só multiplicaria chamadas de API.
+Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados, porque nos dois a coleta já é
+uma requisição por período: a partição não custa chamada a mais e permite reprocessar um
+período passado (*backfill*). As demais fontes baixam a série inteira por chamada, e
+partição ali só multiplicaria chamadas de API.
 """
 
 from __future__ import annotations
@@ -9,12 +11,22 @@ from __future__ import annotations
 from collections.abc import Iterator
 from datetime import date
 
-from dagster import MonthlyPartitionsDefinition
+from dagster import MonthlyPartitionsDefinition, TimeWindowPartitionsDefinition
 
 # O IPCA trocou de agregado no SIDRA duas vezes; a partição mensal esconde isso.
 IPCA_MENSAL = MonthlyPartitionsDefinition(start_date="2006-07-01")
 INPC_MENSAL = MonthlyPartitionsDefinition(start_date="2020-01-01")
 IPCA_INDICE_MENSAL = MonthlyPartitionsDefinition(start_date="1979-12-01")
+
+# PIB (SIDRA 1846): o ingestor faz uma requisição por ano (`--de`/`--ate`), e a série começa
+# em 1996. `end_offset=1` inclui o ano corrente, ainda incompleto (o 1T sai em junho).
+PIB_ANUAL = TimeWindowPartitionsDefinition(
+    cron_schedule="0 0 1 1 *", start="1996", fmt="%Y", end_offset=1
+)
+
+# Cada divulgação do IBGE revisa trimestres anteriores, inclusive do ano passado: o
+# agendamento relê o ano corrente e o anterior. A Bronze só acrescenta o que mudou.
+ANOS_RELIDOS_PIB = 1
 
 # (primeiro mês, último mês, agregado) — mesma divisão da receita `just seed`.
 VIGENCIA_AGREGADOS_IPCA = (

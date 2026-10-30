@@ -1,23 +1,30 @@
-"""Ativos da fonte `pib`: SIDRA 1846 → Bronze em Delta e Parquet → DuckDB.
+"""Ativos da fonte `pib`: SIDRA 1846 → Bronze em Delta → `bronze.pib_valor` no DuckDB.
 
-Modelo para os módulos das outras fontes: um arquivo por fonte em `orchestration/assets/`,
-carregado sozinho por `orchestration/definitions.py`.
+A coleta é particionada por ano (`partitions.PIB_ANUAL`): o ingestor já faz uma requisição
+por ano, então reprocessar anos passados (*backfill*) custa só as requisições desses anos.
+Um backfill de vários anos roda numa execução só (`BackfillPolicy.single_run`), com
+`--de`/`--ate`. A carga no DuckDB não é particionada: ela espelha o Delta inteiro e só
+acrescenta linhas novas, então rodar de novo não duplica nada.
 """
 
-from dagster import AssetExecutionContext, asset
+from dagster import AssetExecutionContext, BackfillPolicy, asset
 
 from inflatrack import ingest_pib, load_pib
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
+from orchestration.partitions import PIB_ANUAL
 
 
 @asset(
     group_name="pib",
+    partitions_def=PIB_ANUAL,
+    backfill_policy=BackfillPolicy.single_run(),
     retry_policy=RETRY_REDE,
-    kinds={"python", "parquet"},
-    description="Contas nacionais trimestrais (SIDRA 1846), 1996 até hoje.",
+    kinds={"python", "delta"},
+    description="Contas nacionais trimestrais (SIDRA 1846), uma partição por ano desde 1996.",
 )
 def pib_parquet(context: AssetExecutionContext) -> None:
-    executar(context, ingest_pib.main)
+    faixa = context.partition_key_range
+    executar(context, ingest_pib.main, "--de", faixa.start, "--ate", faixa.end)
 
 
 @asset(

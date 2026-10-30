@@ -17,7 +17,7 @@ from dagster import (
     schedule,
 )
 
-from orchestration.partitions import janela_de_releitura
+from orchestration.partitions import ANOS_RELIDOS_PIB, janela_de_releitura
 
 FUSO = "America/Sao_Paulo"
 
@@ -70,6 +70,20 @@ def _agendamento_sidra(job: JobDefinition, ativo: str):
     return _agendamento
 
 
+@schedule(
+    name="pib_job_divulgacao",
+    job=pib_job,
+    # Diário só nos meses de divulgação das contas trimestrais.
+    cron_schedule="0 9 * 3,6,9,12 *",
+    execution_timezone=FUSO,
+)
+def agendamento_pib(context: ScheduleEvaluationContext):
+    """Relê o ano corrente e o anterior: a divulgação nova revisa trimestres já publicados."""
+    execucao = context.scheduled_execution_time
+    for ano in range(execucao.year - ANOS_RELIDOS_PIB, execucao.year + 1):
+        yield RunRequest(run_key=f"pib-{ano}-{execucao:%Y-%m-%d}", partition_key=str(ano))
+
+
 SCHEDULES = [
     _agendamento_sidra(ipca_job, "ipca"),
     _agendamento_sidra(inpc_job, "inpc"),
@@ -79,8 +93,7 @@ SCHEDULES = [
     # 1×/dia: 9 requisições cabem na cota de 25/dia.
     ScheduleDefinition(job=commodities_job, cron_schedule="0 8 * * *", execution_timezone=FUSO),
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
-    # Diário só nos meses de divulgação das contas trimestrais.
-    ScheduleDefinition(job=pib_job, cron_schedule="0 9 * 3,6,9,12 *", execution_timezone=FUSO),
+    agendamento_pib,
     # 1×/mês: o Banco Mundial revisa fora de calendário.
     ScheduleDefinition(job=pib_china_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),

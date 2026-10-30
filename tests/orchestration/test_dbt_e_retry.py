@@ -2,7 +2,7 @@
 
 import httpx
 import pytest
-from dagster import AssetKey, RetryPolicy, asset, materialize
+from dagster import AssetKey, RetryPolicy, asset, instance_for_test, materialize
 
 from orchestration.assets import commodities, pib
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
@@ -72,13 +72,13 @@ def test_dagster_tenta_de_novo_quando_a_api_devolve_503() -> None:
     def ingestao_instavel(context) -> None:
         executar(context, ingestor_que_cai_uma_vez)
 
-    resultado = materialize([ingestao_instavel], raise_on_error=False)
+    with instance_for_test() as instancia:
+        resultado = materialize([ingestao_instavel], instance=instancia, raise_on_error=False)
+        eventos = resultado.all_events
 
     assert resultado.success
     assert len(chamadas) == 2
-    tentativas = [
-        evento for evento in resultado.all_events if evento.event_type_value == "STEP_UP_FOR_RETRY"
-    ]
+    tentativas = [evento for evento in eventos if evento.event_type_value == "STEP_UP_FOR_RETRY"]
     assert len(tentativas) == 1
 
 
@@ -93,5 +93,6 @@ def test_sem_retry_a_falha_da_api_derruba_o_ativo() -> None:
     def ingestao_sem_retry(context) -> None:
         executar(context, ingestor_fora_do_ar)
 
-    resultado = materialize([ingestao_sem_retry], raise_on_error=False)
+    with instance_for_test() as instancia:
+        resultado = materialize([ingestao_sem_retry], instance=instancia, raise_on_error=False)
     assert not resultado.success
