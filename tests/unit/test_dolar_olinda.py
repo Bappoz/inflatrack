@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 import duckdb
 import pytest
-
 from inflatrack.dolar_olinda import OlindaClient, OlindaError
 from inflatrack.ingest_dolar import carregar, transformar
 

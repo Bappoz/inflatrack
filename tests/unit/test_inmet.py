@@ -2,7 +2,6 @@ from pathlib import Path
 
 import duckdb
 import pytest
-
 from inflatrack.inmet import (
     InmetError,
     transformar_clima_diario,

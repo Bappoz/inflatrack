@@ -4,7 +4,6 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 import pytest
-
 from inflatrack.load_commodities import load_data
 
 

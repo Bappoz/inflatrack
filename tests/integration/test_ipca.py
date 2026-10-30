@@ -20,7 +20,7 @@ from deltalake import DeltaTable
 
 from inflatrack import bronze_ipca, sidra
 
-FIXTURES = Path(__file__).parent / "fixtures" / "ipca"
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "ipca"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
 
 

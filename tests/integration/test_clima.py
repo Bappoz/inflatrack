@@ -14,7 +14,7 @@ from deltalake import DeltaTable
 
 from inflatrack import bronze_clima
 
-FIXTURES = Path(__file__).parent / "fixtures" / "clima"
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "clima"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
 
 

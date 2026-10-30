@@ -5,11 +5,11 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
-
-from inflatrack import bronze, ingest_commodities
 from inflatrack.alphavantage import AlphaVantageClient
 
-FIXTURES = Path(__file__).parent / "fixtures" / "commodities"
+from inflatrack import bronze, ingest_commodities
+
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "commodities"
 AGORA = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
 
 

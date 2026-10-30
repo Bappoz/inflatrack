@@ -2,7 +2,6 @@ from pathlib import Path
 
 import duckdb
 import pytest
-
 from inflatrack.dieese import DieeseError, extrair_tabela
 from inflatrack.load_salario_minimo import carregar
 

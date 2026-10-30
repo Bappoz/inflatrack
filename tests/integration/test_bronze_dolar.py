@@ -8,11 +8,11 @@ from pathlib import Path
 
 import pytest
 from deltalake import DeltaTable
-
-from inflatrack import bronze_dolar
 from inflatrack.dolar_olinda import OlindaError
 
-FIXTURE_DOLAR = Path(__file__).parent / "fixtures" / "dolar" / "olinda_amostra.json"
+from inflatrack import bronze_dolar
+
+FIXTURE_DOLAR = Path(__file__).parent.parent / "fixtures" / "dolar" / "olinda_amostra.json"
 
 
 @pytest.fixture

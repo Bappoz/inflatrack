@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 from deltalake import DeltaTable
-
-from inflatrack import bronze_selic
 from inflatrack.selic_sgs import SGSError
 
-FIXTURE_SELIC = Path(__file__).parent / "fixtures" / "selic" / "sgs_amostra.json"
+from inflatrack import bronze_selic
+
+FIXTURE_SELIC = Path(__file__).parent.parent / "fixtures" / "selic" / "sgs_amostra.json"
 
 
 @pytest.fixture

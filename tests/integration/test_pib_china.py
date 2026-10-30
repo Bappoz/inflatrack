@@ -2,10 +2,10 @@ from pathlib import Path
 
 import duckdb
 import pytest
-
-from inflatrack import bronze_pib_china
 from inflatrack.ingest_pib_china import WorldBankError, transformar
 from inflatrack.load_pib_china import carregar
+
+from inflatrack import bronze_pib_china
 
 
 def payload(*observacoes: tuple[str, float | None]) -> list:

@@ -8,7 +8,7 @@ import pytest
 
 from inflatrack import bronze, bronze_pib
 
-FIXTURES = Path(__file__).parent / "fixtures" / "pib"
+FIXTURES = Path(__file__).parent.parent / "fixtures" / "pib"
 AGORA = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
 
 

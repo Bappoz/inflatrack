@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 import duckdb
 import pytest
-
 from inflatrack.ingest_selic import carregar, transformar
 from inflatrack.selic_sgs import SGSClient, SGSError
 
