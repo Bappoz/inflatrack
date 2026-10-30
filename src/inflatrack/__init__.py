@@ -1,58 +1,83 @@
 """Pacote principal inflatrack."""
 
+import importlib
 import sys
 
-# 1. Registrar common.bronze primeiro para evitar dependência circular
-from inflatrack.common import bronze
+# 1. Subpacotes principais
+from inflatrack import clients, common, loaders  # noqa: F401
 
-sys.modules["inflatrack.bronze"] = bronze
-
-# 2. Importar os clients e registrar em sys.modules para retrocompatibilidade
-from inflatrack.clients import (  # noqa: E402
-    alphavantage,
-    dieese,
-    dolar_olinda,
-    inmet,
-    pib,
-    selic_sgs,
-    sidra,
-)
-
-sys.modules["inflatrack.alphavantage"] = alphavantage
-sys.modules["inflatrack.dieese"] = dieese
-sys.modules["inflatrack.dolar_olinda"] = dolar_olinda
-sys.modules["inflatrack.inmet"] = inmet
-sys.modules["inflatrack.pib"] = pib
-sys.modules["inflatrack.selic_sgs"] = selic_sgs
-sys.modules["inflatrack.sidra"] = sidra
-
-# 3. Importar os loaders e registrar em sys.modules
-from inflatrack.loaders import (  # noqa: E402
-    load_clima,
-    load_commodities,
-    load_pib,
-    load_pib_china,
-    load_salario_minimo,
-)
-
-sys.modules["inflatrack.load_clima"] = load_clima
-sys.modules["inflatrack.load_commodities"] = load_commodities
-sys.modules["inflatrack.load_pib"] = load_pib
-sys.modules["inflatrack.load_pib_china"] = load_pib_china
-sys.modules["inflatrack.load_salario_minimo"] = load_salario_minimo
-
-__all__ = [
+# 2. Clientes para compatibilidade
+_CLIENT_NAMES = [
     "alphavantage",
-    "bronze",
     "dieese",
     "dolar_olinda",
     "inmet",
+    "pib",
+    "selic_sgs",
+    "sidra",
+]
+for _name in _CLIENT_NAMES:
+    _mod = importlib.import_module(f"inflatrack.clients.{_name}")
+    sys.modules[f"inflatrack.{_name}"] = _mod
+    setattr(sys.modules[__name__], _name, _mod)
+
+# 3. Loaders para compatibilidade
+_LOADER_NAMES = [
     "load_clima",
     "load_commodities",
     "load_pib",
     "load_pib_china",
     "load_salario_minimo",
-    "pib",
-    "selic_sgs",
-    "sidra",
+]
+for _name in _LOADER_NAMES:
+    _mod = importlib.import_module(f"inflatrack.loaders.{_name}")
+    sys.modules[f"inflatrack.{_name}"] = _mod
+    setattr(sys.modules[__name__], _name, _mod)
+
+# 4. Módulos bronze_* primeiro (pois ingest_* dependem de bronze_*)
+_BRONZE_NAMES = [
+    "bronze_clima",
+    "bronze_dolar",
+    "bronze_ipca",
+    "bronze_pib",
+    "bronze_pib_china",
+    "bronze_pib_russia",
+    "bronze_pib_usa",
+    "bronze_salario_minimo",
+    "bronze_selic",
+]
+for _name in _BRONZE_NAMES:
+    _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
+    sys.modules[f"inflatrack.{_name}"] = _mod
+    setattr(sys.modules[__name__], _name, _mod)
+
+# 5. Módulos ingest_*
+_INGEST_NAMES = [
+    "ingest",
+    "ingest_clima",
+    "ingest_commodities",
+    "ingest_dolar",
+    "ingest_pib",
+    "ingest_pib_china",
+    "ingest_pib_russia",
+    "ingest_pib_usa",
+    "ingest_salario_minimo",
+    "ingest_selic",
+]
+for _name in _INGEST_NAMES:
+    _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
+    sys.modules[f"inflatrack.{_name}"] = _mod
+    setattr(sys.modules[__name__], _name, _mod)
+
+from inflatrack import bronze  # noqa: E402, F401
+
+__all__ = [
+    "bronze",
+    "clients",
+    "common",
+    "loaders",
+    *_CLIENT_NAMES,
+    *_LOADER_NAMES,
+    *_BRONZE_NAMES,
+    *_INGEST_NAMES,
 ]

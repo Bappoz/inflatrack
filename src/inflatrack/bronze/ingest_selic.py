@@ -22,7 +22,7 @@ logger = logging.getLogger("inflatrack.ingest_selic")
 BRONZE_DIR_PADRAO = Path("data/parquet/selic")
 RAW_DIR_PADRAO = Path("data/raw/bcb")
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
-SCHEMA_SQL = Path(__file__).resolve().parents[2] / "scripts" / "setup_duckdb_macro.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "setup_duckdb_macro.sql"
 
 
 def salvar_raw(data: list[dict], destino: Path, inicio: date, fim: date) -> Path:
