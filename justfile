@@ -101,7 +101,7 @@ bronze-ipca-checar:
 
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:
-    docker compose cp sql/verificar_carga.sql db:/tmp/verificar_carga.sql
+    docker compose cp scripts/sql/verificar_carga.sql db:/tmp/verificar_carga.sql
     docker compose exec -T db psql -U {{PG_USER}} -d {{PG_DB}} -f /tmp/verificar_carga.sql
 
 # Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.

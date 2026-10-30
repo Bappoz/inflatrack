@@ -15,7 +15,9 @@ logger = logging.getLogger("inflatrack.load_salario_minimo")
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 PARQUET_PADRAO = Path("data/parquet/dieese/salario_minimo.parquet")
 DELTA_PADRAO = Path("data/parquet/salario_minimo")
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "setup_duckdb_salario_minimo.sql"
+SCHEMA_SQL = (
+    Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb_salario_minimo.sql"
+)
 
 MODOS_CARGA = ("substitui", "so_acrescenta")
 

@@ -13,7 +13,7 @@ logger = logging.getLogger("inflatrack.load_pib_china")
 
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 PARQUET_PADRAO = Path("data/parquet/pib_china/pib_china.parquet")
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "setup_duckdb_pib_china.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb_pib_china.sql"
 
 
 def carregar(conexao: duckdb.DuckDBPyConnection, parquet: Path) -> int:

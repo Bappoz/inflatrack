@@ -18,7 +18,7 @@ COMMODITY_CONFIGS = {
     "ALL_COMMODITIES": {"category": "Geral", "unit": "index (2016=100)", "name": "Índice Global"}
 }
 
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "setup_duckdb.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb.sql"
 
 def get_db_path():
     base_dir = Path(os.getcwd())

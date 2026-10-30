@@ -27,7 +27,7 @@ logger = logging.getLogger("inflatrack.load_pib")
 
 DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 PARQUET_DIR_PADRAO = Path("data/parquet/pib")
-SCHEMA_SQL = Path("scripts/setup_duckdb_pib.sql")
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb_pib.sql"
 
 
 def aplicar_esquema(conexao: duckdb.DuckDBPyConnection, caminho: Path) -> None:
