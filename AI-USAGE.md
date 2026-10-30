@@ -1111,6 +1111,37 @@ de tarefas nessa linha.
 - Criou `tests/orchestration/test_dbt_e_retry.py` (grafo, pool, grupos, checks, política de retry e uma falha HTTP 503 seguida de sucesso na nova tentativa) e o `dbt/README.md` para os colegas.
 - Verificado: 146 testes passam, `ruff` limpo, `dbt build` 54/54, e `dagster asset materialize --select kind:dbt` com `RUN_SUCCESS`.
 - Ainda NÃO feito: o backfill (aguarda a escolha entre IPCA e PIB por ano) e a demonstração de queda de dependência.
+
+**Continuação (2026-10-30, tarde)**
+- A pedido do integrante, retirou a linha de coautoria do Claude dos commits locais (reescrita de mensagens antes do push, conteúdo inalterado) e descartou o stash antigo.
+- Backfill do PIB por ano no Dagster (`PIB_ANUAL`, `BackfillPolicy.single_run`, agendamento que relê o ano corrente e o anterior), com testes de nível 4 e retry testado pelo caminho real do ingestor (SIDRA falso com HTTP 503).
+- Backfill real de 2025 a 2026: 138 linhas lidas do SIDRA e 0 novas na Bronze.
+- Demonstração de queda de dependência: a pasta do Delta do PIB foi movida, o loader falhou, o dbt não executou e os dados ficaram intactos; a pasta foi restaurada com os hashes dos 97 arquivos idênticos, e a retomada terminou em `RUN_SUCCESS`. Registrado em `docs/evidencias/e3/dagster_recuperacao.md`.
+- Pergunta 1 do Metabase ("inflação acumulada do meu setor em 12 meses"): consulta SQL sobre o IPCA oficial que já está no Postgres (`scripts/sql/metabase/p1_inflacao_12m_por_setor.sql`), **provisória** até existir a `gold.fct_inflacao_mensal`. Conferida contra o produto das 12 variações mensais: Índice geral 4,58% = 4,58% e Vestuário 3,34% = 3,34%; Alimentação 4,66% contra 4,64%, pelo arredondamento das mensais.
+- Revisou o `PLAN_E3_E4.md` para a Squad: quadro "Atualização de 30/10", a regra de não apagar `setup_duckdb_*.sql` em uso, a correção do passo 7 da Seção 5.0 (Metabase lê a Gold na E3) e as tarefas já feitas riscadas.
+
+**O que NÃO foi feito**
+- A pergunta não foi criada dentro do Metabase: a configuração inicial já tinha sido feita pelo integrante, e a ferramenta não tem o login. A consulta e os passos foram entregues para ele criar.
+- O lock entre o Metabase e o DuckDB continua sem teste.
+
+**Continuação (2026-10-30, noite)**
+- Painel do Metabase versionado no Git, a pedido do integrante, porque a exportação nativa do Metabase é paga (conferido na documentação): `scripts/sql/metabase/` (um `.sql` por pergunta e o `painel.toml`) e `scripts/metabase_painel.py`, que faz a configuração inicial, cria as conexões, a coleção, as perguntas e o dashboard pela API, sem duplicar. Testes unitários em `tests/unit/test_metabase_painel.py`.
+- Verificado num Metabase descartável (porta 3091, removido depois): duas execuções sem duplicar e a pergunta 1 devolvendo os 10 setores com os valores conferidos. O campo de conexão do driver de DuckDB (`database_file`, `read_only`) foi lido do `metabase-plugin.yaml` do próprio driver.
+- Achado: com o Metabase conectado ao `inflatrack.duckdb`, mesmo somente leitura, o dbt não consegue escrever ("arquivo já está sendo usado por outro processo"). O driver (DuckDB 1.4.1) lê o arquivo gravado pelo 1.5.5 sem problema. A forma de o painel ler a Gold ficou para o integrante decidir (cópia da Gold em arquivo separado, cópia no Postgres, ou parar o Metabase nas cargas).
+- Explicou ao integrante a divisão entre o dbt (que define e calcula a Gold) e o DuckDB (onde os dados ficam e de onde vem a trava).
+
+**O que NÃO foi feito**
+- `just metabase-painel` não rodou no Metabase do integrante (falta o login no `.env`).
+
+**Continuação (2026-10-30, fim do dia)**
+- Por decisão do integrante, o Metabase passou a ler só o Postgres. A ferramenta criou `src/inflatrack/reverse_etl/exportar_serie.py` e o ativo `serie_postgres`, que copiam as tabelas da Gold listadas em `TABELAS` para o schema `serie`. A cópia apaga e insere numa transação, sem recriar a tabela.
+- Antes de escrever, provou com a extensão `postgres` do DuckDB que a recarga mantém o índice criado no Postgres. Também tirou o mount do DuckDB do contêiner do Metabase.
+- Verificado: 4 testes de integração com Postgres real (schema temporário), suíte com 161 testes, e o Dagster rodando `dbt` e depois `serie_postgres` com `RUN_SUCCESS` (588 linhas em `serie.dim_calendario`).
+- Reestruturou o `PLAN_E3_E4.md` a pedido do integrante: sem o quadro de atualização no topo, a Seção 5 só com o que cada um ainda precisa fazer e o contexto técnico numa Seção 6.3 nova.
+- Renomeou a branch para `E3` e commitou sem coautor.
+
+**O que NÃO foi verificado**
+- O asset `serie_postgres` com `AutomationCondition.eager` não foi visto disparando sozinho (o sensor de automação nasce desligado); só a execução manual.
 - A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
 
 ---
