@@ -1,0 +1,27 @@
+# Painel do Metabase versionado no Git. O script scripts/metabase_painel.py lê este arquivo
+# e cria ou atualiza no Metabase: as conexões, a coleção, uma pergunta por arquivo .sql e
+# o dashboard. O que vale é o que está aqui: mudança feita só na interface é sobrescrita
+# na próxima sincronização.
+
+[painel]
+nome = "InflaTrack — Painel do lojista"
+colecao = "InflaTrack (versionado)"
+descricao = "Gerado por scripts/metabase_painel.py a partir de scripts/sql/metabase/. Não edite na interface."
+
+# O Metabase lê só o Postgres: a Gold chega em serie.* pelo ativo serie_postgres. Ele nunca
+# se conecta ao DuckDB, porque uma conexão aberta no arquivo trava o dbt e os loaders.
+# Usuário, senha e banco vêm do .env.
+[bancos.postgres]
+nome = "InflaTrack — Postgres"
+engine = "postgres"
+
+# Uma entrada por pergunta. `posicao` é a grade do dashboard (24 colunas de largura).
+[[perguntas]]
+arquivo = "p1_inflacao_12m_por_setor.sql"
+titulo = "Inflação acumulada em 12 meses por setor"
+descricao = "Pergunta 1. Provisória: lê o IPCA do Postgres até a gold.fct_inflacao_mensal existir."
+banco = "postgres"
+grafico = "bar"
+eixo_x = "setor"
+eixo_y = ["inflacao_12m_pct"]
+posicao = { linha = 0, coluna = 0, largura = 16, altura = 9 }

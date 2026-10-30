@@ -148,6 +148,10 @@ dbt:
 dbt-test:
     uv run dbt test
 
+# Recria o painel do Metabase a partir de scripts/sql/metabase/ (Metabase no ar: profile bi).
+metabase-painel:
+    uv run python scripts/metabase_painel.py
+
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
     uv run --group docs mkdocs serve

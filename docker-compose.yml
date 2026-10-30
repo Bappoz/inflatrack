@@ -46,9 +46,10 @@ services:
       timeout: 3s
       retries: 10
 
-  # Metabase com o driver comunitário de DuckDB (imagem Debian; a Alpine não funciona).
-  # No Metabase: adicione "DuckDB" com o caminho /duckdb/inflatrack.duckdb
-  # e "PostgreSQL" com host `db`, porta 5432.
+  # Metabase: lê SÓ o Postgres (host `db`, schema `serie`). Não monta o arquivo do DuckDB de
+  # propósito: com uma conexão do Metabase aberta nele, o dbt e os loaders não conseguem
+  # escrever (testado em 2026-10-30). A Gold chega ao Postgres pelo ativo `serie_postgres`.
+  # O painel é recriado do Git com `just metabase-painel` (scripts/sql/metabase/).
   metabase:
     image: ghcr.io/motherduckdb/metabase-duckdb:latest
     profiles: [bi]
@@ -66,9 +67,6 @@ services:
       MB_DB_HOST: metabase-db
     ports:
       - "${METABASE_PORT:-3001}:3000"
-    volumes:
-      # Somente leitura: o DuckDB aceita um único escritor (o pipeline).
-      - ./data/duckdb:/duckdb:ro
     deploy:
       resources:
         limits:

@@ -69,5 +69,8 @@ depois do loader. Não é preciso escrever Python: todo modelo novo aparece sozi
 - **`Catalog Error: Table … does not exist`**: o loader da sua fonte ainda não rodou nesse banco.
 - **O schema saiu `main_silver`**: o modelo está fora de `staging/`, `intermediate/`, `marts/` ou
   `semantic/`, ou alguém sobrescreveu o `+schema`. Quem define os schemas é o `dbt_project.yml`.
-- **`database is locked`**: outro processo (Dagster, um loader ou o Metabase) está com o arquivo
-  aberto para escrita. O DuckDB aceita um escritor por vez.
+- **`database is locked` / "arquivo já está sendo usado por outro processo"**: outro processo
+  (Dagster, um loader, o `dagster dev` ou um notebook) está com o arquivo aberto. O DuckDB aceita um
+  escritor por vez. O Metabase nunca abre este arquivo: ele lê a cópia da Gold no Postgres.
+- **Quero ver a minha tabela da Gold no painel**: ponha o nome em `TABELAS`, em
+  `src/inflatrack/reverse_etl/exportar_serie.py`, e veja `scripts/sql/metabase/README.md`.
