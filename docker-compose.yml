@@ -29,5 +29,51 @@ services:
     ports:
       - "${ADMINER_PORT:-8080}:8080"
 
+  # Banco interno do Metabase (usuários, dashboards, perguntas salvas).
+  # Separado do Postgres do projeto para não misturar metadados com dados.
+  metabase-db:
+    image: postgres:16.4-alpine
+    profiles: [bi]
+    environment:
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: ${METABASE_DB_PASSWORD:-metabase}
+      POSTGRES_DB: metabase
+    volumes:
+      - metabase_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Metabase com o driver comunitário de DuckDB (imagem Debian; a Alpine não funciona).
+  # No Metabase: adicione "DuckDB" com o caminho /duckdb/inflatrack.duckdb
+  # e "PostgreSQL" com host `db`, porta 5432.
+  metabase:
+    image: ghcr.io/motherduckdb/metabase-duckdb:latest
+    profiles: [bi]
+    depends_on:
+      metabase-db:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase}
+      MB_DB_HOST: metabase-db
+    ports:
+      - "${METABASE_PORT:-3001}:3000"
+    volumes:
+      # Somente leitura: o DuckDB aceita um único escritor (o pipeline).
+      - ./data/duckdb:/duckdb:ro
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
 volumes:
   pgdata:
+  metabase_pgdata:
