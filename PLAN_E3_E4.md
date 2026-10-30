@@ -493,7 +493,26 @@ Para ninguém ficar travado esperando o outro terminar, combinamos o seguinte: *
 
 ---
 
-### 5.0 O que todo mundo precisa fazer na sua própria fonte de dados
+### 5.0 O Caminho do Dado e o que Todo Mundo Precisa Fazer na sua Fonte
+
+Para que todos sigam rigorosamente a mesma esteira de ponta a ponta e saibam o que verificar, este é o **caminho oficial obrigatório** que o dado de cada fonte deve percorrer:
+
+1. **Coleta na Fonte:** Baixar os dados brutos da API/site externo usando o cliente Python isolado em `src/inflatrack/clients/`.
+2. **Bronze no Delta Lake:** Salvar os dados brutos originais em Parquet na pasta `data/parquet/<sua_fonte>/` (preservando o histórico sem filtros analíticos e com hash SHA-256).
+3. **Bronze no DuckDB:** Criar/executar o carregador em `src/inflatrack/loaders/load_<sua_fonte>.py` para inserir os dados na tabela `bronze.<sua_fonte>` do DuckDB via merge/upsert.
+4. **Silver Staging (`dbt`):** Criar a view SQL de limpeza 1:1 em `dbt/models/staging/<sua_fonte>/` (`silver.stg_<sua_fonte>__...`), tratando tipos, marcadores e nulos.
+5. **Silver Intermediária (`dbt`):** Consolidar os dados no grão mensal em `dbt/models/intermediate/` (`silver.int_<sua_fonte>__mensal`), fixando a chave sempre no 1º dia do mês (`mes_referencia = YYYY-MM-01`) e calculando médias móveis, variações e lags.
+6. **Gold Marts (`dbt`):** Cruzar os dados nas tabelas finais em `dbt/models/marts/` (Dimensões e Fatos da camada `gold.*`).
+7. **Postgres e Metabase:** A série calculada na Gold é copiada para o schema `serie` do PostgreSQL, de onde o Metabase consome para montar os painéis gerenciais.
+
+**O que cada integrante deve verificar e testar na sua parte:**
+* Se o download roda de forma isolada e grava com sucesso no Delta Lake.
+* Se o loader insere e atualiza no DuckDB sem duplicar linhas ao rodar duas vezes seguidas (idempotência).
+* Se a compilação e os testes do dbt (`uv run dbt build` / `uv run dbt test`) passam com 100% de sucesso.
+
+---
+
+#### 5.0.1 Regras de Ouro para a Fonte de Cada Integrante
 
 Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte que já vem cuidando desde o começo do semestre:
 
