@@ -42,7 +42,7 @@ pib-china-ingest:
 
 # Sobe o Parquet do PIB da China para o mesmo DuckDB das commodities.
 pib-china-load:
-    uv run python -m inflatrack.load_pib_china
+    uv run python -m inflatrack.loaders.load_pib_china
 
 # Ingestão + carga do PIB da China, de ponta a ponta.
 pib-china: pib-china-ingest pib-china-load
@@ -122,7 +122,7 @@ bronze-pib-checar:
 
 # Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
 pib-load:
-    uv run python -m inflatrack.load_pib
+    uv run python -m inflatrack.loaders.load_pib
 
 # Ingestão + carga do PIB, de ponta a ponta.
 pib: pib-ingest pib-load
@@ -185,7 +185,7 @@ bronze-macro: bronze-dolar bronze-selic
 # Carga isolada das Commodities (AlphaVantage -> DuckDB)
 seed-commodities:
     uv run python -m inflatrack.ingest_commodities --commodity ALL --modo historico
-    uv run python -m inflatrack.load_commodities
+    uv run python -m inflatrack.loaders.load_commodities
 
 # Bronze das commodities em Delta (data/parquet/commodities/). Gasta 9 das 25 req./dia.
 bronze-commodities:
@@ -215,7 +215,7 @@ salario-minimo-ingest:
     uv run python -m inflatrack.ingest_salario_minimo
 
 salario-minimo-load:
-    uv run python -m inflatrack.load_salario_minimo
+    uv run python -m inflatrack.loaders.load_salario_minimo
 
 salario-minimo: salario-minimo-ingest salario-minimo-load
 
@@ -230,14 +230,14 @@ bronze-salario-minimo-checar:
     uv run python -m inflatrack.bronze_salario_minimo checar
 
 bronze-salario-minimo-load modo="substitui":
-    uv run python -m inflatrack.load_salario_minimo --modo {{modo}}
+    uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
 # INMET: Dados de Clima e Estações
 clima-ingest:
     uv run python -m inflatrack.ingest_clima --apenas-estacoes
 
 clima-load:
-    uv run python -m inflatrack.load_clima
+    uv run python -m inflatrack.loaders.load_clima
 
 clima: clima-ingest clima-load
 
@@ -252,7 +252,7 @@ bronze-clima-checar:
     uv run python -m inflatrack.bronze_clima checar
 
 bronze-clima-load modo="substitui":
-    uv run python -m inflatrack.load_clima --modo {{modo}}
+    uv run python -m inflatrack.loaders.load_clima --modo {{modo}}
 
 # Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
 orquestrador:

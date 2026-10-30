@@ -16,7 +16,7 @@ DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 PARQUET_ESTACOES_PADRAO = Path("data/parquet/clima/estacoes.parquet")
 PARQUET_CLIMA_PADRAO = Path("data/parquet/clima/clima_diario.parquet")
 DELTA_PADRAO = Path("data/parquet/clima")
-SCHEMA_SQL = Path(__file__).resolve().parents[2] / "scripts" / "setup_duckdb_clima.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "setup_duckdb_clima.sql"
 
 MODOS_CARGA = ("substitui", "so_acrescenta")
 
