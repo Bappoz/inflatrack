@@ -1103,6 +1103,14 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Dagster com dbt, retry, backfill e Metabase: ainda não implementados.
+
+**Continuação na mesma data (2026-10-30)**
+- Commits locais, sem push, separados por assunto: Metabase, loaders, base do dbt, Silver e este registro.
+- Metabase movido para a porta 3001, porque a 3000 é do Dagster.
+- Criou `orchestration/assets/dbt_assets.py` (modelos e testes do dbt como ativos e asset checks, no pool do DuckDB, com disparo `eager`) e ligou as sources do dbt aos ativos dos loaders por `meta.dagster.asset_key`, recurso conferido no código do dagster-dbt instalado.
+- Criou `tests/orchestration/test_dbt_e_retry.py` (grafo, pool, grupos, checks, política de retry e uma falha HTTP 503 seguida de sucesso na nova tentativa) e o `dbt/README.md` para os colegas.
+- Verificado: 146 testes passam, `ruff` limpo, `dbt build` 54/54, e `dagster asset materialize --select kind:dbt` com `RUN_SUCCESS`.
+- Ainda NÃO feito: o backfill (aguarda a escolha entre IPCA e PIB por ano) e a demonstração de queda de dependência.
 - A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
 
 ---
