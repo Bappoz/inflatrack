@@ -11,7 +11,7 @@ import duckdb
 import psycopg
 import pytest
 
-from inflatrack.bronze.ingest import dsn_do_ambiente
+from inflatrack.common.db import dsn_do_ambiente
 from inflatrack.reverse_etl import exportar_serie
 
 

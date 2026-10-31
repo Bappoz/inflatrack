@@ -1,0 +1,56 @@
+-- select
+--     f.mes_referencia,
+--     c.nome_categoria,
+--     f.variacao_mensal_pct,
+--     f.variacao_acum_12m_pct
+-- from serie.fct_inflacao_mensal as f
+-- inner join serie.dim_cesta_ipca_scd2 as c on c.id_versao_cesta = f.id_versao_cesta
+-- where f.codigo_categoria = '1101002'
+--     and f.codigo_localidade = 5300108
+--     and f.indice = 'IPCA'
+-- order by f.mes_referencia desc
+-- limit 12
+
+=== Execução 1 de 3 ===
+Limit  (cost=0.70..141.33 rows=12 width=47) (actual time=0.173..0.269 rows=12 loops=1)
+  Buffers: shared hit=39 read=2
+  ->  Nested Loop  (cost=0.70..692.14 rows=59 width=47) (actual time=0.171..0.265 rows=12 loops=1)
+        Buffers: shared hit=39 read=2
+        ->  Index Scan using fct_inflacao_mensal_consulta_idx on fct_inflacao_mensal f  (cost=0.43..473.91 rows=117 width=34) (actual time=0.133..0.156 rows=12 loops=1)
+              Index Cond: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+              Buffers: shared hit=3 read=2
+        ->  Index Scan using dim_cesta_ipca_scd2_pkey on dim_cesta_ipca_scd2 c  (cost=0.28..1.87 rows=1 width=64) (actual time=0.007..0.007 rows=1 loops=12)
+              Index Cond: (id_versao_cesta = f.id_versao_cesta)
+              Buffers: shared hit=36
+Planning:
+  Buffers: shared hit=25
+Planning Time: 0.704 ms
+Execution Time: 0.364 ms
+
+=== Execução 2 de 3 ===
+Limit  (cost=0.70..141.33 rows=12 width=47) (actual time=0.093..0.164 rows=12 loops=1)
+  Buffers: shared hit=41
+  ->  Nested Loop  (cost=0.70..692.14 rows=59 width=47) (actual time=0.092..0.159 rows=12 loops=1)
+        Buffers: shared hit=41
+        ->  Index Scan using fct_inflacao_mensal_consulta_idx on fct_inflacao_mensal f  (cost=0.43..473.91 rows=117 width=34) (actual time=0.061..0.066 rows=12 loops=1)
+              Index Cond: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+              Buffers: shared hit=5
+        ->  Index Scan using dim_cesta_ipca_scd2_pkey on dim_cesta_ipca_scd2 c  (cost=0.28..1.87 rows=1 width=64) (actual time=0.006..0.006 rows=1 loops=12)
+              Index Cond: (id_versao_cesta = f.id_versao_cesta)
+              Buffers: shared hit=36
+Planning Time: 0.269 ms
+Execution Time: 0.292 ms
+
+=== Execução 3 de 3 ===
+Limit  (cost=0.70..141.33 rows=12 width=47) (actual time=0.091..0.162 rows=12 loops=1)
+  Buffers: shared hit=41
+  ->  Nested Loop  (cost=0.70..692.14 rows=59 width=47) (actual time=0.090..0.158 rows=12 loops=1)
+        Buffers: shared hit=41
+        ->  Index Scan using fct_inflacao_mensal_consulta_idx on fct_inflacao_mensal f  (cost=0.43..473.91 rows=117 width=34) (actual time=0.062..0.066 rows=12 loops=1)
+              Index Cond: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+              Buffers: shared hit=5
+        ->  Index Scan using dim_cesta_ipca_scd2_pkey on dim_cesta_ipca_scd2 c  (cost=0.28..1.87 rows=1 width=64) (actual time=0.006..0.006 rows=1 loops=12)
+              Index Cond: (id_versao_cesta = f.id_versao_cesta)
+              Buffers: shared hit=36
+Planning Time: 0.272 ms
+Execution Time: 0.269 ms

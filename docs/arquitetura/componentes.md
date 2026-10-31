@@ -143,7 +143,7 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 * Sustentar as FKs de `produto` e `lojista` para a cesta e a localidade do IPCA
 * Guardar referências e a tabela insert-only de observações do IBGE
 * Aplicar restrições e transações no cadastro e no histórico de reajustes
-* Nota: a dimensão `classificacao_versao` ainda não preserva renomeações; ver [ADR 0001](../arquitetura.md)
+* A dimensão `classificacao_versao` preserva renomeações desde a migration `0004`; ver [ADR 0001](../arquitetura.md)
 
 ### Quando usar DuckDB vs PostgreSQL
 

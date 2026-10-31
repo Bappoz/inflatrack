@@ -62,7 +62,7 @@ def mes_da_chave(chave: str) -> date:
 
 
 def formato_sidra(mes: date) -> str:
-    """date para o AAAA-MM aceito por `inflatrack.ingest`."""
+    """date para o AAAA-MM aceito por `inflatrack.bronze.ipca`."""
     return mes.strftime("%Y-%m")
 
 

@@ -12,7 +12,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
-| Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
+| Lucas Zanetti | 6 | 2026-09-08 a 2026-10-31 | Claude Code (Opus 5.5) (3), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
@@ -60,6 +60,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Metabase para visualizar o DuckDB e o Postgres |
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
 | 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
+| 2026-10-31 | Lucas Zanetti | Claude Code (Opus 5.5) | E3: IPCA e lojista até a Gold, CDC, SCD2, vitrine `serie` e EXPLAIN |
 
 ---
 
@@ -216,6 +217,38 @@ separados e um PR.
 
 **Decisões que continuam sendo da Squad**
 - Concluir o ADR 0004 sobre Delta/Iceberg e mecanismo de CDC, e planejar Silver/Gold, histórico de classificação, clima diário e integração limpa da E2 conforme o plano.
+
+### 2026-10-31 — Claude Code (Opus 5.5) — E3: IPCA e lojista até a Gold, CDC, SCD2, vitrine `serie` e EXPLAIN
+
+**O que a ferramenta fez**
+- Fundiu `ingest.py` e `bronze_ipca.py` em `bronze/ipca.py`, tirou a gravação em `data/raw/`, criou `ipca_metadados` no Delta e `common/db.py`, e separou os testes em `tests/unit/` e `tests/integration/`.
+- Criou `load_ipca.py`, `load_transacional.py`, `orchestration/assets/ipca.py` e `orchestration/assets/transacional.py`, tirando o IPCA de `ingestao.py`.
+- Escreveu as migrations `0004` (precisão do 1737, vigência da cesta, `reajuste_custo`, `venda_mensal`, gatilho insert-only, `REPLICA IDENTITY FULL` e publicação) e `0005` (schema `serie`, índice e papéis).
+- Implementou o CDC (`cdc/transacional.py`, com decodificador do `pgoutput`) e a demonstração (`cdc/simular_mudancas.py`), e redigiu o ADR.
+- Escreveu a Silver e a Gold do IPCA e do lojista, as duas SCD2, os testes singulares, a medição com `EXPLAIN` e a documentação.
+
+**O que foi verificado e como**
+- Pipeline refeito do zero num Postgres descartável, com os dados reais do IPCA e o lojista fictício: 114 de 114 itens do dbt nesta trilha; 127 de 127 no projeto, sem as trilhas de PIB e commodities, cuja Bronze não existe nesta máquina.
+- `uv run pytest`: 205 testes passando, com Postgres no ar.
+- Números conferidos contra o IBGE: 4,58% no índice geral em set/2026; -10,8650% contra -10,86% publicados para Arroz em Brasília; diferença máxima de 0,0326 p.p. entre o acumulado calculado e o publicado.
+- Coleta real no SIDRA (`coletar`, agregados 7060 e 1737, um mês cada) e materialização no Dagster de `ipca_duckdb` e `transacional_delta`.
+- Migrations `0004` e `0005` aplicadas a uma cópia do volume de desenvolvimento (5.992.897 linhas em `observacao`).
+
+**Erros da ferramenta encontrados durante a verificação**
+- Regra errada de 12/17 localidades no teste: corrigida depois de olhar o dado (elas entraram em 2014 e 2018).
+- Janela de 12 meses da fato do lojista errada no mês ainda não publicado (mostrava -5,65% em vez de -10,87%): corrigida.
+- Duas fontes do dbt com a mesma chave de ativo quebrando o Dagster, e sintaxe errada de `alter default privileges` na `0005`: corrigidas.
+
+**O que NÃO foi verificado**
+- As trilhas de PIB e commodities do `dbt build` nesta máquina, por falta da Bronze delas.
+- As migrations no volume real de desenvolvimento, que continua intocado: só na cópia.
+- O painel do Metabase e `just migrar` no compose padrão. A pergunta 1 continua lendo `public.observacao`; só o `JOIN` dela foi ajustado à nova vigência.
+- A vazão do CDC. A causa do aborto ao terminar (`deltalake` + `pyarrow`, registrado no plano, Seção 6.3) não foi investigada; o código foi desviado dele.
+- A carga completa do SIDRA não foi refeita (886 requisições): a Bronze é a de 2026-10-11, até set/2026.
+
+**Decisões que continuam sendo da Squad**
+- Numeração do ADR do CDC.
+- Revisar as divergências do plano registradas na Seção 5.1.
 
 ---
 
