@@ -37,7 +37,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
-from inflatrack.inmet import BASE_URL, InmetClient
+from inflatrack.inmet import BASE_URL, InmetClient, transformar_clima_diario
 
 logger = logging.getLogger("inflatrack.bronze_clima")
 
@@ -78,6 +78,25 @@ ESQUEMA_ESTACAO = pa.schema(
     ]
 )
 
+ESQUEMA_MEDICAO = pa.schema(
+    [
+        pa.field("id_medicao", pa.string(), nullable=False),
+        pa.field("estacao_id", pa.string(), nullable=False),
+        pa.field("data_referencia", pa.date32(), nullable=False),
+        pa.field("temp_min", pa.float64()),
+        pa.field("temp_max", pa.float64()),
+        pa.field("temp_media", pa.float64()),
+        pa.field("precipitacao_total_mm", pa.float64()),
+        pa.field("umidade_relativa_media_pct", pa.float64()),
+        pa.field("umidade_relativa_min_pct", pa.float64()),
+        pa.field("observado", pa.bool_(), nullable=False),
+        pa.field("_id_resposta", pa.string(), nullable=False),
+        pa.field("_fonte", pa.string(), nullable=False),
+        pa.field("_requisicao", pa.string(), nullable=False),
+        pa.field("_ingerido_em", pa.timestamp("us", tz="UTC"), nullable=False),
+    ]
+)
+
 CHAVE_ESTACAO = (
     "estacao_id",
     "nome",
@@ -102,6 +121,16 @@ class Gravacao:
     """O que uma chamada de :func:`gravar` acrescentou de fato."""
 
     id_resposta: str
+    resposta_nova: bool
+    linhas_lidas: int
+    linhas_novas: int
+
+
+@dataclass(frozen=True)
+class GravacaoMedicoes:
+    """Resumo da gravação de medições diárias do INMET."""
+
+    id_resposta: str | None
     resposta_nova: bool
     linhas_lidas: int
     linhas_novas: int
@@ -267,6 +296,55 @@ def acrescentar_estacoes(destino: Path, linhas: list[dict]) -> int:
     return len(novas)
 
 
+def _id_medicao(linha: dict) -> str:
+    colunas_de_dado = (
+        "estacao_id",
+        "data_referencia",
+        "temp_min",
+        "temp_max",
+        "temp_media",
+        "precipitacao_total_mm",
+        "umidade_relativa_media_pct",
+        "umidade_relativa_min_pct",
+        "observado",
+    )
+    conteudo = json.dumps(
+        {coluna: linha.get(coluna) for coluna in colunas_de_dado},
+        sort_keys=True,
+        default=str,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
+
+
+def acrescentar_medicoes(destino: Path, linhas: list[dict]) -> int:
+    """Acrescenta medições inéditas e mantém versões quando uma leitura é revisada."""
+    if not linhas:
+        return 0
+
+    caminho = _caminho(destino, "medicao")
+    linhas_com_id = [linha | {"id_medicao": _id_medicao(linha)} for linha in linhas]
+    ids = {linha["id_medicao"] for linha in linhas_com_id}
+    if DeltaTable.is_deltatable(caminho):
+        existentes = (
+            DeltaTable(caminho)
+            .to_pyarrow_dataset()
+            .to_table(columns=["id_medicao"], filter=ds.field("id_medicao").isin(list(ids)))
+        )
+        ids_existentes = set(existentes.column("id_medicao").to_pylist())
+    else:
+        ids_existentes = set()
+
+    novas = [linha for linha in linhas_com_id if linha["id_medicao"] not in ids_existentes]
+    if novas:
+        write_deltalake(
+            caminho,
+            pa.Table.from_pylist(novas, ESQUEMA_MEDICAO),
+            mode="append",
+        )
+    return len(novas)
+
+
 def _com_metadados(
     linhas: list[dict], id_resposta: str, requisicao: str, ingerido_em: datetime
 ) -> list[dict]:
@@ -305,6 +383,40 @@ def gravar(
         destino, _com_metadados(linhas, id_resposta, requisicao, ingerido_em)
     )
     return Gravacao(id_resposta, nova, len(linhas), novas)
+
+
+def gravar_medicoes(
+    destino: Path,
+    payload: list[dict[str, Any]],
+    requisicao: str,
+    ingerido_em: datetime | None = None,
+    status_http: int | None = 200,
+    tipo_conteudo: str | None = "application/json; charset=utf-8",
+) -> GravacaoMedicoes:
+    """Valida e grava uma resposta diária do INMET nas tabelas Delta.
+
+    Respostas sem observações não são armazenadas. Leituras revisadas geram uma nova
+    linha, enquanto a reexecução de uma leitura idêntica é idempotente.
+    """
+    linhas_df = transformar_clima_diario(payload)
+    linhas_df = linhas_df.astype(object).where(linhas_df.notna(), None)
+    linhas = linhas_df.to_dict(orient="records")
+    if not linhas:
+        return GravacaoMedicoes(None, False, 0, 0)
+
+    ingerido_em = ingerido_em or datetime.now(UTC)
+    corpo = json.dumps(payload, ensure_ascii=False)
+    id_resposta, nova = gravar_resposta(
+        destino,
+        requisicao=requisicao,
+        corpo=corpo,
+        ingerido_em=ingerido_em,
+        status_http=status_http,
+        tipo_conteudo=tipo_conteudo,
+    )
+    linhas_com_metadados = _com_metadados(linhas, id_resposta, requisicao, ingerido_em)
+    novas = acrescentar_medicoes(destino, linhas_com_metadados)
+    return GravacaoMedicoes(id_resposta, nova, len(linhas), novas)
 
 
 def importar_raw(

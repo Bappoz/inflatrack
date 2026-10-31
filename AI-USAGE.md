@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
+| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
 
 ## Todas as sessões
 
@@ -60,6 +60,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Metabase para visualizar o DuckDB e o Postgres |
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
 | 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
+| 2026-10-31 | Johnnatan Salles | GitHub Copilot | Bronze de medições INMET, Silver mensal de clima e salário, mapeamento de localidades e validação de limites da fonte |
 
 ---
 
@@ -1334,6 +1335,21 @@ de tarefas nessa linha.
 
 **Decisões que continuam sendo da Squad**
 - Migração dos assets das outras fontes restantes (`ipca`, `dolar`, `selic`, `commodities`, `pib`, `pib_china`) de `ingestao.py` para seus próprios arquivos em `orchestration/assets/`.
+
+### 2026-10-31 — GitHub Copilot — Ingestão e Silver de clima e salário mínimo (E3)
+
+**O que a ferramenta fez**
+- Corrigiu a conversão de zeros e sentinelas do INMET; implementou Delta de medições, loader DuckDB, coleta controlada por estação/período, asset Dagster manual, mapeamento explícito de estações e localidades e modelos dbt mensais para clima e salário mínimo.
+- Atualizou a documentação das duas fontes e manteve os DDLs `setup_duckdb_clima.sql` e `setup_duckdb_salario_minimo.sql`, ainda usados pelos loaders.
+
+**O que foi verificado e como**
+- `uv run pytest tests/unit/test_inmet.py -q` e `uv run pytest tests/integration/test_clima.py -q` passaram; a integração cobre zero válido, sentinela como `NULL`, revisão histórica, idempotência e promoção ao DuckDB.
+- `uv run dbt compile` dos modelos de clima, salário mínimo e dimensão de localidade passou; após regenerar o manifesto, `uv run pytest tests/orchestration/test_orchestration.py -q` passou.
+- Mapeamento de estações conferido contra o fixture INMET e códigos de localidade contra `migrations/0003_seed_referencia.sql`.
+
+**O que NÃO foi verificado**
+- Nenhuma requisição real de medições foi feita; a disponibilidade atual do endpoint do INMET precisa ser confirmada. Fortaleza não possui estação correspondente no fixture, e o projeto não possui uma fonte independente para custo da cesta básica.
+- O `dbt build` com tabelas Bronze reais, a coleta ponta a ponta e o clone limpo não foram executados.
 
 ---
 

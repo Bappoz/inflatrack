@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_salario_minimo__mensal
+    description: >
+      Uma linha por mês do DIEESE, em mes_referencia = YYYY-MM-01. Mantém valores
+      nominais e necessários e calcula razão entre eles, variações e média móvel.
+    columns:
+      - name: mes_referencia
+        data_tests: [unique, not_null]
+      - name: salario_nominal
+        data_tests: [not_null]
+      - name: salario_necessario
+        data_tests: [not_null]

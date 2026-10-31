@@ -1,6 +1,13 @@
 version: 2
 
 models:
+  - name: dim_localidade
+    description: Localidades IBGE cobertas pelos agregados regionais do IPCA.
+    columns:
+      - name: codigo_localidade
+        data_tests: [unique, not_null]
+      - name: nome
+        data_tests: [not_null]
   - name: dim_calendario
     description: >
       Uma linha por mês, de jan/1979 até dezembro do ano seguinte ao do build.

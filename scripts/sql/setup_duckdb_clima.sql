@@ -45,3 +45,20 @@ CREATE TABLE IF NOT EXISTS bronze.clima_estacao (
     _requisicao VARCHAR NOT NULL,
     _ingerido_em TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS bronze.clima_medicao (
+    id_medicao VARCHAR PRIMARY KEY,
+    estacao_id VARCHAR NOT NULL,
+    data_referencia DATE NOT NULL,
+    temp_min DOUBLE,
+    temp_max DOUBLE,
+    temp_media DOUBLE,
+    precipitacao_total_mm DOUBLE,
+    umidade_relativa_media_pct DOUBLE,
+    umidade_relativa_min_pct DOUBLE,
+    observado BOOLEAN NOT NULL,
+    _id_resposta VARCHAR NOT NULL,
+    _fonte VARCHAR NOT NULL,
+    _requisicao VARCHAR NOT NULL,
+    _ingerido_em TIMESTAMPTZ NOT NULL
+);

@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_salario_minimo__mes
+    description: Uma linha por mês, com valores monetários da última revisão publicada pelo DIEESE.
+    columns:
+      - name: mes_referencia
+        data_tests: [unique, not_null]
+      - name: salario_nominal
+        data_tests: [not_null]
+      - name: salario_necessario
+        data_tests: [not_null]

@@ -16,7 +16,7 @@ O modelo meteorológico adota a separação dimensional clássica entre o cadast
 --8<-- "docs/assets/diagramas/esquema-clima.svg"
 </div>
 
-A seta é tracejada porque o DDL (`scripts/setup_duckdb_clima.sql`) não declara a chave estrangeira: a ligação por `estacao_id` é garantida pela carga, não pelo banco.
+A seta é tracejada porque o DDL (`scripts/sql/setup_duckdb_clima.sql`) não declara a chave estrangeira: a ligação por `estacao_id` é garantida pela carga, não pelo banco.
 
 ---
 
@@ -134,4 +134,15 @@ Cadastro nacional das estações meteorológicas (automáticas e convencionais) 
 | `_ingerido_em` | timestamp (UTC) | — | Momento da ingestão |
 
 **Granularidade:** uma linha por estação meteorológica × atributos operacionais. Atualizações cadastrais pelo INMET geram uma nova versão rastreável em Delta (*insert-only*).
+
+### clima_medicao
+
+Tabela Delta em `data/parquet/clima/medicao/`, com uma linha por versão de leitura diária. O campo
+`id_medicao` é calculado a partir dos valores da leitura, sem incluir metadados de ingestão; assim,
+uma reexecução idêntica não duplica linhas e uma revisão histórica é preservada como versão nova.
+
+O loader espelha a tabela em `bronze.clima_medicao`, criada por
+`scripts/sql/setup_duckdb_clima.sql`. O script SQL é necessário ao loader e não deve ser removido.
+Na Silver, a leitura mais recente por estação e dia alimenta a consolidação mensal, com defasagens
+`t-1`, `t-2` e `t-3`. Campos ausentes e sentinelas viram `NULL`; zeros reais permanecem zero.
 

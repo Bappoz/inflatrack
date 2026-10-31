@@ -6,6 +6,10 @@ Esta seção detalha o schema físico da fonte de dados da Pesquisa Nacional da 
 
 A fonte fornece a série histórica mensal do salário mínimo oficial federal (nominal) e do salário mínimo necessário calculado com base no preceito constitucional (CF/88, art. 7º, IV) e no custo de vida apurado nas capitais.
 
+No estado atual, os dados coletados são os salários nominal e necessário. Não há uma série
+independente de custo da cesta básica no Delta; portanto, ela não pode ser apresentada como medida
+observada até que a equipe incorpore uma fonte e tabela próprias.
+
 ---
 
 ## Modelo Conceitual
@@ -104,4 +108,8 @@ Série temporal extraída com **todas as linhas** da tabela HTML, tipada e sem d
 | `_ingerido_em` | timestamp (UTC) | Carimbo temporal da ingestão |
 
 **Granularidade:** uma linha por mês apurado × `salario_nominal` × `salario_necessario`. Caso o DIEESE retifique um mês já divulgado, a alteração entra como **linha nova**, assegurando linhagem e histórico imutável (*insert-only*).
+
+O modelo `silver.int_salario_minimo__mensal` consolida a última revisão de cada mês, calcula a razão
+entre salário necessário e nominal, as variações e a média móvel nominal de três meses. A série
+disponível desde 1994 cobre o recorte a partir de 2006 sem truncamento.
 

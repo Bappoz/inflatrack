@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: bronze_clima
+    description: Dados meteorológicos do INMET promovidos da Bronze Delta pelo loader.
+    schema: bronze
+    tables:
+      - name: clima_estacao
+        config:
+          meta:
+            dagster:
+              asset_key: ["clima_duckdb"]
+        description: Cadastro versionado das estações meteorológicas.
+        columns:
+          - name: estacao_id
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]
+      - name: clima_medicao
+        config:
+          meta:
+            dagster:
+              asset_key: ["clima_medicoes_duckdb"]
+        description: Uma linha por versão de leitura diária e estação.
+        columns:
+          - name: id_medicao
+            data_tests: [unique, not_null]
+          - name: estacao_id
+            data_tests: [not_null]
+          - name: data_referencia
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

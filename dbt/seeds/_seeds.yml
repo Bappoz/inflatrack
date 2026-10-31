@@ -52,3 +52,41 @@ seeds:
           - accepted_values:
               arguments:
                 values: [daily, monthly]
+
+  - name: seed_localidade_ibge
+    description: Localidades usadas nas séries do IPCA, conforme migrations/0003_seed_referencia.sql.
+    config:
+      column_types:
+        codigo_ibge: varchar
+        nome: varchar
+        tipo: varchar
+        uf: varchar
+    columns:
+      - name: codigo_ibge
+        data_tests: [unique, not_null]
+      - name: nome
+        data_tests: [not_null]
+      - name: tipo
+        data_tests: [not_null]
+
+  - name: seed_de_para_estacao_localidade
+    description: >
+      Relação manual de estações do INMET a localidades do IPCA. Inclui apenas
+      vínculos conferidos pelo nome e pelas coordenadas do catálogo do INMET.
+    config:
+      column_types:
+        estacao_id: varchar
+        codigo_ibge: varchar
+        justificativa: varchar
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: codigo_ibge
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_localidade_ibge')
+                field: codigo_ibge
+      - name: justificativa
+        data_tests: [not_null]
