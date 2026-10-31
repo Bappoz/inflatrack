@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: int_transacional__precos
+    description: >
+      Uma linha por evento de um produto (cadastro, alteração, reajuste, custo ou exclusão), com o
+      estado completo depois dele, na ordem do negócio. Um evento atrasado entra na posição certa.
+    columns:
+      - name: id_produto
+        data_tests: [not_null]
+      - name: efetivo_em
+        description: aplicado_em nos reajustes; criado_em no cadastro; hora do commit nos demais.
+        data_tests: [not_null]
+      - name: preco_centavos
+        data_tests: [not_null]
+      - name: excluido
+        data_tests: [not_null]
+
+  - name: int_transacional__mensal
+    description: >
+      Uma linha por produto x mês (mes_referencia = YYYY-MM-01), do cadastro até o mês atual ou o
+      da exclusão, com o preço e o custo vigentes no fim do mês e as vendas informadas.
+    columns:
+      - name: id_produto
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: preco_brl
+        data_tests: [not_null]
+      - name: quantidade_vendida
+        description: NULL quando o lojista não informou a venda do mês.

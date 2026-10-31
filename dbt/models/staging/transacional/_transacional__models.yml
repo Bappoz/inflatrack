@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: stg_transacional__mudanca
+    description: >
+      Uma linha por mudança em public (lojista, produto, reajuste, reajuste_custo e venda_mensal),
+      na ordem do WAL, com a linha de origem em JSON.
+    columns:
+      - name: lsn
+        data_tests: [not_null]
+      - name: tabela
+        data_tests: [not_null]
+      - name: commit_em
+        description: Quando o Postgres confirmou a mudança (tempo do sistema, não do negócio).
+        data_tests: [not_null]
