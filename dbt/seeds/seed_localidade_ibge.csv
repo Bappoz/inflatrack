@@ -1,0 +1,18 @@
+codigo_localidade,nome_localidade,tipo_localidade,uf
+1,Brasil,pais,
+1501,Belém,regiao_metropolitana,PA
+2301,Fortaleza,regiao_metropolitana,CE
+2601,Recife,regiao_metropolitana,PE
+2901,Salvador,regiao_metropolitana,BA
+3101,Belo Horizonte,regiao_metropolitana,MG
+3201,Grande Vitória,regiao_metropolitana,ES
+3301,Rio de Janeiro,regiao_metropolitana,RJ
+3501,São Paulo,regiao_metropolitana,SP
+4101,Curitiba,regiao_metropolitana,PR
+4301,Porto Alegre,regiao_metropolitana,RS
+1200401,Rio Branco,municipio,AC
+2111300,São Luís,municipio,MA
+2800308,Aracaju,municipio,SE
+5002704,Campo Grande,municipio,MS
+5208707,Goiânia,municipio,GO
+5300108,Brasília,municipio,DF

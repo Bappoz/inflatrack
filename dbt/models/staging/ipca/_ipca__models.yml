@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_ipca__metadados
+    description: >
+      Uma linha por versão de categoria da cesta em cada agregado do SIDRA (classificação 315).
+      O mesmo código pode ter nomes diferentes entre agregados e, se o IBGE renomear, entre versões.
+    columns:
+      - name: agregado
+        data_tests: [not_null]
+      - name: id_categoria
+        data_tests: [not_null]
+      - name: codigo_categoria
+        data_tests: [not_null]
+      - name: nome_categoria
+        data_tests: [not_null]
+      - name: nivel_categoria
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [geral, grupo, subgrupo, item, subitem]
+      - name: versao_atual
+        description: Verdadeiro na versão mais recente que a Bronze conhece.
+
+  - name: stg_ipca__observacao
+    description: >
+      Uma linha por agregado x localidade x variável x categoria x mês, na versão mais recente
+      publicada pelo IBGE e com o código natural da cesta. Mantém os marcadores de ausência
+      (observado = falso).
+    columns:
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: codigo_categoria
+        description: Código da cesta. Nulo significaria id do SIDRA sem metadados.
+        data_tests: [not_null]
+      - name: valor
+        description: NULL quando o SIDRA mandou um marcador (texto original em valor_bruto).
+      - name: versoes_coletadas
+        description: Quantas versões dessa combinação a Bronze tem (1 = nunca revisado).
