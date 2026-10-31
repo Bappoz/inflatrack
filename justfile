@@ -20,13 +20,18 @@ up:
 down:
     docker compose down
 
-# Do zero, em máquina limpa: apaga o volume e reaplica migrations/0001..0003.
+# Do zero, em máquina limpa: apaga o volume e reaplica todas as migrations/.
 reset:
     docker compose down -v
     docker compose up -d --wait
 
 psql:
     docker compose exec db psql -U {{PG_USER}} -d {{PG_DB}}
+
+# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
+# Ex.: just migrar 0005_serie_historica.sql
+migrar arquivo:
+    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
 
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
