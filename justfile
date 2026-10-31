@@ -33,26 +33,6 @@ psql:
 migrar arquivo:
     docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
 
-# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
-# Ex.: just migrar 0005_serie_historica.sql
-migrar arquivo:
-    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
-
-# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
-# Ex.: just migrar 0005_serie_historica.sql
-migrar arquivo:
-    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
-
-# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
-# Ex.: just migrar 0005_serie_historica.sql
-migrar arquivo:
-    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
-
-# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
-# Ex.: just migrar 0005_serie_historica.sql
-migrar arquivo:
-    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
-
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
@@ -132,30 +112,6 @@ bronze-ipca-metadados:
 ipca-load:
     uv run python -m inflatrack.loaders.load_ipca
 
-# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
-bronze-ipca-metadados:
-    uv run python -m inflatrack.bronze.ipca metadados
-
-# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
-ipca-load:
-    uv run python -m inflatrack.loaders.load_ipca
-
-# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
-bronze-ipca-metadados:
-    uv run python -m inflatrack.bronze.ipca metadados
-
-# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
-ipca-load:
-    uv run python -m inflatrack.loaders.load_ipca
-
-# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
-bronze-ipca-metadados:
-    uv run python -m inflatrack.bronze.ipca metadados
-
-# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
-ipca-load:
-    uv run python -m inflatrack.loaders.load_ipca
-
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:
     docker compose cp scripts/sql/verificar_carga.sql db:/tmp/verificar_carga.sql
@@ -204,10 +160,6 @@ dbt:
 # Só os testes analíticos (Nível 3 da pirâmide).
 dbt-test:
     uv run dbt test
-
-# Copia as tabelas da Gold para o schema serie do Postgres, a vitrine que o Metabase lê.
-serie:
-    uv run python -m inflatrack.reverse_etl.exportar_serie
 
 # Copia as tabelas da Gold para o schema serie do Postgres, a vitrine que o Metabase lê.
 serie:
@@ -280,35 +232,6 @@ bronze-commodities-importar:
 # Símbolos, volume e datas repetidas de commodities_cotacao.
 bronze-commodities-checar:
     uv run python -m inflatrack.bronze.ingest_commodities checar
-
-# CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
-bronze-transacional:
-    uv run python -m inflatrack.cdc.transacional
-
-# Espelha o Delta do CDC em bronze.transacional_mudanca no DuckDB.
-transacional-load:
-    uv run python -m inflatrack.loaders.load_transacional
-
-# Demonstra o CDC: insere, altera e apaga no Postgres, reprocessa e registra um evento atrasado.
-simular-cdc:
-    uv run python -m inflatrack.cdc.simular_mudancas
-
-# CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
-bronze-transacional:
-    uv run python -m inflatrack.cdc.transacional
-
-# Espelha o Delta do CDC em bronze.transacional_mudanca no DuckDB.
-transacional-load:
-    uv run python -m inflatrack.loaders.load_transacional
-
-# Demonstra o CDC: insere, altera e apaga no Postgres, reprocessa e registra um evento atrasado.
-simular-cdc:
-    uv run python -m inflatrack.cdc.simular_mudancas
-
-# E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
-e3-lojista: ipca-load simular-cdc transacional-load
-    uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario
-    just serie
 
 # CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
 bronze-transacional:

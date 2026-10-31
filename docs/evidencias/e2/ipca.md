@@ -3,7 +3,7 @@
 O que a fonte `ipca` entrega na Entrega 2, com o comando que produziu cada número. Tudo nesta página foi executado em **2026-10-11**, contra a API do SIDRA e contra o PostgreSQL do `docker compose`, no commit `4f1c78c` (`deltalake` 1.6.6, `duckdb` 1.5.5, `pyarrow` 25.0.1).
 
 !!! info "Onde está o código"
-    [`src/inflatrack/bronze_ipca.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze_ipca.py) (transformação, checagens, gravação e importação), chamado por [`ingest.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/ingest.py) a cada mês. Testes em `tests/test_ipca.py`, com respostas reais do SIDRA em `tests/fixtures/ipca/`. Colunas das duas tabelas no [Dicionário de Dados](../../dicionario/sidra.md#bronze-em-delta).
+    Na E3, `bronze_ipca.py` e `ingest.py` viraram um só arquivo: [`src/inflatrack/bronze/ipca.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze/ipca.py) (transformação, checagens, gravação e importação). Testes em `tests/unit/test_ipca.py` e `tests/integration/test_ipca.py`, com respostas reais do SIDRA em `tests/fixtures/ipca/`. Colunas das duas tabelas no [Dicionário de Dados](../../dicionario/sidra.md#bronze-em-delta).
 
 ## Situação das tarefas da E2
 

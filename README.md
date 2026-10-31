@@ -119,7 +119,10 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 |---|---|
 | `migrations/` | Esquema físico do PostgreSQL, aplicado em ordem na primeira subida do container |
 | `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
-| `src/inflatrack/ingest.py` | CLI de carga do IPCA/INPC: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
+| `src/inflatrack/bronze/ipca.py` | IPCA/INPC: coleta no SIDRA, Bronze em Delta e `COPY` para o banco |
+| `src/inflatrack/loaders/load_ipca.py` | Sobe o Delta do IPCA para o DuckDB (`just ipca-load`) |
+| `src/inflatrack/cdc/` | CDC do banco do lojista para a Bronze, sem CNPJ (`just bronze-transacional`, `just simular-cdc`) |
+| `src/inflatrack/loaders/load_transacional.py` | Sobe o Delta do CDC para o DuckDB (`just transacional-load`) |
 | `src/inflatrack/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
 | `src/inflatrack/ingest_pib.py` | CLI do PIB: crua em `data/raw/pib_raw/`, depois Parquet em `data/parquet/pib/` |
 | `src/inflatrack/load_pib.py` | Sobe o Parquet do PIB para o DuckDB (`just pib-load`) |
