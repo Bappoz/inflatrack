@@ -31,7 +31,7 @@ from pathlib import Path
 import duckdb
 from dotenv import load_dotenv
 
-from inflatrack.bronze.ingest import dsn_do_ambiente
+from inflatrack.common.db import dsn_do_ambiente
 
 logger = logging.getLogger("inflatrack.exportar_serie")
 
@@ -39,7 +39,14 @@ DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 SCHEMA_DESTINO = "serie"
 
 # Tabelas da Gold que o painel enxerga. Cada integrante acrescenta as suas.
-TABELAS: tuple[str, ...] = ("dim_calendario",)
+TABELAS: tuple[str, ...] = (
+    "dim_calendario",
+    "dim_localidade",
+    "dim_cesta_ipca_scd2",
+    "fct_inflacao_mensal",
+    "dim_produto_preco_scd2",
+    "fct_reajuste_lojista",
+)
 
 
 def _colunas(conexao: duckdb.DuckDBPyConnection, catalogo: str, schema: str, tabela: str):

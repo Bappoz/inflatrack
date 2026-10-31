@@ -45,6 +45,9 @@ module_name = "orchestration.definitions"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+# A pirâmide pede o mesmo nome em níveis diferentes (tests/unit/test_ipca.py e
+# tests/integration/test_ipca.py); o modo padrão do pytest recusa dois módulos homônimos.
+addopts = "--import-mode=importlib"
 
 [tool.pyright]
 extraPaths = [".", "src"]

@@ -229,7 +229,7 @@ def versao(destino: Path, tabela: str) -> int | None:
 
 def carregar_duckdb(
     conexao,
-    origem: pa.Table,
+    origem: pa.Table | ds.Dataset,
     tabela: str,
     modo: Literal["acrescenta", "substitui"],
     colunas: Sequence[str],
@@ -237,7 +237,8 @@ def carregar_duckdb(
     """Espelha ``origem`` em ``tabela`` do DuckDB, sem transformar. Devolve linhas inseridas.
 
     * ``acrescenta``: insere só as linhas cuja combinação ``colunas`` (a chave, com o
-      valor dentro) ainda não está na tabela.
+      valor dentro) ainda não está na tabela. Aceita um ``Dataset``, lido sob demanda pelo
+      DuckDB, para tabela grande demais para a memória (IPCA: 9 milhões de linhas).
     * ``substitui``: apaga da tabela as partições ``colunas`` presentes em ``origem`` e
       insere ``origem`` inteira.
 

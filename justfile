@@ -33,13 +33,18 @@ psql:
 migrar arquivo:
     docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
 
+# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
+# Ex.: just migrar 0005_serie_historica.sql
+migrar arquivo:
+    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
+
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
 
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
-    uv run python -m inflatrack.bronze.ingest --agregado 7060 --de 2026-05 --ate 2026-07
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2026-05 --ate 2026-07
 
 # World Bank -> raw + Parquet anual.
 pib-china-ingest:
@@ -84,25 +89,33 @@ bronze-pib-russia-checar:
     uv run python -m inflatrack.bronze.bronze_pib_russia checar
 
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
-# (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
+# (ver docs/evidencias/e2/ipca.md). Grava a Bronze em Delta e o Postgres; reexecutar não duplica.
 seed:
-    uv run python -m inflatrack.bronze.ingest --agregado 2938 --de 2006-07 --ate 2011-12
-    uv run python -m inflatrack.bronze.ingest --agregado 1419 --de 2012-01 --ate 2019-12
-    uv run python -m inflatrack.bronze.ingest --agregado 7060 --de 2020-01 --ate 2026-09
-    uv run python -m inflatrack.bronze.ingest --agregado 7063 --de 2020-01 --ate 2026-09
-    uv run python -m inflatrack.bronze.ingest --agregado 1737 --de 1979-12 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 2938 --de 2006-07 --ate 2011-12
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 1419 --de 2012-01 --ate 2019-12
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7063 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 1737 --de 1979-12 --ate 2026-09
 
 # Bronze do IPCA em Delta (data/parquet/ipca/): um intervalo de meses de um agregado.
 bronze-ipca de ate agregado="7060":
-    uv run python -m inflatrack.bronze.ingest --agregado {{agregado}} --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.ipca coletar --agregado {{agregado}} --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/ipca-inpc/ para as tabelas Delta. Reexecutável.
 bronze-ipca-importar:
-    uv run python -m inflatrack.bronze.bronze_ipca importar
+    uv run python -m inflatrack.bronze.ipca importar
 
 # Volume, meses faltando e revisões de ipca_observacao. Sai com erro se houver buraco.
 bronze-ipca-checar:
-    uv run python -m inflatrack.bronze.bronze_ipca checar
+    uv run python -m inflatrack.bronze.ipca checar
+
+# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
+bronze-ipca-metadados:
+    uv run python -m inflatrack.bronze.ipca metadados
+
+# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
+ipca-load:
+    uv run python -m inflatrack.loaders.load_ipca
 
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:

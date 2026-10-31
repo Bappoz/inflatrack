@@ -1,24 +1,24 @@
-"""Bronze do IPCA: transformação, checagens, idempotência e importação do Raw.
+"""IPCA, Nível 2: gravação em Delta, idempotência, importação do Raw e carga no DuckDB.
 
-As fixtures de ``tests/fixtures/ipca/`` são respostas reais do SIDRA, baixadas em
-2026-10-11 e gravadas byte a byte:
-
-* ``7060-202001-recorte.json``: Brasil, São Paulo e Rio Branco x 4 variáveis x 3
-  categorias (36 linhas). Recorte escolhido por ter, na mesma resposta, os marcadores
-  ``...`` e ``-`` e valores negativos de verdade.
-* ``1737-197912.json`` e ``1737-202609.json``: meses completos do número-índice (6 linhas).
+Usa as respostas reais de ``tests/fixtures/ipca/`` (ver ``tests/unit/test_ipca.py``) e pastas
+temporárias. Os testes de ``sincronizar_cesta`` precisam do Postgres no ar e são pulados sem ele.
 """
 
 import gzip
 import json
+import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
 from pathlib import Path
 
+import duckdb
+import psycopg
 import pytest
 from deltalake import DeltaTable
 
-from inflatrack import bronze_ipca, sidra
+from inflatrack import sidra
+from inflatrack.bronze import ipca
+from inflatrack.common.db import dsn_do_ambiente
+from inflatrack.loaders import load_ipca
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "ipca"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
@@ -44,126 +44,10 @@ def recorte() -> list[dict]:
     return json.loads(corpo("7060-202001-recorte.json"))
 
 
-def test_transformar_mantem_todas_as_linhas(recorte) -> None:
-    """O ingestor antigo descartava ~30% das linhas; a Bronze não descarta nenhuma."""
-    linhas = bronze_ipca.transformar(recorte, 7060)
-
-    assert len(linhas) == len(recorte) == 36
-    assert [linha["valor_bruto"] for linha in linhas] == [objeto["V"] for objeto in recorte]
-
-
-def test_transformar_marcador_vira_valor_nulo_com_o_texto_original(recorte) -> None:
-    linhas = bronze_ipca.transformar(recorte, 7060)
-
-    sem_valor = [linha for linha in linhas if linha["valor"] is None]
-    assert {linha["valor_bruto"] for linha in sem_valor} == {"...", "-"}
-    assert len(sem_valor) == 21
-
-
-def test_transformar_nao_confunde_deflacao_com_marcador(recorte) -> None:
-    """``-`` sozinho é ausente; ``-2.68`` é queda de preço e precisa sobreviver."""
-    linhas = bronze_ipca.transformar(recorte, 7060)
-
-    negativos = {
-        linha["valor"] for linha in linhas if linha["valor"] is not None and linha["valor"] < 0
-    }
-    assert negativos == {Decimal("-2.68"), Decimal("-0.21")}
-
-
-def test_transformar_converte_tipos_sem_inventar_padrao(recorte) -> None:
-    primeira = bronze_ipca.transformar(recorte, 7060)[0]
-
-    assert primeira == {
-        "agregado": 7060,
-        "mes_referencia": date(2020, 1, 1),
-        "nivel_territorial": 1,
-        "codigo_localidade": 1,
-        "codigo_variavel": 63,
-        "id_categoria": 7169,
-        "codigo_unidade": 2,
-        "valor": Decimal("0.21"),
-        "valor_bruto": "0.21",
-    }
-
-
-def test_transformar_unidade_vazia_fica_nula(recorte) -> None:
-    """Nas linhas ``...`` a API manda a unidade vazia; não se assume ``%``."""
-    linhas = bronze_ipca.transformar(recorte, 7060)
-
-    assert {linha["codigo_unidade"] for linha in linhas if linha["valor_bruto"] == "..."} == {None}
-
-
-@pytest.mark.parametrize("marcador", sorted(sidra.MARCADORES_AUSENTE))
-def test_transformar_reconhece_os_quatro_marcadores(recorte, marcador) -> None:
-    """``..`` e ``X`` estão na ajuda da API, mas não apareceram nas respostas baixadas:
-    este caso troca o valor de uma linha real à mão."""
-    objeto = recorte[0] | {"V": marcador}
-
-    (linha,) = bronze_ipca.transformar([objeto], 7060)
-
-    assert linha["valor"] is None
-    assert linha["valor_bruto"] == marcador
-
-
-def test_transformar_1737_nao_tem_categoria() -> None:
-    linhas = bronze_ipca.transformar(json.loads(corpo("1737-197912.json")), 1737)
-
-    assert {linha["id_categoria"] for linha in linhas} == {None}
-    # 13 casas decimais: em float o número-índice de 1979 perderia precisão.
-    assert Decimal("0.0000000076183") in {linha["valor"] for linha in linhas}
-
-
-def test_transformar_recusa_campo_inesperado(recorte) -> None:
-    """Campo novo na API não pode sumir em silêncio: a extração para e avisa."""
-    with pytest.raises(bronze_ipca.ChecagemError, match="campos"):
-        bronze_ipca.transformar([recorte[0] | {"D5C": "1"}], 7060)
-
-
-def test_transformar_recusa_valor_que_nao_e_numero_nem_marcador(recorte) -> None:
-    with pytest.raises(bronze_ipca.ChecagemError, match="marcador"):
-        bronze_ipca.transformar([recorte[0] | {"V": "n/d"}], 7060)
-
-
-def test_checar_aceita_mes_completo() -> None:
-    linhas = bronze_ipca.transformar(json.loads(corpo("1737-202609.json")), 1737)
-
-    bronze_ipca.checar(linhas, 1737, "202609")
-
-
-def test_checar_recusa_resposta_vazia() -> None:
-    with pytest.raises(bronze_ipca.ChecagemError, match="vazia"):
-        bronze_ipca.checar([], 7060)
-
-
-def test_checar_recusa_mes_diferente_do_pedido() -> None:
-    linhas = bronze_ipca.transformar(json.loads(corpo("1737-202609.json")), 1737)
-
-    with pytest.raises(bronze_ipca.ChecagemError, match="pedido 202608"):
-        bronze_ipca.checar(linhas, 1737, "202608")
-
-
-def test_checar_recusa_volume_fora_da_referencia(recorte) -> None:
-    """O recorte tem 3 localidades e 3 categorias; o 7060 completo tem 17 e 457."""
-    linhas = bronze_ipca.transformar(recorte, 7060)
-
-    with pytest.raises(bronze_ipca.ChecagemError, match="3 localidades .esperado 17."):
-        bronze_ipca.checar(linhas, 7060)
-
-
-def test_checar_recusa_buraco_no_retangulo(recorte, monkeypatch) -> None:
-    referencia = bronze_ipca.Referencia(3, frozenset({63, 66, 69, 2265}), 3)
-    monkeypatch.setitem(bronze_ipca.REFERENCIA, 7060, referencia)
-    linhas = bronze_ipca.transformar(recorte, 7060)
-    bronze_ipca.checar(linhas, 7060)  # o recorte inteiro passa
-
-    with pytest.raises(bronze_ipca.ChecagemError, match="35 combinações de 36"):
-        bronze_ipca.checar(linhas[:-1], 7060)
-
-
 def test_gravar_preenche_as_duas_tabelas_com_linhagem(tmp_path) -> None:
     resposta = resposta_1737()
 
-    gravacao = bronze_ipca.gravar(tmp_path, 1737, "202609", resposta, QUANDO)
+    gravacao = ipca.gravar(tmp_path, 1737, "202609", resposta, QUANDO)
 
     (guardada,) = tabela(tmp_path, "resposta")
     assert guardada["corpo"] == resposta.corpo
@@ -179,9 +63,9 @@ def test_gravar_preenche_as_duas_tabelas_com_linhagem(tmp_path) -> None:
 
 
 def test_reexecutar_o_mesmo_mes_nao_acrescenta_nada(tmp_path) -> None:
-    bronze_ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
+    ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
 
-    segunda = bronze_ipca.gravar(tmp_path, 1737, "202609", resposta_1737())
+    segunda = ipca.gravar(tmp_path, 1737, "202609", resposta_1737())
 
     assert (segunda.resposta_nova, segunda.linhas_novas) == (False, 0)
     assert len(tabela(tmp_path, "resposta")) == 1
@@ -198,11 +82,11 @@ def _editado(nome: str, **troca: str) -> str:
 
 
 def test_revisao_do_ibge_entra_como_linha_nova_e_preserva_a_anterior(tmp_path) -> None:
-    bronze_ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
+    ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
     # Simula o IBGE republicando só a variação mensal (variável 63): 0.82 -> 0.84.
     revisada = resposta_1737(texto=_editado("1737-202609.json", V="0.84"))
 
-    gravacao = bronze_ipca.gravar(tmp_path, 1737, "202609", revisada)
+    gravacao = ipca.gravar(tmp_path, 1737, "202609", revisada)
 
     assert (gravacao.resposta_nova, gravacao.linhas_novas) == (True, 1)
     assert len(tabela(tmp_path, "resposta")) == 2
@@ -216,8 +100,8 @@ def test_resposta_reprovada_nao_e_gravada(tmp_path, recorte) -> None:
     url = sidra.url_valores(7060, "202001")
     resposta = sidra.Resposta(url, 200, "application/json", corpo("7060-202001-recorte.json"))
 
-    with pytest.raises(bronze_ipca.ChecagemError):
-        bronze_ipca.gravar(tmp_path, 7060, "202001", resposta)
+    with pytest.raises(ipca.ChecagemError):
+        ipca.gravar(tmp_path, 7060, "202001", resposta)
 
     assert list(tmp_path.iterdir()) == []
 
@@ -236,7 +120,7 @@ def test_importar_raw_reconstroi_a_requisicao_pelo_nome_do_arquivo(tmp_path) -> 
     _raw_antigo(raw, "1737-197912.json")
     _raw_antigo(raw, "1737-202609.json")
 
-    respostas, observacoes, falhas = bronze_ipca.importar_raw(raw, bronze)
+    respostas, observacoes, falhas = ipca.importar_raw(raw, bronze)
 
     assert (respostas, observacoes, falhas) == (2, 12, [])
     guardadas = sorted(tabela(bronze, "resposta"), key=lambda linha: linha["_requisicao"])
@@ -251,16 +135,16 @@ def test_importar_raw_reconstroi_a_requisicao_pelo_nome_do_arquivo(tmp_path) -> 
 def test_importar_raw_duas_vezes_nao_duplica(tmp_path) -> None:
     raw, bronze = tmp_path / "raw", tmp_path / "bronze"
     _raw_antigo(raw, "1737-202609.json")
-    bronze_ipca.importar_raw(raw, bronze)
+    ipca.importar_raw(raw, bronze)
 
-    assert bronze_ipca.importar_raw(raw, bronze) == (0, 0, [])
+    assert ipca.importar_raw(raw, bronze) == (0, 0, [])
 
 
 def test_importar_raw_guarda_o_corpo_mesmo_quando_recusa_a_extracao(tmp_path) -> None:
     raw, bronze = tmp_path / "raw", tmp_path / "bronze"
     _raw_antigo(raw, "7060-202001-recorte.json").rename(raw / "7060-202001.json.gz")
 
-    respostas, observacoes, falhas = bronze_ipca.importar_raw(raw, bronze)
+    respostas, observacoes, falhas = ipca.importar_raw(raw, bronze)
 
     assert (respostas, observacoes) == (1, 0)
     assert len(falhas) == 1 and falhas[0].startswith("7060-202001.json.gz")
@@ -268,12 +152,148 @@ def test_importar_raw_guarda_o_corpo_mesmo_quando_recusa_a_extracao(tmp_path) ->
 
 
 def test_resumo_da_bronze_aponta_mes_faltando(tmp_path) -> None:
-    bronze_ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
+    ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
     julho = resposta_1737("202607", _editado("1737-202609.json", D3C="202607"))
-    bronze_ipca.gravar(tmp_path, 1737, "202607", julho, QUANDO)
+    ipca.gravar(tmp_path, 1737, "202607", julho, QUANDO)
 
-    (resumo,) = bronze_ipca.resumo_da_bronze(tmp_path)
+    (resumo,) = ipca.resumo_da_bronze(tmp_path)
 
     assert (resumo["meses"], resumo["meses_faltando"]) == (2, 1)
     assert (resumo["linhas"], resumo["meses_fora_do_volume"]) == (12, 0)
     assert resumo["linhas_de_revisao"] == 0
+
+
+# --- Metadados --------------------------------------------------------------------
+
+
+def _metadados(nome_subitem: str = "Arroz") -> sidra.Resposta:
+    categorias = [{"id": 7169, "nome": "Índice geral"}]
+    categorias += [{"id": 8000 + i, "nome": f"1101{i:03d}.Subitem {i}"} for i in range(3, 458)]
+    categorias.append({"id": 7173, "nome": f"1101002.{nome_subitem}"})
+    corpo_json = json.dumps(
+        {
+            "periodicidade": {"inicio": 202001, "fim": 202609},
+            "classificacoes": [{"id": 315, "categorias": categorias}],
+        }
+    )
+    url = sidra.URL_METADADOS.format(agregado=7060)
+    return sidra.Resposta(url, 200, "application/json", corpo_json)
+
+
+def test_gravar_metadados_e_idempotente_e_guarda_a_resposta(tmp_path) -> None:
+    primeira = ipca.gravar_metadados(tmp_path, 7060, _metadados(), QUANDO)
+    segunda = ipca.gravar_metadados(tmp_path, 7060, _metadados())
+
+    assert (primeira.linhas_novas, segunda.linhas_novas) == (457, 0)
+    assert not segunda.resposta_nova
+    assert len(tabela(tmp_path, "metadados")) == 457
+    assert len(tabela(tmp_path, "resposta")) == 1
+
+
+def test_renomear_subitem_entra_como_versao_nova_e_preserva_a_anterior(tmp_path) -> None:
+    ipca.gravar_metadados(tmp_path, 7060, _metadados("Arroz"), QUANDO)
+
+    gravacao = ipca.gravar_metadados(tmp_path, 7060, _metadados("Arroz polido"))
+
+    nomes = {
+        linha["nome"] for linha in tabela(tmp_path, "metadados") if linha["codigo"] == "1101002"
+    }
+    assert gravacao.linhas_novas == 1
+    assert nomes == {"Arroz", "Arroz polido"}
+
+
+# --- Delta -> DuckDB --------------------------------------------------------------
+
+
+def test_load_ipca_duas_vezes_nao_duplica_e_a_revisao_entra(tmp_path) -> None:
+    ipca.gravar(tmp_path, 1737, "202609", resposta_1737(), QUANDO)
+    ipca.gravar_metadados(tmp_path, 7060, _metadados(), QUANDO)
+    with duckdb.connect(str(tmp_path / "a.duckdb")) as conexao:
+        primeira = load_ipca.carregar(conexao, tmp_path)
+        segunda = load_ipca.carregar(conexao, tmp_path)
+
+        revisada = ipca.gravar(
+            tmp_path,
+            1737,
+            "202609",
+            resposta_1737(texto=_editado("1737-202609.json", V="1.23")),
+            QUANDO,
+        )
+        terceira = load_ipca.carregar(conexao, tmp_path)
+        total = conexao.execute("SELECT count(*) FROM bronze.ipca_observacao").fetchone()[0]
+
+    assert primeira == {"bronze.ipca_observacao": 6, "bronze.ipca_metadados": 457}
+    assert segunda == {"bronze.ipca_observacao": 0, "bronze.ipca_metadados": 0}
+    assert terceira["bronze.ipca_observacao"] == revisada.linhas_novas > 0
+    assert total == 6 + revisada.linhas_novas
+
+
+def test_load_ipca_sem_delta_avisa_em_vez_de_criar_tabela_vazia(tmp_path) -> None:
+    with duckdb.connect() as conexao, pytest.raises(FileNotFoundError, match="observacao"):
+        load_ipca.carregar(conexao, tmp_path)
+
+
+# --- Postgres: histórico da cesta (SCD tipo 2) ------------------------------------
+
+
+@pytest.fixture
+def pg():
+    try:
+        conexao = psycopg.connect(dsn_do_ambiente(), connect_timeout=3)
+    except psycopg.OperationalError:
+        pytest.skip("Postgres fora do ar")
+    with conexao:
+        yield conexao
+        conexao.rollback()  # nada do teste fica no banco
+
+
+def _cesta(nome: str, fim: int = 202609) -> dict:
+    # Três dígitos não têm pai (`sidra.categorias`), então o teste não precisa semear a hierarquia.
+    codigo = f"9{uuid.uuid4().int % 100:02d}"
+    return {
+        "periodicidade": {"inicio": 202001, "fim": fim},
+        "classificacoes": [{"id": 315, "categorias": [{"id": 99, "nome": f"{codigo}.{nome}"}]}],
+    }
+
+
+def _versoes(pg, codigo: str) -> list[tuple]:
+    return pg.execute(
+        "select nome, vigencia_inicio, vigencia_fim from classificacao_versao"
+        " where codigo = %s and id_fonte = 7060 order by vigencia_inicio",
+        (codigo,),
+    ).fetchall()
+
+
+def test_cesta_reexecutada_com_o_mesmo_nome_nao_cria_versao(pg) -> None:
+    metadados = _cesta("Leite pasteurizado")
+    (codigo,) = ipca.sincronizar_cesta(pg, 7060, metadados).values()
+
+    ipca.sincronizar_cesta(pg, 7060, metadados)
+
+    assert _versoes(pg, codigo) == [("Leite pasteurizado", date(2020, 1, 1), None)]
+
+
+def test_renomear_na_cesta_fecha_a_versao_e_preserva_o_nome_antigo(pg) -> None:
+    metadados = _cesta("Leite pasteurizado", fim=202606)
+    (codigo,) = ipca.sincronizar_cesta(pg, 7060, metadados).values()
+
+    categorias = metadados["classificacoes"][0]["categorias"]
+    categorias[0]["nome"] = f"{codigo}.Leite longa vida"
+    metadados["periodicidade"]["fim"] = 202609
+    ipca.sincronizar_cesta(pg, 7060, metadados)
+
+    assert _versoes(pg, codigo) == [
+        ("Leite pasteurizado", date(2020, 1, 1), date(2026, 8, 1)),
+        ("Leite longa vida", date(2026, 9, 1), None),
+    ]
+
+
+def test_cesta_recusa_duas_versoes_abertas_para_o_mesmo_codigo(pg) -> None:
+    (codigo,) = ipca.sincronizar_cesta(pg, 7060, _cesta("Arroz")).values()
+
+    with pytest.raises(psycopg.errors.UniqueViolation):
+        pg.execute(
+            "insert into classificacao_versao (codigo, id_fonte, nome, vigencia_inicio)"
+            " values (%s, 7060, 'Outro', '2026-01-01')",
+            (codigo,),
+        )
