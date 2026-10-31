@@ -38,6 +38,11 @@ migrar arquivo:
 migrar arquivo:
     docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
 
+# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
+# Ex.: just migrar 0005_serie_historica.sql
+migrar arquivo:
+    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
+
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
@@ -108,6 +113,14 @@ bronze-ipca-importar:
 # Volume, meses faltando e revisões de ipca_observacao. Sai com erro se houver buraco.
 bronze-ipca-checar:
     uv run python -m inflatrack.bronze.ipca checar
+
+# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
+bronze-ipca-metadados:
+    uv run python -m inflatrack.bronze.ipca metadados
+
+# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
+ipca-load:
+    uv run python -m inflatrack.loaders.load_ipca
 
 # Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
 bronze-ipca-metadados:
@@ -230,9 +243,20 @@ bronze-commodities-importar:
 bronze-commodities-checar:
     uv run python -m inflatrack.bronze.ingest_commodities checar
 
+# CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
+bronze-transacional:
+    uv run python -m inflatrack.cdc.transacional
+
+# Espelha o Delta do CDC em bronze.transacional_mudanca no DuckDB.
+transacional-load:
+    uv run python -m inflatrack.loaders.load_transacional
+
+# Demonstra o CDC: insere, altera e apaga no Postgres, reprocessa e registra um evento atrasado.
+simular-cdc:
+    uv run python -m inflatrack.cdc.simular_mudancas
+
 # E2 de ponta a ponta: a Bronze de cada fonte e a sua checagem. Cada fonte acrescenta as suas.
 # O IPCA fica de fora (carga completa: 886 requisições, ~21 min, exige o Postgres no ar): use `just e2-ipca`.
-# O CDC do transacional entra aqui quando existir.
 e2: bronze-pib bronze-pib-checar bronze-commodities bronze-commodities-checar bronze-pib-china bronze-pib-china-checar bronze-pib-usa bronze-pib-usa-checar bronze-pib-russia bronze-pib-russia-checar bronze-dolar bronze-dolar-checar bronze-selic bronze-selic-checar bronze-salario-minimo bronze-salario-minimo-checar bronze-clima bronze-clima-checar
 
 # IPCA/INPC da E2: a carga completa e a checagem. Exige `just up`; ~21 min.
