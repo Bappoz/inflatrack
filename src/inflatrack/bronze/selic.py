@@ -281,20 +281,44 @@ def checar_tabela(destino: Path = DIRETORIO_PADRAO) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--de", default="2020-01-01", help="Data inicial AAAA-MM-DD")
-    parser.add_argument("--ate", default=date.today().isoformat(), help="Data final AAAA-MM-DD")
-    parser.add_argument(
+    sub = parser.add_subparsers(dest="comando")
+
+    p_col = sub.add_parser("coletar", help="Coleta dados da API e grava em Delta")
+    p_col.add_argument("--de", default="2020-01-01", help="Data inicial AAAA-MM-DD")
+    p_col.add_argument("--ate", default=date.today().isoformat(), help="Data final AAAA-MM-DD")
+    p_col.add_argument(
         "--destino", default=str(DIRETORIO_PADRAO), help="Diretório de destino Delta"
     )
-    args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    de = date.fromisoformat(args.de)
-    ate = date.fromisoformat(args.ate)
+    p_imp = sub.add_parser("importar", help="Importa arquivos .json.gz antigos")
+    p_imp.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO), help="Diretório de origem raw")
+    p_imp.add_argument(
+        "--destino", default=str(DIRETORIO_PADRAO), help="Diretório de destino Delta"
+    )
 
-    logger.info("Coletando taxas Selic de %s a %s...", de, ate)
-    res = coletar(de, ate, Path(args.destino))
-    logger.info("Selic Delta: %d lidas, %d novas", res.linhas_lidas, res.linhas_novas)
+    p_chk = sub.add_parser("checar", help="Valida estado das tabelas Delta")
+    p_chk.add_argument(
+        "--destino", default=str(DIRETORIO_PADRAO), help="Diretório de destino Delta"
+    )
+
+    args_list = list(argv) if argv is not None else sys.argv[1:]
+    if not args_list or args_list[0] not in ("coletar", "importar", "checar", "-h", "--help"):
+        args_list = ["coletar", *args_list]
+
+    args = parser.parse_args(args_list)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    if args.comando == "coletar":
+        de = date.fromisoformat(args.de)
+        ate = date.fromisoformat(args.ate)
+        logger.info("Coletando taxas Selic de %s a %s...", de, ate)
+        res = coletar(de, ate, Path(args.destino))
+        logger.info("Selic Delta: %d lidas, %d novas", res.linhas_lidas, res.linhas_novas)
+    elif args.comando == "importar":
+        total = importar(Path(args.raw_dir), Path(args.destino))
+        logger.info("Importação de raw legado da Selic concluída: %d novas linhas", total)
+    elif args.comando == "checar":
+        checar_tabela(Path(args.destino))
     return 0
 
 

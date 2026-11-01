@@ -162,35 +162,37 @@ docs-build:
 
 # Carga isolada do Dólar (o fim padrão é a data atual).
 seed-dolar de="2020-01-01":
-    uv run python -m inflatrack.bronze.ingest_dolar --de {{de}}
+    uv run python -m inflatrack.bronze.dolar coletar --de {{de}}
+    uv run python -m inflatrack.loaders.load_dolar
 
 # Bronze do Dólar Comercial em Delta (data/parquet/dolar/): coleta direta da API Olinda.
 bronze-dolar de="2020-01-01" ate=datetime("%Y-%m-%d"):
-    uv run python -m inflatrack.bronze.bronze_dolar coletar --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.dolar coletar --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta do Dólar. Reexecutável.
 bronze-dolar-importar:
-    uv run python -m inflatrack.bronze.bronze_dolar importar
+    uv run python -m inflatrack.bronze.dolar importar
 
 # Checagens de integridade e volume das tabelas Delta do Dólar.
 bronze-dolar-checar:
-    uv run python -m inflatrack.bronze.bronze_dolar checar
+    uv run python -m inflatrack.bronze.dolar checar
 
 # Carga isolada da Selic (o fim padrão é a data atual).
 seed-selic de="2020-01-01":
-    uv run python -m inflatrack.bronze.ingest_selic --de {{de}}
+    uv run python -m inflatrack.bronze.selic coletar --de {{de}}
+    uv run python -m inflatrack.loaders.load_selic
 
 # Bronze da Selic em Delta (data/parquet/selic/): coleta direta da API SGS Série 11.
 bronze-selic de="2020-01-01" ate=datetime("%Y-%m-%d"):
-    uv run python -m inflatrack.bronze.bronze_selic coletar --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.selic coletar --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta da Selic. Reexecutável.
 bronze-selic-importar:
-    uv run python -m inflatrack.bronze.bronze_selic importar
+    uv run python -m inflatrack.bronze.selic importar
 
 # Checagens de integridade e volume das tabelas Delta da Selic.
 bronze-selic-checar:
-    uv run python -m inflatrack.bronze.bronze_selic checar
+    uv run python -m inflatrack.bronze.selic checar
 
 # Bronze de Macroeconomia em Delta (Dólar + Selic).
 bronze-macro: bronze-dolar bronze-selic

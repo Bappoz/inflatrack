@@ -10,7 +10,6 @@ import pytest
 from deltalake import DeltaTable
 from inflatrack.selic_sgs import SGSError
 
-from inflatrack import bronze_selic
 from inflatrack.bronze import selic
 
 FIXTURE_SELIC = Path(__file__).parent.parent / "fixtures" / "selic" / "sgs_amostra.json"
@@ -22,7 +21,7 @@ def payload_selic() -> list[dict]:
 
 
 def test_transformar_selic_sem_interpolacao(payload_selic: list[dict]) -> None:
-    linhas = bronze_selic.transformar(payload_selic)
+    linhas = selic.transformar(payload_selic)
     assert len(linhas) == 3
 
     # Preserva estritamente os dias da API, sem interpolar sábados e domingos
@@ -36,21 +35,21 @@ def test_transformar_selic_sem_interpolacao(payload_selic: list[dict]) -> None:
 
 def test_transformar_selic_invalido() -> None:
     with pytest.raises(SGSError):
-        bronze_selic.transformar([])
+        selic.transformar([])
 
     with pytest.raises(SGSError):
-        bronze_selic.transformar([{"data": "02/01/2020"}])
+        selic.transformar([{"data": "02/01/2020"}])
 
 
 def test_checar_selic_valida(payload_selic: list[dict]) -> None:
-    linhas = bronze_selic.transformar(payload_selic)
-    bronze_selic.checar(linhas)
+    linhas = selic.transformar(payload_selic)
+    selic.checar(linhas)
 
 
 def test_checar_selic_fora_de_faixa() -> None:
     # Taxa anualizada passada por engano (> 1.0% ao dia)
-    with pytest.raises(bronze_selic.ChecagemError, match="fora da faixa"):
-        bronze_selic.checar(
+    with pytest.raises(selic.ChecagemError, match="fora da faixa"):
+        selic.checar(
             [
                 {
                     "data_referencia": Path("2020-01-02"),
@@ -61,8 +60,8 @@ def test_checar_selic_fora_de_faixa() -> None:
         )
 
     # Taxa negativa
-    with pytest.raises(bronze_selic.ChecagemError, match="fora da faixa"):
-        bronze_selic.checar(
+    with pytest.raises(selic.ChecagemError, match="fora da faixa"):
+        selic.checar(
             [
                 {
                     "data_referencia": Path("2020-01-02"),

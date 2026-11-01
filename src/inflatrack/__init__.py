@@ -39,14 +39,12 @@ for _name in _LOADER_NAMES:
 # 4. Módulos bronze_* primeiro (pois ingest_* dependem de bronze_*)
 _BRONZE_NAMES = [
     "bronze_clima",
-    "bronze_dolar",
     "bronze_ipca",
     "bronze_pib",
     "bronze_pib_china",
     "bronze_pib_russia",
     "bronze_pib_usa",
     "bronze_salario_minimo",
-    "bronze_selic",
     "dolar",
     "selic",
 ]
@@ -60,13 +58,11 @@ _INGEST_NAMES = [
     "ingest",
     "ingest_clima",
     "ingest_commodities",
-    "ingest_dolar",
     "ingest_pib",
     "ingest_pib_china",
     "ingest_pib_russia",
     "ingest_pib_usa",
     "ingest_salario_minimo",
-    "ingest_selic",
 ]
 for _name in _INGEST_NAMES:
     _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
