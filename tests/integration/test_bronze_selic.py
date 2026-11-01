@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from deltalake import DeltaTable
 from inflatrack.selic_sgs import SGSError
 
 from inflatrack import bronze_selic
+from inflatrack.bronze import selic
 
 FIXTURE_SELIC = Path(__file__).parent.parent / "fixtures" / "selic" / "sgs_amostra.json"
 
@@ -76,7 +78,7 @@ def test_gravar_e_idempotencia_selic(tmp_path: Path, payload_selic: list[dict]) 
     requisicao = "bcdata.sgs.11_teste"
 
     # Primeira gravação
-    res1 = bronze_selic.gravar(tmp_path, requisicao=requisicao, corpo=corpo)
+    res1 = selic.gravar(tmp_path, requisicao=requisicao, corpo=corpo)
     assert res1.resposta_nova is True
     assert res1.linhas_lidas == 3
     assert res1.linhas_novas == 3
@@ -88,7 +90,7 @@ def test_gravar_e_idempotencia_selic(tmp_path: Path, payload_selic: list[dict]) 
     assert dt_taxa.to_pyarrow_table().num_rows == 3
 
     # Segunda gravação (reexecução exata)
-    res2 = bronze_selic.gravar(tmp_path, requisicao=requisicao, corpo=corpo)
+    res2 = selic.gravar(tmp_path, requisicao=requisicao, corpo=corpo)
     assert res2.resposta_nova is False
     assert res2.linhas_lidas == 3
     assert res2.linhas_novas == 0
@@ -96,3 +98,32 @@ def test_gravar_e_idempotencia_selic(tmp_path: Path, payload_selic: list[dict]) 
     # Contagens inalteradas
     assert DeltaTable(str(tmp_path / "resposta")).to_pyarrow_table().num_rows == 1
     assert DeltaTable(str(tmp_path / "taxa_dia")).to_pyarrow_table().num_rows == 3
+
+
+def test_importar_raw_legado_selic(tmp_path: Path, payload_selic: list[dict]) -> None:
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir(parents=True)
+    arquivo_gzip = raw_dir / "selic_2020.json.gz"
+    with gzip.open(arquivo_gzip, "wt", encoding="utf-8") as f:
+        json.dump(payload_selic, f)
+
+    destino_delta = tmp_path / "delta"
+    total1 = selic.importar(raw_dir, destino=destino_delta)
+    assert total1 == 3
+
+    # Reimportar o mesmo arquivo deve ser estritamente idempotente (0 novas)
+    total2 = selic.importar(raw_dir, destino=destino_delta)
+    assert total2 == 0
+
+
+def test_checar_tabela_selic(tmp_path: Path, payload_selic: list[dict]) -> None:
+    destino_delta = tmp_path / "delta"
+
+    # Diretório vazio sem tabelas Delta deve falhar
+    with pytest.raises(selic.ChecagemError, match="não encontrada"):
+        selic.checar_tabela(destino_delta)
+
+    # Grava dados válidos e checa sucesso
+    corpo = json.dumps(payload_selic, ensure_ascii=False)
+    selic.gravar(destino_delta, requisicao="teste:checar", corpo=corpo)
+    selic.checar_tabela(destino_delta)

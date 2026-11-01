@@ -9,7 +9,7 @@ from orchestration.schedules import SCHEDULES
 
 def test_definicoes_carregam_sem_erro():
     repositorio = defs.get_repository_def()
-    assert {"ipca", "dolar", "commodities_duckdb", "clima_duckdb"} <= {
+    assert {"ipca", "dolar_duckdb", "selic_duckdb", "commodities_duckdb", "clima_duckdb"} <= {
         chave.to_user_string() for chave in repositorio.asset_graph.get_all_asset_keys()
     }
 
@@ -94,3 +94,51 @@ def test_todo_ativo_que_escreve_no_duckdb_usa_o_pool():
         no = repositorio.asset_graph.get(chave)
         if "duckdb" in no.kinds:
             assert no.pools == {POOL_DUCKDB}, chave.to_user_string()
+
+
+def test_dependencias_e_configuracao_dolar_e_selic():
+    """Valida o grafo de dependências, particionamento e pools de Dólar e Selic."""
+    from dagster import AssetKey
+
+    from orchestration.assets.comum import POOL_DUCKDB
+
+    grafo = defs.get_repository_def().asset_graph
+
+    # Dólar
+    dolar_p = grafo.get(AssetKey(["dolar_parquet"]))
+    dolar_d = grafo.get(AssetKey(["dolar_duckdb"]))
+    assert dolar_p.group_name == "macro"
+    assert dolar_d.group_name == "macro"
+    assert {p.to_user_string() for p in dolar_d.parent_keys} == {"dolar_parquet"}
+    assert dolar_d.pools == {POOL_DUCKDB}
+    assert "duckdb" in dolar_d.kinds
+
+    # Selic
+    selic_p = grafo.get(AssetKey(["selic_parquet"]))
+    selic_d = grafo.get(AssetKey(["selic_duckdb"]))
+    assert selic_p.group_name == "macro"
+    assert selic_d.group_name == "macro"
+    assert {p.to_user_string() for p in selic_d.parent_keys} == {"selic_parquet"}
+    assert selic_d.pools == {POOL_DUCKDB}
+    assert "duckdb" in selic_d.kinds
+
+
+def test_execucao_assets_dolar_e_selic_com_mock():
+    """Valida execução dos assets dolar_duckdb e selic_duckdb chamando os loaders."""
+    from unittest.mock import patch
+
+    from dagster import build_asset_context
+
+    from orchestration.assets import dolar as asset_dolar
+    from orchestration.assets import selic as asset_selic
+
+    with patch("inflatrack.loaders.load_dolar.main", return_value=0) as mock_dolar_main:
+        ctx = build_asset_context()
+        asset_dolar.dolar_duckdb(ctx)
+        mock_dolar_main.assert_called_once_with([])
+
+    with patch("inflatrack.loaders.load_selic.main", return_value=0) as mock_selic_main:
+        ctx = build_asset_context()
+        asset_selic.selic_duckdb(ctx)
+        mock_selic_main.assert_called_once_with([])
+

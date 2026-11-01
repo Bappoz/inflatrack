@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,6 +12,7 @@ from deltalake import DeltaTable
 from inflatrack.dolar_olinda import OlindaError
 
 from inflatrack import bronze_dolar
+from inflatrack.bronze import dolar
 
 FIXTURE_DOLAR = Path(__file__).parent.parent / "fixtures" / "dolar" / "olinda_amostra.json"
 
@@ -102,3 +104,32 @@ def test_gravar_e_idempotencia_dolar(tmp_path: Path, payload_dolar: dict) -> Non
     # Contagens permanecem inalteradas
     assert DeltaTable(str(tmp_path / "resposta")).to_pyarrow_table().num_rows == 1
     assert DeltaTable(str(tmp_path / "boletim")).to_pyarrow_table().num_rows == 4
+
+
+def test_importar_raw_legado_dolar(tmp_path: Path, payload_dolar: dict) -> None:
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir(parents=True)
+    arquivo_gzip = raw_dir / "dolar_2020.json.gz"
+    with gzip.open(arquivo_gzip, "wt", encoding="utf-8") as f:
+        json.dump(payload_dolar, f)
+
+    destino_delta = tmp_path / "delta"
+    total1 = dolar.importar(raw_dir, destino=destino_delta)
+    assert total1 == 4
+
+    # Reimportar o mesmo arquivo deve ser estritamente idempotente (0 novas)
+    total2 = dolar.importar(raw_dir, destino=destino_delta)
+    assert total2 == 0
+
+
+def test_checar_tabela_dolar(tmp_path: Path, payload_dolar: dict) -> None:
+    destino_delta = tmp_path / "delta"
+
+    # Diretório vazio sem tabelas Delta deve falhar
+    with pytest.raises(dolar.ChecagemError, match="não encontrada"):
+        dolar.checar_tabela(destino_delta)
+
+    # Grava dados válidos e checa sucesso
+    corpo = json.dumps(payload_dolar, ensure_ascii=False)
+    dolar.gravar(destino_delta, requisicao="teste:checar", corpo=corpo)
+    dolar.checar_tabela(destino_delta)

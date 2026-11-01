@@ -4,7 +4,7 @@ import httpx
 import pytest
 from dagster import AssetKey, RetryPolicy, asset, instance_for_test, materialize
 
-from orchestration.assets import commodities, pib
+from orchestration.assets import commodities, dolar, pib, selic
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 from orchestration.definitions import defs
 
@@ -48,8 +48,10 @@ def test_testes_do_dbt_viram_asset_checks() -> None:
 
 
 def test_politica_de_retry_por_fonte() -> None:
-    """PIB tenta de novo se a rede cair; commodities não, para não queimar a cota de 25/dia."""
+    """PIB, Dólar e Selic tentam de novo se a rede cair; commodities não para poupar cota."""
     assert pib.pib_parquet.op.retry_policy == RETRY_REDE
+    assert dolar.dolar_parquet.op.retry_policy == RETRY_REDE
+    assert selic.selic_parquet.op.retry_policy == RETRY_REDE
     assert commodities.commodities_parquet.op.retry_policy is None
 
 
