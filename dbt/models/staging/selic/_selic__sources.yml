@@ -1,0 +1,28 @@
+version: 2
+
+sources:
+  - name: bronze_selic
+    description: Bronze da Taxa Selic diária (Série SGS 11), espelhada do Delta Lake por inflatrack.loaders.load_selic.
+    schema: bronze
+    tables:
+      - name: selic_taxa
+        config:
+          meta:
+            dagster:
+              asset_key: ["selic_duckdb"]
+        description: >
+          Taxas Selic diárias apuradas pelo BACEN em dias úteis. Só acrescenta registros novos.
+        columns:
+          - name: data_referencia
+            description: Data da taxa apurada.
+            data_tests: [not_null]
+          - name: taxa_dia_pct
+            description: Taxa diária em porcentagem.
+            data_tests: [not_null]
+          - name: taxa_anualizada_pct
+            description: Taxa anualizada em porcentagem (base 252 dias úteis).
+            data_tests: [not_null]
+          - name: ano
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]
