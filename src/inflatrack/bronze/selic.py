@@ -4,7 +4,7 @@ Ponto de entrada único para coleta e validação da Taxa Selic diária.
 Grava duas tabelas Delta em ``data/parquet/selic/``:
 
     data/parquet/selic/resposta/   selic_resposta   uma linha por resposta com hash SHA-256
-    data/parquet/selic/taxa/       selic_taxa       taxa diária e anualizada com PyArrow
+    data/parquet/selic/taxa_dia/   selic_taxa_dia   taxa diária e anualizada com PyArrow
 
 Ambas as tabelas só acrescentam registros novos e são particionadas por ano.
 Reexecutar a mesma janela é estritamente idempotente.
@@ -33,7 +33,7 @@ from inflatrack.clients.selic_sgs import SGSClient, SGSError
 logger = logging.getLogger("inflatrack.selic")
 
 FONTE = "selic"
-TABELA = "taxa"
+TABELA = "taxa_dia"
 SERIE_SELIC = 11
 DIRETORIO_PADRAO = Path("data/parquet/selic")
 RAW_DIR_PADRAO = Path("data/raw/bcb")
@@ -84,24 +84,43 @@ def hash_do_corpo(corpo: str) -> str:
     return hashlib.sha256(corpo.encode("utf-8")).hexdigest()
 
 
-def transformar(payload: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def transformar(payload: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]]:
     """Converte a resposta da API SGS em registros tipados de taxa."""
-    if not isinstance(payload, list):
+    if isinstance(payload, list):
+        itens = payload
+    elif (
+        isinstance(payload, dict)
+        and "conteudo" in payload
+        and isinstance(payload["conteudo"], list)
+    ):
+        itens = payload["conteudo"]
+    else:
         raise SGSError(f"formato inesperado de payload SGS: {type(payload)}")
-    if not payload:
+
+    if not itens:
         raise SGSError("a API SGS não retornou observações da Selic")
 
     linhas: list[dict[str, Any]] = []
     obrigatorias = {"data", "valor"}
 
-    for item in payload:
+    for item in itens:
         if not isinstance(item, dict):
             raise SGSError("item da lista de taxas não é um dicionário")
         if not obrigatorias.issubset(item.keys()):
             raise SGSError("resposta da API SGS sem as colunas esperadas")
 
-        data_ref = datetime.strptime(str(item["data"]), "%d/%m/%Y").date()
-        taxa_dia = float(item["valor"])
+        data_str = str(item["data"]).strip()
+        try:
+            data_ref = datetime.strptime(data_str, "%d/%m/%Y").date()
+        except ValueError as err:
+            raise SGSError(f"data inválida no formato DD/MM/AAAA: {data_str!r}") from err
+
+        valor_raw = item["valor"]
+        try:
+            taxa_dia = float(valor_raw)
+        except (ValueError, TypeError) as err:
+            raise SGSError(f"valor numérico inválido de taxa: {valor_raw!r}") from err
+
         taxa_anualizada = ((1.0 + (taxa_dia / 100.0)) ** 252 - 1.0) * 100.0
 
         linhas.append(
@@ -147,7 +166,7 @@ def gravar(
     id_resp = hash_resp
 
     dir_resposta = destino / "resposta"
-    dir_taxa = destino / "taxa"
+    dir_taxa = destino / "taxa_dia"
     dir_resposta.parent.mkdir(parents=True, exist_ok=True)
 
     resposta_nova = True
@@ -242,7 +261,7 @@ def importar(origem_raw: Path, destino: Path = DIRETORIO_PADRAO) -> int:
 def checar_tabela(destino: Path = DIRETORIO_PADRAO) -> None:
     """Verifica a integridade das tabelas Delta gravadas."""
     caminho_resp = destino / "resposta"
-    caminho_taxa = destino / "taxa"
+    caminho_taxa = destino / "taxa_dia"
 
     if not DeltaTable.is_deltatable(caminho_resp):
         raise ChecagemError(f"tabela de respostas não encontrada em {caminho_resp}")
@@ -253,7 +272,7 @@ def checar_tabela(destino: Path = DIRETORIO_PADRAO) -> None:
     linhas_taxa = tab_taxa.num_rows
 
     if linhas_taxa == 0:
-        raise ChecagemError("tabela selic_taxa vazia")
+        raise ChecagemError("tabela selic_taxa_dia vazia")
 
     taxas = tab_taxa.column("taxa_dia_pct").to_pylist()
     if any(t is None or t <= 0.0 or t > 1.0 for t in taxas):

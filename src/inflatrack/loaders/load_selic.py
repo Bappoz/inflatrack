@@ -1,6 +1,6 @@
 """Carga da Bronze Delta da Taxa Selic no DuckDB analítico compartilhado.
 
-A tabela Delta ``data/parquet/selic/taxa/`` é espelhada em ``bronze.selic_taxa``,
+A tabela Delta ``data/parquet/selic/taxa_dia/`` é espelhada em ``bronze.selic_taxa``,
 sem nenhuma regra de negócio. A tabela é criada na primeira carga com o esquema do próprio
 Delta (``bronze.carregar_duckdb``), não dependendo de nenhum script SQL manual.
 
@@ -44,7 +44,7 @@ def carregar_bronze(
     delta_dir: Path,
     modo: str = "acrescenta",
 ) -> int:
-    """Espelha a tabela Delta ``taxa`` em ``bronze.selic_taxa``. Devolve linhas novas."""
+    """Espelha a tabela Delta ``taxa_dia`` em ``bronze.selic_taxa``. Devolve linhas novas."""
     if modo not in COLUNAS_POR_MODO:
         raise ValueError(f"modo inválido: {modo!r}. Escolha entre {list(COLUNAS_POR_MODO)}")
 
