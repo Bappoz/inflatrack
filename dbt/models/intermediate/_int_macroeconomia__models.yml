@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: int_macroeconomia__mensal
+    description: >
+      Uma linha por mês (mes_referencia = YYYY-MM-01) com o consolidado macroeconômico
+      de Câmbio (Dólar Comercial PTAX) e Juros (Taxa Selic). Contém médias mensais,
+      fechamento, volatilidade, variações percentuais e médias móveis retrospectivas (3, 6 e 12 meses).
+    columns:
+      - name: mes_referencia
+        description: "Primeiro dia do mês de referência (formato YYYY-MM-01)."
+        data_tests:
+          - not_null
+          - unique
+      - name: mes_fechado
+        description: "false se o mês ainda estiver em curso na data da análise."
+        data_tests: [not_null]
+      - name: dias_uteis_dolar
+        description: "Quantidade de pregões cambiais observados no mês."
+        data_tests: [not_null]
+      - name: dias_uteis_selic
+        description: "Quantidade de dias úteis com taxa Selic apurada no mês."
+        data_tests: [not_null]
+      - name: dolar_media
+        description: "Média mensal da cotação de venda do dólar PTAX."
+      - name: dolar_fechamento
+        description: "Cotação oficial de fechamento do último dia útil do mês."
+      - name: dolar_minimo
+        description: "Menor cotação observada no mês."
+      - name: dolar_maximo
+        description: "Maior cotação observada no mês."
+      - name: dolar_desvio_intramensal
+        description: "Desvio-padrão dos pregões do mês (volatilidade intradiária)."
+      - name: spread_medio
+        description: "Spread médio entre venda e compra no mês."
+      - name: dolar_var_mensal_pct
+        description: "Variação percentual da média do dólar contra o mês anterior."
+      - name: dolar_var_12m_pct
+        description: "Variação percentual da média do dólar contra 12 meses atrás."
+      - name: dolar_mm3
+        description: "Média móvel de 3 meses da cotação do dólar."
+      - name: dolar_mm6
+        description: "Média móvel de 6 meses da cotação do dólar."
+      - name: dolar_mm12
+        description: "Média móvel de 12 meses da cotação do dólar."
+      - name: dolar_volatilidade_12m_pct
+        description: "Desvio-padrão da variação mensal nos últimos 12 meses."
+      - name: selic_media_dia_pct
+        description: "Média das taxas Selic diárias do mês em porcentagem."
+      - name: selic_anualizada_fim_mes_pct
+        description: "Taxa Selic anualizada no último dia útil do mês (meta Copom)."
+      - name: selic_acumulada_mes_pct
+        description: "Taxa Selic acumulada real no mês via capitalização composta."
+      - name: selic_var_mensal_pontos
+        description: "Variação em pontos percentuais da Selic anualizada contra o mês anterior."
+      - name: selic_var_12m_pontos
+        description: "Variação em pontos percentuais da Selic anualizada contra 12 meses atrás."
+      - name: selic_mm3_anualizada
+        description: "Média móvel de 3 meses da Selic anualizada de fim de mês."
+      - name: selic_mm6_anualizada
+        description: "Média móvel de 6 meses da Selic anualizada de fim de mês."
+      - name: selic_mm12_anualizada
+        description: "Média móvel de 12 meses da Selic anualizada de fim de mês."

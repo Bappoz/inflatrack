@@ -20,6 +20,8 @@ def _pais(*chave: str) -> set[str]:
     [
         ("stg_pib__valor", "pib_duckdb"),
         ("stg_commodities__cotacao", "commodities_duckdb"),
+        ("stg_dolar__cotacao_diaria", "dolar_duckdb"),
+        ("stg_selic__taxa_diaria", "selic_duckdb"),
     ],
 )
 def test_staging_do_dbt_roda_depois_do_loader_da_bronze(modelo: str, loader: str) -> None:
@@ -30,6 +32,8 @@ def test_staging_do_dbt_roda_depois_do_loader_da_bronze(modelo: str, loader: str
 def test_intermediate_depende_da_staging_da_mesma_fonte() -> None:
     assert "silver/stg_pib__valor" in _pais("silver", "int_pib__mensal")
     assert "silver/stg_commodities__cotacao" in _pais("silver", "int_commodities__mensal")
+    assert "silver/stg_dolar__cotacao_diaria" in _pais("silver", "int_macroeconomia__mensal")
+    assert "silver/stg_selic__taxa_diaria" in _pais("silver", "int_macroeconomia__mensal")
 
 
 def test_ativos_do_dbt_ficam_no_pool_e_no_grupo_da_camada() -> None:
@@ -44,7 +48,11 @@ def test_ativos_do_dbt_ficam_no_pool_e_no_grupo_da_camada() -> None:
 
 def test_testes_do_dbt_viram_asset_checks() -> None:
     checados = {chave.asset_key.to_user_string() for chave in GRAFO.asset_check_keys}
-    assert {"silver/int_pib__mensal", "silver/int_commodities__mensal"} <= checados
+    assert {
+        "silver/int_pib__mensal",
+        "silver/int_commodities__mensal",
+        "silver/int_macroeconomia__mensal",
+    } <= checados
 
 
 def test_politica_de_retry_por_fonte() -> None:
