@@ -19,9 +19,6 @@ sources:
           - name: taxa_dia_pct
             description: Taxa diária em porcentagem.
             data_tests: [not_null]
-          - name: taxa_anualizada_pct
-            description: Taxa anualizada em porcentagem (base 252 dias úteis).
-            data_tests: [not_null]
           - name: ano
             data_tests: [not_null]
           - name: _ingerido_em
