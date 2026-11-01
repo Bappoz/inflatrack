@@ -25,9 +25,11 @@ for _name in _CLIENT_NAMES:
 _LOADER_NAMES = [
     "load_clima",
     "load_commodities",
+    "load_dolar",
     "load_pib",
     "load_pib_china",
     "load_salario_minimo",
+    "load_selic",
 ]
 for _name in _LOADER_NAMES:
     _mod = importlib.import_module(f"inflatrack.loaders.{_name}")
@@ -45,6 +47,8 @@ _BRONZE_NAMES = [
     "bronze_pib_usa",
     "bronze_salario_minimo",
     "bronze_selic",
+    "dolar",
+    "selic",
 ]
 for _name in _BRONZE_NAMES:
     _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
