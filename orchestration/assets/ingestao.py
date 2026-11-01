@@ -14,9 +14,7 @@ from dagster import AssetExecutionContext, BackfillPolicy, asset
 
 from inflatrack import (
     ingest,
-    ingest_dolar,
     ingest_pib_china,
-    ingest_selic,
     load_pib_china,
 )
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
@@ -93,31 +91,6 @@ def ipca_numero_indice(context: AssetExecutionContext) -> None:
         "--de", formato_sidra(inicio),
         "--ate", formato_sidra(fim),
     )  # fmt: skip
-
-
-# --- Dólar e Selic (BCB → DuckDB) ---------------------------------------------------
-
-
-@asset(
-    group_name="macro",
-    pool=POOL_DUCKDB,
-    retry_policy=RETRY_REDE,
-    kinds={"python", "duckdb"},
-    description="Dólar comercial PTAX diário (API Olinda), de 2020 até hoje.",
-)
-def dolar(context: AssetExecutionContext) -> None:
-    executar(context, ingest_dolar.main, "--de", "2020-01-01")
-
-
-@asset(
-    group_name="macro",
-    pool=POOL_DUCKDB,
-    retry_policy=RETRY_REDE,
-    kinds={"python", "duckdb"},
-    description="Taxa Selic diária (SGS), de 2020 até hoje.",
-)
-def selic(context: AssetExecutionContext) -> None:
-    executar(context, ingest_selic.main, "--de", "2020-01-01")
 
 
 # --- PIB da China (Banco Mundial → Parquet → DuckDB) --------------------------------
