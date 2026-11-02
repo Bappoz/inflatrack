@@ -28,6 +28,7 @@ _LOADER_NAMES = [
     "load_commodities",
     "load_pib",
     "load_pib_china",
+    "load_pib_internacional",
     "load_salario_minimo",
 ]
 for _name in _LOADER_NAMES:

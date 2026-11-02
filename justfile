@@ -44,6 +44,10 @@ pib-china-ingest:
 pib-china-load:
     uv run python -m inflatrack.loaders.load_pib_china
 
+# Carga das tabelas Delta do PIB Internacional no DuckDB compartilhado.
+pib-internacional-load pais="todos":
+    uv run python -m inflatrack.loaders.load_pib_internacional --pais {{pais}}
+
 # Ingestão + carga do PIB da China, de ponta a ponta.
 pib-china: pib-china-ingest pib-china-load
 

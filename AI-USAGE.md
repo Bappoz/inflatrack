@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 4 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (3) |
+| Artur Fernandes Galdino | 5 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (4) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
@@ -61,6 +61,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
 | 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
 | 2026-11-02 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3) |
+| 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
 
 ---
 
@@ -1229,6 +1230,24 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Modelagem analítica dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e consolidação final dos carregadores DuckDB e Dagster (escopo das próximas etapas da E3).
+
+### 2026-11-02 (Fase 2) — Antigravity (Gemini 3.8 Flash) — Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3)
+
+**O que a ferramenta fez**
+- Consolidou as baterias de testes em `tests/unit/test_pib_internacional.py` (12 testes cobrindo transformações longo e largo, validação de payload, regras temporais de corte e continuidade da Rússia) e `tests/integration/test_pib_internacional.py` (6 testes cobrindo idempotência em Delta Lake, validação de integridade e importação de raw).
+- Criou o módulo de carga DuckDB unificado `src/inflatrack/loaders/load_pib_internacional.py` utilizando `common.bronze.carregar_duckdb` nos modos de espelhamento individual (`bronze.pib_<pais>_indicador`) e agregado (`bronze.pib_internacional_indicador`), sem dependência de DDLs manuais.
+- Atualizou `src/inflatrack/loaders/load_pib_china.py` para compatibilidade com a tabela legada e delegação para o novo loader.
+- Adicionou suíte de testes de integração do carregador em `tests/integration/test_load_pib_internacional.py`.
+- Registrou o loader no `inflatrack/__init__.py` e adicionou a receita `pib-internacional-load` no `justfile`.
+
+**O que foi verificado e como**
+- Execução dos testes unitários e de integração de PIB: 25 testes aprovados.
+- Teste de carga real no banco DuckDB analítico local (`data/duckdb/inflatrack.duckdb`): 132 linhas inseridas por país e 396 na tabela unificada na 1ª execução; 0 linhas na 2ª execução consecutiva, comprovando idempotência estrita.
+- Execução completa da suíte do repositório (`uv run pytest tests/`): 182 testes aprovados.
+- `uv run ruff check .` aprovado com 0 erros de estilo e conformidade.
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e orquestração no Dagster (Etapas 5 e 6).
 
 ---
 
