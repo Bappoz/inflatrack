@@ -18,7 +18,7 @@ from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
     description="Crescimento e PIB em US$ da China (Banco Mundial), anual.",
 )
 def pib_china_parquet(context: AssetExecutionContext) -> None:
-    executar(context, pib_internacional.main, "coletar", "--pais", "CHN")
+    executar(context, pib_internacional.main, "--pais", "CHN", "coletar")
 
 
 @asset(
@@ -28,7 +28,7 @@ def pib_china_parquet(context: AssetExecutionContext) -> None:
     description="Crescimento e PIB em US$ dos EUA (Banco Mundial), anual.",
 )
 def pib_usa_parquet(context: AssetExecutionContext) -> None:
-    executar(context, pib_internacional.main, "coletar", "--pais", "USA")
+    executar(context, pib_internacional.main, "--pais", "USA", "coletar")
 
 
 @asset(
@@ -38,7 +38,7 @@ def pib_usa_parquet(context: AssetExecutionContext) -> None:
     description="Crescimento e PIB em US$ da Rússia (Banco Mundial), anual.",
 )
 def pib_russia_parquet(context: AssetExecutionContext) -> None:
-    executar(context, pib_internacional.main, "coletar", "--pais", "RUS")
+    executar(context, pib_internacional.main, "--pais", "RUS", "coletar")
 
 
 # --- Carga Centralizada no DuckDB ---
