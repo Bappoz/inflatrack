@@ -27,7 +27,9 @@ ipca_indice_job = define_asset_job("ipca_indice_job", AssetSelection.assets("ipc
 macro_job = define_asset_job("macro_job", AssetSelection.groups("macro"))
 commodities_job = define_asset_job("commodities_job", AssetSelection.groups("commodities"))
 pib_job = define_asset_job("pib_job", AssetSelection.groups("pib"))
-pib_china_job = define_asset_job("pib_china_job", AssetSelection.groups("pib_china"))
+pib_internacional_job = define_asset_job(
+    "pib_internacional_job", AssetSelection.groups("pib_internacional")
+)
 dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 
@@ -38,7 +40,7 @@ JOBS = [
     macro_job,
     commodities_job,
     pib_job,
-    pib_china_job,
+    pib_internacional_job,
     dieese_job,
     clima_job,
 ]
@@ -95,6 +97,8 @@ SCHEDULES = [
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
     agendamento_pib,
     # 1×/mês: o Banco Mundial revisa fora de calendário.
-    ScheduleDefinition(job=pib_china_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO),
+    ScheduleDefinition(
+        job=pib_internacional_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO
+    ),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),
 ]
