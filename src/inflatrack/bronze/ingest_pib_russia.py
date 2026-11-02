@@ -1,7 +1,6 @@
 """Ingestão anual do PIB da Rússia pela API pública do Banco Mundial.
 
-Grava a resposta original em ``data/raw/pib_russia/``, materializa um Parquet
-em ``data/parquet/pib_russia/`` e atualiza as tabelas Delta Lake da Bronze.
+Módulo de compatibilidade delegando para ``inflatrack.bronze.pib_internacional``.
 """
 
 from __future__ import annotations
@@ -14,20 +13,21 @@ import sys
 from pathlib import Path
 
 import httpx
-import pandas as pd
+
+from inflatrack.bronze import pib_internacional
+from inflatrack.bronze.pib_internacional import (
+    INDICADOR_CRESCIMENTO,
+    INDICADOR_PIB_USD,
+    WorldBankError,
+)
 
 logger = logging.getLogger("inflatrack.ingest_pib_russia")
 
+PAIS = "RUS"
 API_URL = "https://api.worldbank.org/v2/country/RUS/indicator/{indicador}"
-INDICADOR_CRESCIMENTO = "NY.GDP.MKTP.KD.ZG"
-INDICADOR_PIB_USD = "NY.GDP.MKTP.CD"
 RAW_DIR_PADRAO = Path("data/raw/pib_russia")
 PARQUET_DIR_PADRAO = Path("data/parquet/pib_russia")
 COLUNAS = ["ano", "crescimento_pib_pct", "pib_usd"]
-
-
-class WorldBankError(ValueError):
-    """Resposta inválida ou incompleta da API do Banco Mundial."""
 
 
 def buscar_payload(cliente: httpx.Client, indicador: str) -> list:
@@ -51,77 +51,16 @@ def gravar_bruto(destino: Path, indicador: str, payload: list) -> Path:
     return caminho
 
 
-def transformar(payload_crescimento: list, payload_pib_usd: list) -> pd.DataFrame:
-    valores: dict[int, dict[str, float | int | None]] = {}
-
-    for payload, coluna in (
-        (payload_crescimento, "crescimento_pib_pct"),
-        (payload_pib_usd, "pib_usd"),
-    ):
-        if len(payload) < 2 or not isinstance(payload[1], list):
-            raise WorldBankError(f"payload inválido para {coluna}")
-        for item in payload[1]:
-            if not isinstance(item, dict):
-                raise WorldBankError(f"observação inválida para {coluna}")
-            ano_texto = item.get("date")
-            if not isinstance(ano_texto, str) or not ano_texto.isdigit():
-                raise WorldBankError(f"ano inválido para {coluna}: {ano_texto!r}")
-            ano = int(ano_texto)
-            valor = item.get("value")
-            valores.setdefault(ano, {"ano": ano})[coluna] = (
-                float(valor) if valor is not None else None
-            )
-
-    quadro = pd.DataFrame(valores.values(), columns=COLUNAS)
-    if quadro.empty:
-        raise WorldBankError("a API não retornou observações")
-    return quadro.sort_values("ano", ignore_index=True)
+def transformar(payload_crescimento: list, payload_pib_usd: list):
+    return pib_internacional.transformar_largo(payload_crescimento, payload_pib_usd)
 
 
 def executar(args: argparse.Namespace) -> int:
-    raw_dir = Path(args.raw_dir)
-    parquet_dir = Path(args.parquet_dir)
-
-    with httpx.Client(follow_redirects=True) as cliente:
-        logger.info("coletando crescimento anual do PIB da Rússia")
-        payload_crescimento = buscar_payload(cliente, INDICADOR_CRESCIMENTO)
-        gravar_bruto(raw_dir, INDICADOR_CRESCIMENTO, payload_crescimento)
-
-        logger.info("coletando PIB nominal anual da Rússia em USD")
-        payload_pib_usd = buscar_payload(cliente, INDICADOR_PIB_USD)
-        gravar_bruto(raw_dir, INDICADOR_PIB_USD, payload_pib_usd)
-
-    quadro = transformar(payload_crescimento, payload_pib_usd)
-    parquet_dir.mkdir(parents=True, exist_ok=True)
-    destino = parquet_dir / "pib_russia.parquet"
-    quadro.to_parquet(destino, index=False)
-    logger.info("%d anos transformados em %s", len(quadro), destino)
-
-    # Bronze em Delta (E2)
-    try:
-        from inflatrack import bronze_pib_russia
-
-        req_crescimento = (
-            API_URL.format(indicador=INDICADOR_CRESCIMENTO) + "?format=json&per_page=1000"
-        )
-        bronze_pib_russia.gravar(
-            destino=parquet_dir,
-            indicador=INDICADOR_CRESCIMENTO,
-            requisicao=req_crescimento,
-            corpo=json.dumps(payload_crescimento),
-        )
-        req_pib_usd = API_URL.format(indicador=INDICADOR_PIB_USD) + "?format=json&per_page=1000"
-        bronze_pib_russia.gravar(
-            destino=parquet_dir,
-            indicador=INDICADOR_PIB_USD,
-            requisicao=req_pib_usd,
-            corpo=json.dumps(payload_pib_usd),
-        )
-        logger.info("tabelas Delta da Bronze da Rússia atualizadas em %s", parquet_dir)
-    except Exception as erro:  # noqa: BLE001
-        logger.warning("não foi possível atualizar a Bronze da Rússia em Delta: %s", erro)
-
-    return len(quadro)
+    return pib_internacional.executar_ingestao_larga(
+        pais=PAIS,
+        raw_dir=Path(args.raw_dir),
+        parquet_dir=Path(args.parquet_dir),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -133,11 +72,27 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         executar(args)
-    except (httpx.HTTPError, json.JSONDecodeError, WorldBankError) as erro:
-        logger.error("carga abortada: %s", erro)
+    except Exception as exc:
+        logger.error("falha na ingestão do PIB da Rússia: %s", exc)
         return 1
     return 0
 
+
+__all__ = [
+    "API_URL",
+    "COLUNAS",
+    "INDICADOR_CRESCIMENTO",
+    "INDICADOR_PIB_USD",
+    "PAIS",
+    "PARQUET_DIR_PADRAO",
+    "RAW_DIR_PADRAO",
+    "WorldBankError",
+    "buscar_payload",
+    "executar",
+    "gravar_bruto",
+    "main",
+    "transformar",
+]
 
 if __name__ == "__main__":
     sys.exit(main())

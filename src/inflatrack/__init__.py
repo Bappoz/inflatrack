@@ -46,6 +46,7 @@ _BRONZE_NAMES = [
     "bronze_pib_usa",
     "bronze_salario_minimo",
     "bronze_selic",
+    "pib_internacional",
 ]
 for _name in _BRONZE_NAMES:
     _mod = importlib.import_module(f"inflatrack.bronze.{_name}")

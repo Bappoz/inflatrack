@@ -78,6 +78,18 @@ bronze-pib-russia:
 bronze-pib-russia-checar:
     uv run python -m inflatrack.bronze.bronze_pib_russia checar
 
+# Bronze do PIB Internacional (China, EUA e Rússia) unificada em Delta.
+bronze-pib-internacional pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} coletar
+
+# Checagens de integridade das tabelas Delta do PIB Internacional.
+bronze-pib-internacional-checar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} checar
+
+# Importação dos .json.gz antigos de raw/ para as tabelas Delta do PIB Internacional.
+bronze-pib-internacional-importar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} importar
+
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
 # (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
 seed:

@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
+| Artur Fernandes Galdino | 4 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (3) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
@@ -60,6 +60,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Metabase para visualizar o DuckDB e o Postgres |
 | 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
 | 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
+| 2026-11-02 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3) |
 
 ---
 
@@ -1208,6 +1209,26 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Modelos dbt na camada Silver (`stg_pib_usa`, `stg_pib_russia`) e carga para DuckDB (escopo da E3).
+
+### 2026-11-02 — Antigravity (Gemini 3.8 Flash) — Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3)
+
+**O que a ferramenta fez**
+- Consultou as diretrizes da Entrega 3 em `PLAN_E3_E4.md` e a regra de conformidade em `CLAUDE.md`.
+- Extraiu o cliente compartilhado da API do Banco Mundial em `src/inflatrack/clients/worldbank.py` (`WorldBankClient`), com parametrização de endpoints, constantes dos indicadores (`NY.GDP.MKTP.KD.ZG` e `NY.GDP.MKTP.CD`), mapeamento dos países parceiros (`CHN`, `USA`, `RUS`) e integração com o objeto `Resposta` da camada Bronze.
+- Desenvolveu testes unitários em `tests/unit/test_worldbank_client.py` com mocks de requisição HTTP e validação de esquemas e exceções (`WorldBankError`).
+- Fundiu os 6 arquivos legados de ingestão e bronze da China, EUA e Rússia em um único módulo unificado e parametrizado: `src/inflatrack/bronze/pib_internacional.py`.
+- Manteve compatibilidade retroativa total em `bronze_pib_china.py`, `bronze_pib_usa.py`, `bronze_pib_russia.py`, `ingest_pib_china.py`, `ingest_pib_usa.py` e `ingest_pib_russia.py` delegando para o módulo unificado.
+- Adicionou as receitas unificadas `bronze-pib-internacional`, `bronze-pib-internacional-checar` e `bronze-pib-internacional-importar` no `justfile`.
+
+**O que foi verificado e como**
+- Bateria de testes unitários do novo cliente `test_worldbank_client.py` aprovada com 7/7 testes.
+- Execução completa da suíte de testes de PIB (`tests/unit/test_worldbank_client.py`, `tests/integration/test_pib_china.py`, `test_pib_usa.py`, `test_pib_russia.py`) com 19 testes passando.
+- Execução de toda a suíte de testes do repositório (`uv run pytest tests/unit/ tests/integration/`) resultando em 143 testes aprovados.
+- Análise estática com `uv run ruff check` em todos os módulos criados e modificados com 0 erros.
+- Verificação do build da documentação com `uv run mkdocs build --strict` aprovado com código 0.
+
+**O que NÃO foi verificado**
+- Modelagem analítica dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e consolidação final dos carregadores DuckDB e Dagster (escopo das próximas etapas da E3).
 
 ---
 
