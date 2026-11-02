@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 5 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (4) |
+| Artur Fernandes Galdino | 6 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (5) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
@@ -62,6 +62,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
 | 2026-11-02 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3) |
 | 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
+| 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 
 ---
 
@@ -1248,6 +1249,27 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Modelos dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e orquestração no Dagster (Etapas 5 e 6).
+
+### 2026-11-02 (Fase 3) — Antigravity (Gemini 3.8 Flash) — Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3)
+
+**O que a ferramenta fez**
+- Implementou os ativos Dagster do PIB Internacional em `orchestration/assets/pib_internacional.py` cobrindo extração Bronze e carga DuckDB (`bronze_pib_chn`, `bronze_pib_usa`, `bronze_pib_rus`, `bronze_pib_internacional_indicador`), com políticas de retry de rede (`RETRY_REDE`), agrupamento `pib_internacional` e concorrência controlada no pool `duckdb_writer` (`POOL_DUCKDB`).
+- Limpou ativos legados específicos da China em `orchestration/assets/ingestao.py`, mantendo a suíte de orquestração limpa.
+- Modelou a camada Silver e Gold no dbt:
+  - `dbt/models/staging/pib_internacional/_pib_int__sources.yml`: declaração da fonte DuckDB (`bronze.pib_internacional_indicador`).
+  - `dbt/models/staging/pib_internacional/stg_pib_internacional__indicador.sql`: deduplicação pela versão mais recente e padronização de datas com `make_date`.
+  - `dbt/models/staging/pib_internacional/_pib_int__models.yml`: documentação e testes de `stg_pib_internacional__indicador` (not null e valores aceitos).
+  - `dbt/models/marts/macro/fct_pib_internacional_anual.sql`: modelo dimensional Gold em formato largo unindo `crescimento_pib_pct` e `pib_nominal_usd` por país e ano.
+  - `dbt/models/marts/macro/_macro__models.yml`: documentação e testes de integridade da tabela fato analítica `fct_pib_internacional_anual`.
+
+**O que foi verificado e como**
+- Suíte do Dagster executada com `uv run pytest tests/orchestration/` (21 testes passando).
+- `dbt build --select +fct_pib_internacional_anual` executado com sucesso: 15 testes e modelos aprovados (100% OK).
+- Consulta direta ao DuckDB comprovando presença dos dados analíticos de China, EUA e Rússia de 1960 a 2025 (66 anos cada país, 198 registros no total) com valores de crescimento e PIB em dólares consistentes.
+- `uv run ruff check .` executado com 0 erros.
+
+**O que NÃO foi verificado**
+- Execução de backfill histórico em lote via Dagster UI ao vivo pelo navegador com orquestração completa em tempo real.
 
 ---
 
