@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 6 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (5) |
+| Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
 
@@ -63,6 +63,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3) |
 | 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
+| 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 
 ---
 
@@ -1270,6 +1271,24 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Execução de backfill histórico em lote via Dagster UI ao vivo pelo navegador com orquestração completa em tempo real.
+
+### 2026-11-02 (Fase 4) — Antigravity (Gemini 3.8 Flash) — Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3)
+
+**O que a ferramenta fez**
+- Executou a limpeza e remoção definitiva via `git rm` dos 11 arquivos legados do PIB da China, EUA e Rússia (`bronze_pib_*.py`, `ingest_pib_*.py`, `load_pib_china.py`, `setup_duckdb_pib_china.sql`, `test_pib_*.py`).
+- Ajustou o `justfile` e `src/inflatrack/__init__.py` para apontar diretamente para os módulos unificados de PIB Internacional com parâmetro `--pais`.
+- Unificou visualmente os ativos no Dagster, atribuindo `group_name="pib_internacional"` para todos os nós de PIB Internacional e atualizando o teste de integridade em `tests/orchestration/test_orchestration.py`.
+- Escreveu o Diário de Bordo completo da Squad em `docs/diario/` (`index.md`, `e1.md`, `e2.md`, `e3.md`), reconstruindo todas as Semanas 1 a 13 do semestre letivo com base nos commits, evidências e medições reais.
+- Configurou a navegação do Diário de Bordo no menu do `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Suíte completa de 177 testes em `tests/` (`unit/`, `integration/`, `orchestration/`) executada com 100% de aprovação.
+- `uv run ruff check .` aprovado com 0 erros.
+- `uv run dbt build --select +fct_pib_internacional_anual` aprovado (15/15 OK).
+- `uv run mkdocs build --strict` aprovado com código 0 em 2.57 segundos, sem links órfãos ou avisos.
+
+**O que NÃO foi verificado**
+- Execução em produção do Dagster em servidor externo (apenas ambiente local de desenvolvimento).
 
 ---
 
