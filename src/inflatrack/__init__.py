@@ -27,7 +27,6 @@ _LOADER_NAMES = [
     "load_clima",
     "load_commodities",
     "load_pib",
-    "load_pib_china",
     "load_pib_internacional",
     "load_salario_minimo",
 ]
@@ -42,9 +41,6 @@ _BRONZE_NAMES = [
     "bronze_dolar",
     "bronze_ipca",
     "bronze_pib",
-    "bronze_pib_china",
-    "bronze_pib_russia",
-    "bronze_pib_usa",
     "bronze_salario_minimo",
     "bronze_selic",
     "pib_internacional",
@@ -61,9 +57,6 @@ _INGEST_NAMES = [
     "ingest_commodities",
     "ingest_dolar",
     "ingest_pib",
-    "ingest_pib_china",
-    "ingest_pib_russia",
-    "ingest_pib_usa",
     "ingest_salario_minimo",
     "ingest_selic",
 ]

@@ -3,11 +3,8 @@
 from dagster import AssetExecutionContext, asset
 
 from inflatrack import (
-    bronze_pib_china,
-    bronze_pib_russia,
-    bronze_pib_usa,
-    load_pib_china,
     load_pib_internacional,
+    pib_internacional,
 )
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 
@@ -15,24 +12,24 @@ from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 
 
 @asset(
-    group_name="pib_china",
+    group_name="pib_internacional",
     retry_policy=RETRY_REDE,
     kinds={"python", "parquet", "delta"},
     description="Crescimento e PIB em US$ da China (Banco Mundial), anual.",
 )
 def pib_china_parquet(context: AssetExecutionContext) -> None:
-    executar(context, bronze_pib_china.main, "coletar")
+    executar(context, pib_internacional.main, "coletar", "--pais", "CHN")
 
 
 @asset(
-    group_name="pib_china",
+    group_name="pib_internacional",
     deps=[pib_china_parquet],
     pool=POOL_DUCKDB,
     kinds={"python", "duckdb"},
     description="Carga do PIB da China no DuckDB analítico.",
 )
 def pib_china_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_pib_china.main, "--pais", "CHN")
+    executar(context, load_pib_internacional.main, "--pais", "CHN")
 
 
 # --- Estados Unidos ---
@@ -45,7 +42,7 @@ def pib_china_duckdb(context: AssetExecutionContext) -> None:
     description="Crescimento e PIB em US$ dos EUA (Banco Mundial), anual.",
 )
 def pib_usa_parquet(context: AssetExecutionContext) -> None:
-    executar(context, bronze_pib_usa.main, "coletar")
+    executar(context, pib_internacional.main, "coletar", "--pais", "USA")
 
 
 @asset(
@@ -69,7 +66,7 @@ def pib_usa_duckdb(context: AssetExecutionContext) -> None:
     description="Crescimento e PIB em US$ da Rússia (Banco Mundial), anual.",
 )
 def pib_russia_parquet(context: AssetExecutionContext) -> None:
-    executar(context, bronze_pib_russia.main, "coletar")
+    executar(context, pib_internacional.main, "coletar", "--pais", "RUS")
 
 
 @asset(
