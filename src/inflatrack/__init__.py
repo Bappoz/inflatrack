@@ -15,6 +15,7 @@ _CLIENT_NAMES = [
     "pib",
     "selic_sgs",
     "sidra",
+    "worldbank",
 ]
 for _name in _CLIENT_NAMES:
     _mod = importlib.import_module(f"inflatrack.clients.{_name}")
