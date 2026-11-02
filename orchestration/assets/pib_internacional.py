@@ -8,7 +8,7 @@ from inflatrack import (
 )
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 
-# --- China ---
+# --- Coletas Bronze (Delta Lake) por país ---
 
 
 @asset(
@@ -23,40 +23,12 @@ def pib_china_parquet(context: AssetExecutionContext) -> None:
 
 @asset(
     group_name="pib_internacional",
-    deps=[pib_china_parquet],
-    pool=POOL_DUCKDB,
-    kinds={"python", "duckdb"},
-    description="Carga do PIB da China no DuckDB analítico.",
-)
-def pib_china_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_pib_internacional.main, "--pais", "CHN")
-
-
-# --- Estados Unidos ---
-
-
-@asset(
-    group_name="pib_internacional",
     retry_policy=RETRY_REDE,
     kinds={"python", "parquet", "delta"},
     description="Crescimento e PIB em US$ dos EUA (Banco Mundial), anual.",
 )
 def pib_usa_parquet(context: AssetExecutionContext) -> None:
     executar(context, pib_internacional.main, "coletar", "--pais", "USA")
-
-
-@asset(
-    group_name="pib_internacional",
-    deps=[pib_usa_parquet],
-    pool=POOL_DUCKDB,
-    kinds={"python", "duckdb"},
-    description="Carga do PIB dos EUA no DuckDB analítico.",
-)
-def pib_usa_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_pib_internacional.main, "--pais", "USA")
-
-
-# --- Rússia ---
 
 
 @asset(
@@ -69,18 +41,7 @@ def pib_russia_parquet(context: AssetExecutionContext) -> None:
     executar(context, pib_internacional.main, "coletar", "--pais", "RUS")
 
 
-@asset(
-    group_name="pib_internacional",
-    deps=[pib_russia_parquet],
-    pool=POOL_DUCKDB,
-    kinds={"python", "duckdb"},
-    description="Carga do PIB da Rússia no DuckDB analítico.",
-)
-def pib_russia_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_pib_internacional.main, "--pais", "RUS")
-
-
-# --- Unificado ---
+# --- Carga Centralizada no DuckDB ---
 
 
 @asset(
@@ -88,7 +49,7 @@ def pib_russia_duckdb(context: AssetExecutionContext) -> None:
     deps=[pib_china_parquet, pib_usa_parquet, pib_russia_parquet],
     pool=POOL_DUCKDB,
     kinds={"python", "duckdb"},
-    description="Carga unificada de China, EUA e Rússia em bronze.pib_internacional_indicador.",
+    description="Carga centralizada de China, EUA e Rússia em bronze.pib_internacional_indicador.",
 )
 def pib_internacional_duckdb(context: AssetExecutionContext) -> None:
     executar(context, load_pib_internacional.main, "--pais", "todos")

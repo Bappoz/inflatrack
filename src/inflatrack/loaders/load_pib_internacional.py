@@ -139,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
 
     with duckdb.connect(str(db)) as conexao:
         if args.pais.upper() == "TODOS":
-            carregar_tudo(conexao, parquet_base=Path(args.parquet_base), modo=args.modo)
+            carregar_unificado(conexao, parquet_base=Path(args.parquet_base), modo=args.modo)
         else:
             carregar_pais(conexao, args.pais.upper(), modo=args.modo)
 
