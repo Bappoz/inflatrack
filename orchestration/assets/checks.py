@@ -2,6 +2,9 @@
 
 Atende ao requisito da Entrega 3:
 - Métrica de freshness e SLA declarado para tabelas de consumo e séries macroeconômicas.
+
+Todo check abre o DuckDB, então entra no pool `duckdb_writer` (PLAN_E3_E4.md, Seção 6.3):
+uma conexão aberta, mesmo só leitura, trava o dbt e os loaders.
 """
 
 from datetime import date
@@ -16,6 +19,7 @@ from dagster import (
     asset_check,
 )
 
+from orchestration.assets.comum import POOL_DUCKDB
 from orchestration.assets.dolar import dolar_duckdb
 from orchestration.assets.selic import selic_duckdb
 
@@ -24,6 +28,7 @@ DB_PADRAO = Path("data/duckdb/inflatrack.duckdb")
 
 @asset_check(
     asset=dolar_duckdb,
+    pool=POOL_DUCKDB,
     description="SLA de atualização e volume mínimo para cotações do Dólar comercial PTAX.",
 )
 def check_dolar_freshness_e_volume(
@@ -63,7 +68,7 @@ def check_dolar_freshness_e_volume(
     cumpre_volume = total_linhas >= 100
 
     passed = cumpre_sla and cumpre_volume
-    severity = AssetCheckSeverity.WARN if not cumpre_sla else AssetCheckSeverity.ERROR
+    severity = AssetCheckSeverity.ERROR if not cumpre_volume else AssetCheckSeverity.WARN
 
     status_sla = "CUMPRIDO" if cumpre_sla else "ALERTA DE DESATUALIZAÇÃO"
     return AssetCheckResult(
@@ -85,6 +90,7 @@ def check_dolar_freshness_e_volume(
 
 @asset_check(
     asset=selic_duckdb,
+    pool=POOL_DUCKDB,
     description="SLA de atualização e volume mínimo para taxas Selic diárias.",
 )
 def check_selic_freshness_e_volume(
@@ -124,7 +130,7 @@ def check_selic_freshness_e_volume(
     cumpre_volume = total_linhas >= 100
 
     passed = cumpre_sla and cumpre_volume
-    severity = AssetCheckSeverity.WARN if not cumpre_sla else AssetCheckSeverity.ERROR
+    severity = AssetCheckSeverity.ERROR if not cumpre_volume else AssetCheckSeverity.WARN
 
     status_sla = "CUMPRIDO" if cumpre_sla else "ALERTA DE DESATUALIZAÇÃO"
     return AssetCheckResult(
@@ -145,8 +151,9 @@ def check_selic_freshness_e_volume(
 
 
 @asset_check(
-    asset=AssetKey(["silver", "int_macroeconomia__mensal"]),
-    description="SLA de consumo e profundidade histórica para a série macroeconômica consolidada.",
+    asset=AssetKey(["gold", "fct_macroeconomia_mensal"]),
+    pool=POOL_DUCKDB,
+    description="SLA da tabela de consumo gold.fct_macroeconomia_mensal (câmbio x juros).",
 )
 def check_macroeconomia_mensal_freshness(
     context: AssetCheckExecutionContext,
@@ -162,7 +169,7 @@ def check_macroeconomia_mensal_freshness(
     con = duckdb.connect(str(DB_PADRAO), read_only=True)
     try:
         resultado = con.execute(
-            "select max(mes_referencia), count(*) from silver.int_macroeconomia__mensal"
+            "select max(mes_referencia), count(*) from gold.fct_macroeconomia_mensal"
         ).fetchone()
     finally:
         con.close()
@@ -171,7 +178,7 @@ def check_macroeconomia_mensal_freshness(
         return AssetCheckResult(
             passed=False,
             severity=AssetCheckSeverity.ERROR,
-            description="Tabela silver.int_macroeconomia__mensal está vazia",
+            description="Tabela gold.fct_macroeconomia_mensal está vazia",
         )
 
     max_mes: date = resultado[0]
@@ -185,7 +192,7 @@ def check_macroeconomia_mensal_freshness(
     cumpre_volume = total_meses >= 12
 
     passed = cumpre_sla and cumpre_volume
-    severity = AssetCheckSeverity.WARN if not cumpre_sla else AssetCheckSeverity.ERROR
+    severity = AssetCheckSeverity.ERROR if not cumpre_volume else AssetCheckSeverity.WARN
 
     status_sla = "CUMPRIDO" if cumpre_sla else "ALERTA DE DESATUALIZAÇÃO"
     return AssetCheckResult(

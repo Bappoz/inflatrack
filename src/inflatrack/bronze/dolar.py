@@ -146,9 +146,7 @@ def checar(linhas: Iterable[dict[str, Any]]) -> None:
         venda = linha["cotacao_venda"]
 
         if compra <= 0 or venda <= 0:
-            raise ChecagemError(
-                f"linha {i}: cotação não positiva (compra={compra}, venda={venda})"
-            )
+            raise ChecagemError(f"linha {i}: cotação não positiva (compra={compra}, venda={venda})")
         if venda < compra:
             raise ChecagemError(f"linha {i}: spread negativo (compra={compra}, venda={venda})")
 
@@ -333,4 +331,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

@@ -11,12 +11,12 @@ Documentamos nesta evidência as políticas formais de SLA (*Service Level Agree
 
 | Ativo / Tabela | Camada / Tipo | Frequência de Divulgação Oficial | SLA Declarado | Volume Mínimo | Alerta de Desatualização |
 | :--- | :--- | :--- | :--- | :---: | :--- |
-| **`silver.int_macroeconomia__mensal`** | **Tabela de Consumo** (Silver Intermediate) | Mensal (agregado das séries diárias) | **Até 45 dias corridos** após o início do mês de referência | $\ge 12$ meses | `WARN` no Dagster com metadados de defasagem |
+| **`gold.fct_macroeconomia_mensal`** | **Tabela de Consumo** (Gold, copiada para `serie` e lida pelo Metabase) | Mensal (agregado das séries diárias) | **Até 45 dias corridos** após o início do mês de referência | $\ge 12$ meses | `WARN` no Dagster com metadados de defasagem |
 | **`dolar_duckdb`** (`bronze.dolar_boletim`) | Ingestão / Carga (Bronze) | Diária (dias úteis, fechamento até 19h) | **D-1 útil** (tolerância de até 5 dias corridos) | $\ge 100$ linhas | `WARN` no Dagster caso falte coleta recente |
 | **`selic_duckdb`** (`bronze.selic_taxa`) | Ingestão / Carga (Bronze) | Diária (dias úteis, divulgação D+1 útil) | **D+1 útil** (tolerância de até 5 dias corridos) | $\ge 100$ linhas | `WARN` no Dagster caso falte coleta recente |
 
 ### Justificativa dos Prazos de SLA:
-1. **Série Mensal Consolidada (`int_macroeconomia__mensal`):** Como os modelos preditivos e a Gold dependem de janelas móveis de 12 meses (`mm12`) e volatilidade anualizada, o volume mínimo estrito é de 12 observações mensais. A defasagem de até 45 dias permite acomodar o encerramento do mês civil e o período de apuração antes do reajuste.
+1. **Câmbio x juros na Gold (`fct_macroeconomia_mensal`):** Como os modelos preditivos e a Gold dependem de janelas móveis de 12 meses (`mm12`) e volatilidade anualizada, o volume mínimo estrito é de 12 observações mensais. A defasagem de até 45 dias permite acomodar o encerramento do mês civil e o período de apuração antes do reajuste.
 2. **Fontes Diárias do Banco Central (Dólar e Selic):** O Banco Central do Brasil opera em dias úteis bancários. Finais de semana regulares e feriados prolongados (ex: Carnaval, Páscoa) introduzem naturalmente até 4 a 5 dias corridos de intervalo sem publicação de novos boletins oficiais. Portanto, a tolerância de até 5 dias corridos evita alarmes falsos operacionais.
 
 ---
@@ -25,7 +25,7 @@ Documentamos nesta evidência as políticas formais de SLA (*Service Level Agree
 
 No Dagster 1.13+, a verificação de SLA e integridade analítica é implementada via decorador `@asset_check`. 
 
-O módulo [`orchestration/assets/checks.py`](file:///home/americo/Faculdade/Bancos%202/inflatrack/orchestration/assets/checks.py) conecta-se em modo leitura ao DuckDB (`data/duckdb/inflatrack.duckdb`) e inspeciona:
+O módulo `orchestration/assets/checks.py` conecta-se em modo leitura ao DuckDB, dentro do pool `duckdb_writer`, (`data/duckdb/inflatrack.duckdb`) e inspeciona:
 1. A data mais recente observada (`max(data_referencia)` ou `max(mes_referencia)`);
 2. O total de registros acumulados (`count(*)`);
 3. A diferença em dias em relação à data corrente do sistema.
@@ -54,11 +54,11 @@ AssetCheckResult(
 
 ## 3. Validação Automatizada da Suíte
 
-A conformidade do registro e execução dos checks no orquestrador é assegurada pelos testes em [`tests/orchestration/test_checks.py`](file:///home/americo/Faculdade/Bancos%202/inflatrack/tests/orchestration/test_checks.py):
+A conformidade do registro e execução dos checks no orquestrador é assegurada pelos testes em `tests/orchestration/test_checks.py`, que rodam contra um DuckDB temporário:
 - `test_asset_checks_registrados_nas_definicoes`: Valida a presença dos checks no grafo de definições do Dagster.
 - `test_check_dolar_executa_e_valida_sla`: Executa e valida o SLA do Dólar.
 - `test_check_selic_executa_e_valida_sla`: Executa e valida o SLA da Selic.
-- `test_check_macroeconomia_mensal_executa_e_valida_sla`: Executa e valida o SLA da tabela de consumo intermediária.
+- `test_check_macroeconomia_mensal_executa_e_valida_sla`: Executa e valida o SLA da tabela de consumo da Gold.
 - `test_check_falha_quando_duckdb_nao_existe`: Valida a severidade de erro quando o banco não existe.
 
 Todos os 5 testes rodam em menos de 3 segundos com status 100% `PASS`.

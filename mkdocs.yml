@@ -112,6 +112,7 @@ nav:
     - E3 — Dagster (retry, backfill e falha): evidencias/e3/dagster_recuperacao.md
     - E3 — IPCA, lojista e Gold: evidencias/e3/ipca_lojista.md
     - E3 — Consulta na vitrine (EXPLAIN): evidencias/e3/explain_serie.md
+    - E3 — SLA e frescura (câmbio x juros): evidencias/e3/sla_e_freshness.md
     - Diário de bordo (Lucas): diario/lucas.md
     - Diário de bordo (Artur): diario/artur.md
     - Uso de IA: evidencias/uso_ia.md
