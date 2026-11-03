@@ -126,11 +126,7 @@ def test_transformar_dolar_rejeita_tipo_invalido() -> None:
 
 def test_transformar_dolar_rejeita_item_sem_coluna_obrigatoria() -> None:
     # Faltando cotacaoVenda
-    payload = {
-        "value": [
-            {"cotacaoCompra": 5.0, "dataHoraCotacao": "2024-07-01 10:00:00"}
-        ]
-    }
+    payload = {"value": [{"cotacaoCompra": 5.0, "dataHoraCotacao": "2024-07-01 10:00:00"}]}
     with pytest.raises(OlindaError, match="sem as colunas esperadas"):
         dolar.transformar(payload)
 
