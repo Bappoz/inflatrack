@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_ipca__mensal
+    description: >
+      Uma linha por índice (IPCA ou INPC) x categoria da cesta x localidade x mês
+      (mes_referencia = YYYY-MM-01), com pelo menos um valor publicado. Une os agregados 2938, 1419
+      e 7060 pelo código da cesta e estende o índice geral do Brasil até dez/1979 com o 1737.
+    columns:
+      - name: indice
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [IPCA, INPC]
+      - name: codigo_categoria
+        data_tests: [not_null]
+      - name: codigo_localidade
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: agregado_origem
+        description: Agregado do SIDRA de onde veio o mês (1737 só antes de jul/2006).
+        data_tests: [not_null]
+      - name: variacao_acum_12m_pct
+        description: O publicado pelo IBGE; onde não há (2006-2011), o produto das 12 variações.
+      - name: origem_acum_12m
+        description: publicado ou calculado.
+      - name: variacao_acum_12m_calculada_pct
+        description: Sempre calculado, para o teste que compara a conta com o publicado.
+      - name: peso_mensal_pct
+        description: >
+          Peso da categoria na cesta da localidade naquele mês. Varia todo mês, porque o IBGE
+          atualiza o peso com os preços relativos, e salta na troca de estrutura (POF).
+      - name: numero_indice
+        description: Só no índice geral do Brasil (agregado 1737, base dez/1993 = 100).
+      - name: desvio_padrao_12m_pct
+        description: Desvio-padrão amostral das 12 últimas variações (mês calmo ou instável).
+      - name: variacao_mensal_lag_1m_pct
+        description: Variação de exatamente 1 mês atrás; nulo se aquele mês não existe na série.

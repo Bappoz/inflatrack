@@ -1,6 +1,14 @@
 services:
   db:
     image: postgres:16.4-alpine
+    # wal_level=logical: o CDC lê as mudanças de `public` por decodificação lógica (slot +
+    # publicação inflatrack_cdc). O limite do slot impede que um CDC parado encha o disco.
+    command: >-
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=4
+      -c max_wal_senders=4
+      -c max_slot_wal_keep_size=2GB
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-inflatrack}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inflatrack}

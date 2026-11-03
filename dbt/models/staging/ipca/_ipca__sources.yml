@@ -1,0 +1,57 @@
+version: 2
+
+sources:
+  - name: bronze_ipca
+    description: Bronze do IPCA/INPC (SIDRA) espelhada do Delta por inflatrack.loaders.load_ipca.
+    schema: bronze
+    tables:
+      - name: ipca_observacao
+        config:
+          meta:
+            dagster:
+              asset_key: ["ipca_duckdb"]  # loader que escreve esta tabela
+        description: >
+          Uma linha por valor de cada resposta do SIDRA, com os marcadores de ausência. Só
+          acrescenta: a revisão do IBGE entra como linha nova, com o valor na chave.
+        columns:
+          - name: agregado
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: ref('seed_agregado_sidra')
+                    field: agregado
+          - name: mes_referencia
+            data_tests: [not_null]
+          - name: codigo_localidade
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: ref('seed_localidade_ibge')
+                    field: codigo_localidade
+          - name: codigo_variavel
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: ref('seed_variavel_sidra')
+                    field: codigo_variavel
+          - name: valor_bruto
+            description: Texto original do SIDRA (marcadores como "..." e "-" ficam aqui).
+            data_tests: [not_null]
+      - name: ipca_metadados
+        config:
+          meta:
+            dagster:
+              asset_key: ["ipca_metadados_duckdb"]
+        description: >
+          Uma linha por versão de categoria da cesta em cada agregado. Só acrescenta: renomear um
+          subitem entra como linha nova, com o nome na chave.
+        columns:
+          - name: id_categoria
+            description: Id interno do SIDRA, o valor que chega em D4C nas observações.
+            data_tests: [not_null]
+          - name: codigo
+            description: Código natural da cesta (1101002 = Arroz).
+            data_tests: [not_null]

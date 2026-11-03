@@ -21,7 +21,7 @@ Em paralelo, o **PostgreSQL** atende o lado transacional: cadastro de lojista e 
 
 | Fonte | Chega | Partição | Gatilho hoje |
 |---|---|---|---|
-| SIDRA (7060, 7063, 1737) | mensal, dias 9 a 12 | mensal | manual (`uv run python -m inflatrack.ingest`) |
+| SIDRA (7060, 7063, 1737) | mensal, dias 9 a 12 | mensal | manual (`uv run python -m inflatrack.bronze.ipca coletar`) |
 | SIDRA (2938, 1419) | nunca mais (séries encerradas) | — | só na carga histórica (`just seed`) |
 | SIDRA 1846 (PIB e setores) | trimestral | trimestral | manual (`just pib`) |
 | BCB (Olinda e SGS) | diária (dias úteis) | diária | manual (`just seed-macro`) |

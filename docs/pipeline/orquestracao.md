@@ -55,6 +55,8 @@ orchestration/
 │   ├── pib.py              # um módulo por fonte (modelo para as outras)
 │   ├── commodities.py
 │   ├── ingestao.py         # fontes que ainda não têm módulo próprio
+│   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
+│   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
 │   ├── dbt.py              # (planejado) @dbt_assets — carrega o manifest do projeto dbt
 │   └── publicacao.py       # (planejado) cópia da Gold lida pelo Streamlit
 ├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado
