@@ -62,13 +62,13 @@ select
     cast(umidade_relativa_media_pct as decimal(8, 3)) as umidade_relativa_media_pct,
     dias_com_registro,
     dias_com_temperatura,
-    cast(mapa.codigo_ibge as varchar) as codigo_localidade
-from defasagens
-left join {{ ref('seed_de_para_estacao_localidade') }} as mapa using (estacao_id)
+    cast(temp_media_t_menos_1 as decimal(8, 3)) as temp_media_t_menos_1,
     cast(temp_media_t_menos_2 as decimal(8, 3)) as temp_media_t_menos_2,
     cast(temp_media_t_menos_3 as decimal(8, 3)) as temp_media_t_menos_3,
     cast(precipitacao_t_menos_1 as decimal(10, 3)) as precipitacao_t_menos_1,
     cast(precipitacao_t_menos_2 as decimal(10, 3)) as precipitacao_t_menos_2,
     cast(precipitacao_t_menos_3 as decimal(10, 3)) as precipitacao_t_menos_3,
-    cast(temp_media_mm3 as decimal(8, 3)) as temp_media_mm3
+    cast(temp_media_mm3 as decimal(8, 3)) as temp_media_mm3,
+    mapa.codigo_localidade
 from defasagens
+left join {{ ref('seed_de_para_estacao_localidade') }} as mapa using (estacao_id)
