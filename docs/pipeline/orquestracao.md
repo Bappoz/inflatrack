@@ -35,15 +35,21 @@ Cada caixa é um **ativo**: uma coisa que precisa existir e estar atualizada. O 
 
 ### Ativos implementados hoje
 
+Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez).
+
 | Grupo | Ativos | Destino | Módulo chamado |
 |---|---|---|---|
-| `sidra` | `ipca`, `inpc`, `ipca_numero_indice` | PostgreSQL | `ingest` (o agregado é escolhido pelo mês da partição: 2938, 1419 ou 7060) |
-| `macro` | `dolar`, `selic` | DuckDB | `ingest_dolar`, `ingest_selic` |
-| `commodities` | `commodities_parquet` → `commodities_duckdb` | Parquet → DuckDB | `ingest_commodities`, `load_commodities` |
-| `pib` | `pib_parquet` → `pib_duckdb` | Parquet → DuckDB | `ingest_pib`, `load_pib` |
-| `pib_china` | `pib_china_parquet` → `pib_china_duckdb` | Parquet → DuckDB | `ingest_pib_china`, `load_pib_china` |
-| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Parquet → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
-| `clima` | `clima_parquet` → `clima_duckdb` | Parquet → DuckDB | `ingest_clima`, `load_clima` |
+| `sidra` | `ipca`, `inpc`, `ipca_numero_indice` → `ipca_duckdb` + `ipca_metadados_duckdb` | Delta (+ Postgres) → DuckDB | `bronze.ipca`, `loaders.load_ipca` |
+| `macro` | `dolar_parquet` → `dolar_duckdb`, `selic_parquet` → `selic_duckdb` | Delta → DuckDB | `bronze.dolar`, `bronze.selic`, `loaders.load_dolar`, `loaders.load_selic` |
+| `commodities` | `commodities_parquet` → `commodities_duckdb` | Delta → DuckDB | `bronze.commodities`, `loaders.load_commodities` |
+| `pib` | `pib_parquet` → `pib_duckdb` | Delta → DuckDB | `bronze.pib`, `loaders.load_pib` |
+| `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
+| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
+| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
+| `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
+| `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
 ## Organização do código
 
@@ -53,12 +59,12 @@ orchestration/
 ├── assets/
 │   ├── comum.py            # pool duckdb_writer, retry de rede e a chamada do main(argv)
 │   ├── pib.py              # um módulo por fonte (modelo para as outras)
-│   ├── commodities.py
-│   ├── ingestao.py         # fontes que ainda não têm módulo próprio
+│   ├── commodities.py, dolar.py, selic.py, salario_minimo.py, clima.py, pib_internacional.py
 │   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
 │   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
-│   ├── dbt.py              # (planejado) @dbt_assets — carrega o manifest do projeto dbt
-│   └── publicacao.py       # (planejado) cópia da Gold lida pelo Streamlit
+│   ├── dbt_assets.py       # @dbt_assets: Silver e Gold, ligados às cargas pelo meta.dagster.asset_key
+│   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
+│   └── checks.py           # asset checks de frescura e volume
 ├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado
 └── schedules.py            # um job e um agendamento por grupo de ativos
 .dagster/dagster.yaml       # instância local: pool duckdb_writer com limite 1

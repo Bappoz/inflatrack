@@ -123,5 +123,8 @@ def test_analitico_job_roda_silver_gold_e_vitrine_depois_das_fontes():
 
     assert {"gold/fct_macroeconomia_mensal", "silver/int_macroeconomia__mensal"} <= chaves
     assert "serie_postgres" in chaves
-    assert not any(chave.endswith("_duckdb") for chave in chaves)  # fontes têm job próprio
+    # As fontes têm job próprio, menos a carga do IPCA: ela não é particionada e depende dos três
+    # ativos mensais, então vem aqui, antes do dbt.
+    cargas = {chave for chave in chaves if chave.endswith("_duckdb")}
+    assert cargas == {"ipca_duckdb", "ipca_metadados_duckdb"}
     assert agendamento.cron_schedule == "30 20 * * *"
