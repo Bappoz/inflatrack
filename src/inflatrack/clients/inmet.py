@@ -7,6 +7,7 @@ e umidade) para compor features climáticas no banco analítico.
 from __future__ import annotations
 
 import logging
+from math import isfinite
 from typing import Any
 
 import httpx
@@ -58,12 +59,19 @@ class InmetClient:
 
 
 def _para_float(valor: Any) -> float | None:
-    if valor is None:
+    if valor is None or valor == "":
         return None
     try:
-        return float(valor)
+        numero = float(valor)
     except (ValueError, TypeError):
         return None
+    if not isfinite(numero) or numero in {-9999.0, 9999.0, 9999.9}:
+        return None
+    return numero
+
+
+def _primeiro_valor(*valores: Any) -> Any:
+    return next((valor for valor in valores if valor is not None and valor != ""), None)
 
 
 def transformar_estacoes(payload: list[dict[str, Any]]) -> pd.DataFrame:
@@ -88,9 +96,15 @@ def transformar_estacoes(payload: list[dict[str, Any]]) -> pd.DataFrame:
                 "nome": str(nome).strip(),
                 "estado": str(estado).strip(),
                 "tipo": str(tipo).strip() if tipo else None,
-                "latitude": _para_float(item.get("VL_LATITUDE") or item.get("latitude")),
-                "longitude": _para_float(item.get("VL_LONGITUDE") or item.get("longitude")),
-                "altitude_m": _para_float(item.get("VL_ALTITUDE") or item.get("altitude_m")),
+                "latitude": _para_float(
+                    _primeiro_valor(item.get("VL_LATITUDE"), item.get("latitude"))
+                ),
+                "longitude": _para_float(
+                    _primeiro_valor(item.get("VL_LONGITUDE"), item.get("longitude"))
+                ),
+                "altitude_m": _para_float(
+                    _primeiro_valor(item.get("VL_ALTITUDE"), item.get("altitude_m"))
+                ),
                 "situacao": str(situacao).strip() if situacao else None,
             }
         )
@@ -122,26 +136,36 @@ def transformar_clima_diario(payload: list[dict[str, Any]]) -> pd.DataFrame:
         if not estacao_id or not data_medicao:
             continue
 
-        temp_min = _para_float(item.get("TEM_MIN") or item.get("temp_min") or item.get("MIN_TEMP"))
-        temp_max = _para_float(item.get("TEM_MAX") or item.get("temp_max") or item.get("MAX_TEMP"))
-        temp_med = _para_float(item.get("TEM_MED") or item.get("temp_media") or item.get("TEMP"))
+        temp_min = _para_float(
+            _primeiro_valor(item.get("TEM_MIN"), item.get("temp_min"), item.get("MIN_TEMP"))
+        )
+        temp_max = _para_float(
+            _primeiro_valor(item.get("TEM_MAX"), item.get("temp_max"), item.get("MAX_TEMP"))
+        )
+        temp_med = _para_float(
+            _primeiro_valor(item.get("TEM_MED"), item.get("temp_media"), item.get("TEMP"))
+        )
         if temp_med is None and temp_min is not None and temp_max is not None:
             temp_med = round((temp_min + temp_max) / 2.0, 2)
 
         chuva = _para_float(
-            item.get("CHUVA")
-            or item.get("precipitacao_total_mm")
-            or item.get("PRECIPITACAO_TOTAL")
-            or item.get("RAIN")
+            _primeiro_valor(
+                item.get("CHUVA"),
+                item.get("precipitacao_total_mm"),
+                item.get("PRECIPITACAO_TOTAL"),
+                item.get("RAIN"),
+            )
         )
-        if chuva is None:
-            chuva = 0.0
 
         umd_med = _para_float(
-            item.get("UMD_MED") or item.get("umidade_relativa_media_pct") or item.get("HUMI")
+            _primeiro_valor(
+                item.get("UMD_MED"), item.get("umidade_relativa_media_pct"), item.get("HUMI")
+            )
         )
         umd_min = _para_float(
-            item.get("UMD_MIN") or item.get("umidade_relativa_min_pct") or item.get("MIN_RH")
+            _primeiro_valor(
+                item.get("UMD_MIN"), item.get("umidade_relativa_min_pct"), item.get("MIN_RH")
+            )
         )
         observado = bool(item.get("observado", True))
 

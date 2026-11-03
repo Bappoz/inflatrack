@@ -139,6 +139,52 @@ def carregar_bronze_estacoes(
     return conexao.execute("SELECT count(*) FROM bronze.clima_estacao").fetchone()[0]
 
 
+def carregar_bronze_medicoes(
+    conexao: duckdb.DuckDBPyConnection,
+    delta_dir: Path,
+    modo: str = "substitui",
+) -> int:
+    """Espelha clima_medicao do Delta em bronze.clima_medicao."""
+    if modo not in MODOS_CARGA:
+        raise ValueError(f"Modo de carga inválido: {modo!r}. Escolha entre {MODOS_CARGA}")
+
+    caminho_medicao = delta_dir / "medicao"
+    if not DeltaTable.is_deltatable(str(caminho_medicao)):
+        raise FileNotFoundError(f"Tabela Delta de medições não encontrada em {caminho_medicao}")
+
+    conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
+    tabela = DeltaTable(str(caminho_medicao)).to_pyarrow_table()
+    conexao.register("temp_clima_medicao_delta", tabela)
+    colunas = """
+        id_medicao, estacao_id, data_referencia, temp_min, temp_max, temp_media,
+        precipitacao_total_mm, umidade_relativa_media_pct, umidade_relativa_min_pct,
+        observado, _id_resposta, _fonte, _requisicao, _ingerido_em
+    """
+
+    if modo == "substitui":
+        conexao.begin()
+        conexao.execute("DELETE FROM bronze.clima_medicao")
+        conexao.execute(
+            f"INSERT INTO bronze.clima_medicao ({colunas}) "
+            f"SELECT {colunas} FROM temp_clima_medicao_delta"
+        )
+        conexao.commit()
+    else:
+        conexao.execute(
+            f"""
+            INSERT INTO bronze.clima_medicao ({colunas})
+            SELECT {colunas}
+            FROM temp_clima_medicao_delta AS t
+            WHERE NOT EXISTS (
+                SELECT 1 FROM bronze.clima_medicao AS b WHERE b.id_medicao = t.id_medicao
+            )
+            """
+        )
+
+    conexao.unregister("temp_clima_medicao_delta")
+    return conexao.execute("SELECT count(*) FROM bronze.clima_medicao").fetchone()[0]
+
+
 def carregar_estacoes(conexao: duckdb.DuckDBPyConnection, parquet: Path) -> int:
     """Aplica o DDL e faz UPSERT das estações meteorológicas na tabela legada."""
     conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
@@ -245,6 +291,17 @@ def main(argv: list[str] | None = None) -> int:
             sucesso = True
         else:
             logger.warning("Tabela Delta não encontrada em %s/estacao", delta_dir)
+
+        if DeltaTable.is_deltatable(str(delta_dir / "medicao")):
+            total_medicoes = carregar_bronze_medicoes(conexao, delta_dir, modo=args.modo)
+            logger.info(
+                "Bronze Delta carregada (%s): %d versões em bronze.clima_medicao",
+                args.modo,
+                total_medicoes,
+            )
+            sucesso = True
+        else:
+            logger.info("Tabela Delta de medições ainda não existe em %s/medicao", delta_dir)
 
         if caminho_estacoes.is_file():
             total_est = carregar_estacoes(conexao, caminho_estacoes)

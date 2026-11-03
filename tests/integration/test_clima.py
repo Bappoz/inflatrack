@@ -11,8 +11,9 @@ from pathlib import Path
 
 import pytest
 from deltalake import DeltaTable
+from inflatrack.load_clima import carregar_bronze_medicoes
 
-from inflatrack import bronze_clima
+from inflatrack import bronze_clima, ingest_clima
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "clima"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
@@ -146,6 +147,124 @@ def test_gravar_atualizacao_estacao(tmp_path: Path, payload_estacoes) -> None:
     eid = payload_estacoes[0]["CD_ESTACAO"]
     versoes = [e for e in estacoes if e["estacao_id"] == eid]
     assert len(versoes) == 2
+
+
+def test_gravar_medicoes_idempotente_e_preserva_revisao(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    payload = [
+        {
+            "CD_ESTACAO": "A001",
+            "DT_MEDICAO": "2026-10-01",
+            "TEM_MIN": "0.0",
+            "TEM_MAX": "20.0",
+            "TEM_MED": "10.0",
+            "CHUVA": "0.0",
+        }
+    ]
+
+    primeira = bronze_clima.gravar_medicoes(
+        destino,
+        payload,
+        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
+        ingerido_em=QUANDO,
+    )
+    repetida = bronze_clima.gravar_medicoes(
+        destino,
+        payload,
+        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
+        ingerido_em=datetime(2026, 10, 12, 10, 0, tzinfo=UTC),
+    )
+    payload_revisado = [dict(payload[0], TEM_MED="11.0")]
+    revisao = bronze_clima.gravar_medicoes(
+        destino,
+        payload_revisado,
+        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
+        ingerido_em=datetime(2026, 10, 12, 10, 0, tzinfo=UTC),
+    )
+
+    assert primeira.linhas_lidas == 1
+    assert primeira.linhas_novas == 1
+    assert repetida.linhas_novas == 0
+    assert revisao.linhas_novas == 1
+    medicoes = tabela(destino, "medicao")
+    assert len(medicoes) == 2
+    assert {linha["temp_media"] for linha in medicoes} == {10.0, 11.0}
+    assert all(linha["temp_min"] == 0.0 for linha in medicoes)
+
+
+def test_gravar_medicoes_guarda_sentinela_como_null_delta(tmp_path: Path) -> None:
+    gravacao = bronze_clima.gravar_medicoes(
+        tmp_path / "clima",
+        [
+            {
+                "CD_ESTACAO": "A001",
+                "DT_MEDICAO": "2026-10-01",
+                "TEM_MIN": "-9999",
+                "TEM_MAX": "0.0",
+                "CHUVA": "0.0",
+            }
+        ],
+        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
+        ingerido_em=QUANDO,
+    )
+
+    assert gravacao.linhas_novas == 1
+    medicao = tabela(tmp_path / "clima", "medicao")[0]
+    assert medicao["temp_min"] is None
+    assert medicao["temp_max"] == 0.0
+    assert medicao["precipitacao_total_mm"] == 0.0
+
+
+def test_processar_medicoes_busca_estacao_e_persiste_delta(tmp_path: Path) -> None:
+    class ClienteFake:
+        def buscar_dados_estacao(self, estacao_id, data_inicio, data_fim):
+            assert (estacao_id, data_inicio, data_fim) == ("A001", "2026-10-01", "2026-10-02")
+            return [
+                {
+                    "CD_ESTACAO": "A001",
+                    "DT_MEDICAO": "2026-10-01",
+                    "TEM_MIN": "0.0",
+                    "TEM_MAX": "20.0",
+                    "CHUVA": "0.0",
+                }
+            ]
+
+    respostas, medicoes = ingest_clima.processar_medicoes(
+        ClienteFake(), ["A001"], "2026-10-01", "2026-10-02", tmp_path / "clima"
+    )
+
+    assert respostas == 1
+    assert medicoes == 1
+    assert tabela(tmp_path / "clima", "medicao")[0]["temp_min"] == 0.0
+
+
+def test_loader_medicoes_delta_idempotente(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    bronze_clima.gravar_medicoes(
+        destino,
+        [
+            {
+                "CD_ESTACAO": "A001",
+                "DT_MEDICAO": "2026-10-01",
+                "TEM_MIN": "0.0",
+                "TEM_MAX": "20.0",
+                "CHUVA": "0.0",
+            }
+        ],
+        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
+        ingerido_em=QUANDO,
+    )
+
+    import duckdb
+
+    with duckdb.connect(":memory:") as conexao:
+        assert carregar_bronze_medicoes(conexao, destino) == 1
+        assert carregar_bronze_medicoes(conexao, destino) == 1
+        leitura = conexao.execute(
+            "select temp_min, precipitacao_total_mm from bronze.clima_medicao"
+        ).fetchone()
+
+    assert leitura == (0.0, 0.0)
 
 
 def test_importar_raw(tmp_path: Path, payload_estacoes) -> None:
