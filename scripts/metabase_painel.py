@@ -7,7 +7,10 @@ arquivos e conversa com a API do Metabase:
 
 1. Se o Metabase acabou de subir e nunca foi configurado, faz a configuração inicial com o
    login do ``.env`` (``METABASE_EMAIL`` e ``METABASE_SENHA``). Se já foi, entra com ele.
-2. Cria a conexão com o Postgres, se ainda não existir. O Metabase lê só o Postgres.
+2. Garante no Postgres o usuário de login só-leitura do painel (``METABASE_PG_USER``, membro
+   do papel ``metabase_leitor`` da migration 0005: lê ``serie`` e nada de ``public``) e cria a
+   conexão do Metabase com ele. Uma conexão que já existia com outro usuário (o dono do banco,
+   por exemplo) passa a usar este. O Metabase lê só o Postgres.
 3. Cria a coleção, cria ou atualiza cada pergunta (casando pelo título) e monta o dashboard.
 
 Rodar de novo não duplica nada. Uso::
@@ -29,11 +32,26 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import psycopg
 from dotenv import load_dotenv
+from psycopg import sql
+
+from inflatrack.common.db import dsn_do_ambiente
 
 logger = logging.getLogger("metabase_painel")
 
 PASTA_PAINEL = Path(__file__).resolve().parent / "sql" / "metabase"
+
+# Papel sem login criado na migration 0005: SELECT em `serie`, nada em `public` (dados do lojista).
+PAPEL_LEITOR = "metabase_leitor"
+
+
+def usuario_leitor() -> tuple[str, str]:
+    """Login do Postgres que o Metabase usa. Do .env; o padrão serve só para o ambiente local."""
+    return (
+        os.environ.get("METABASE_PG_USER", "metabase_painel"),
+        os.environ.get("METABASE_PG_PASSWORD", "metabase_painel"),
+    )
 
 
 # --- O que está no Git ---------------------------------------------------------------
@@ -97,12 +115,38 @@ def detalhes_do_banco(banco: dict[str, Any]) -> dict[str, Any]:
             "host": "db",  # nome do serviço no docker-compose
             "port": 5432,
             "dbname": os.environ.get("POSTGRES_DB", "inflatrack"),
-            "user": os.environ.get("POSTGRES_USER", "inflatrack"),
-            "password": os.environ.get("POSTGRES_PASSWORD", "inflatrack"),
+            # Nunca o dono do banco: o painel enxergaria `public` inteiro (preços de toda loja).
+            "user": usuario_leitor()[0],
+            "password": usuario_leitor()[1],
             "ssl": False,
         }
     # Só Postgres: conectar o Metabase ao arquivo do DuckDB trava o dbt e os loaders.
     raise ValueError(f"engine não suportado: {banco['engine']} (o Metabase lê só o Postgres)")
+
+
+def garantir_usuario_leitor(dsn: str, usuario: str, senha: str) -> None:
+    """Cria (ou atualiza a senha de) um login só com o papel ``metabase_leitor``.
+
+    Roda com o dono do banco (o DSN do .env). Senha e usuário vêm do .env, nunca do Git, por
+    isso isto não está numa migration.
+    """
+    with psycopg.connect(dsn, autocommit=True, connect_timeout=5) as conexao:
+        papel = conexao.execute(
+            "select 1 from pg_roles where rolname = %s", [PAPEL_LEITOR]
+        ).fetchone()
+        if papel is None:
+            raise RuntimeError(f"papel {PAPEL_LEITOR} não existe: aplique a migration 0005")
+        existe = conexao.execute("select 1 from pg_roles where rolname = %s", [usuario]).fetchone()
+        comando = (
+            "alter role {} with login password {}"
+            if existe
+            else ("create role {} with login password {}")
+        )
+        conexao.execute(sql.SQL(comando).format(sql.Identifier(usuario), sql.Literal(senha)))
+        conexao.execute(
+            sql.SQL("grant {} to {}").format(sql.Identifier(PAPEL_LEITOR), sql.Identifier(usuario))
+        )
+    logger.info("usuário %s do Postgres pronto (papel %s)", usuario, PAPEL_LEITOR)
 
 
 def mesmo_destino(existente: dict[str, Any], banco: dict[str, Any]) -> bool:
@@ -190,6 +234,12 @@ class Metabase:
         existentes = resposta["data"] if isinstance(resposta, dict) else resposta
         for existente in existentes:
             if existente["name"] == banco["nome"] or mesmo_destino(existente, banco):
+                detalhes = detalhes_do_banco(banco)
+                if (existente.get("details") or {}).get("user") != detalhes["user"]:
+                    logger.info("conexão %s passa a usar %s", existente["name"], detalhes["user"])
+                    self._pedir(
+                        "PUT", f"/api/database/{existente['id']}", json={"details": detalhes}
+                    )
                 return existente["id"]
         logger.info("criando a conexão %s", banco["nome"])
         criado = self._pedir(
@@ -288,6 +338,12 @@ def main(argv: list[str] | None = None) -> int:
     email, senha = os.environ.get("METABASE_EMAIL"), os.environ.get("METABASE_SENHA")
     if not email or not senha:
         logger.error("defina METABASE_EMAIL e METABASE_SENHA no .env (ver .env.example)")
+        return 1
+
+    try:
+        garantir_usuario_leitor(dsn_do_ambiente(), *usuario_leitor())
+    except (psycopg.Error, RuntimeError) as erro:
+        logger.error("não deu para preparar o usuário do painel no Postgres: %s", erro)
         return 1
 
     metabase = Metabase(args.url)
