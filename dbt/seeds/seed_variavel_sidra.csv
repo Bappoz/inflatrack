@@ -1,0 +1,12 @@
+codigo_variavel,indice,medida,nome_variavel
+63,IPCA,variacao_mensal,IPCA - Variação mensal
+69,IPCA,variacao_acum_ano,IPCA - Variação acumulada no ano
+2263,IPCA,variacao_acum_3m,IPCA - Variação acumulada em 3 meses
+2264,IPCA,variacao_acum_6m,IPCA - Variação acumulada em 6 meses
+2265,IPCA,variacao_acum_12m,IPCA - Variação acumulada em 12 meses
+66,IPCA,peso_mensal,IPCA - Peso mensal
+2266,IPCA,numero_indice,IPCA - Número-índice (base: dezembro de 1993 = 100)
+44,INPC,variacao_mensal,INPC - Variação mensal
+68,INPC,variacao_acum_ano,INPC - Variação acumulada no ano
+2292,INPC,variacao_acum_12m,INPC - Variação acumulada em 12 meses
+45,INPC,peso_mensal,INPC - Peso mensal

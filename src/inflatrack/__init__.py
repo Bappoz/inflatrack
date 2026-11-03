@@ -39,7 +39,6 @@ for _name in _LOADER_NAMES:
 _BRONZE_NAMES = [
     "bronze_clima",
     "bronze_dolar",
-    "bronze_ipca",
     "bronze_pib",
     "bronze_salario_minimo",
     "bronze_selic",
@@ -52,7 +51,6 @@ for _name in _BRONZE_NAMES:
 
 # 5. Módulos ingest_*
 _INGEST_NAMES = [
-    "ingest",
     "ingest_clima",
     "ingest_commodities",
     "ingest_dolar",

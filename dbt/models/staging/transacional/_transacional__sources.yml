@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: bronze_transacional
+    description: >
+      Mudanças do banco do lojista capturadas por CDC e espelhadas do Delta por
+      inflatrack.loaders.load_transacional. Não contém CNPJ nem nome do estabelecimento.
+    schema: bronze
+    tables:
+      - name: transacional_mudanca
+        config:
+          meta:
+            dagster:
+              asset_key: ["transacional_duckdb"]  # loader que escreve esta tabela
+        description: >
+          Uma linha por mudança em public (operacao r = foto inicial, I, U, D ou T). Só acrescenta.
+        columns:
+          - name: lsn
+            description: Posição da mudança no WAL do Postgres. Ordena os eventos como aconteceram.
+            data_tests: [not_null]
+          - name: tabela
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [lojista, produto, reajuste, reajuste_custo, venda_mensal]
+          - name: operacao
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [r, I, U, D, T]

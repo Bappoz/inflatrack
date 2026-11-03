@@ -32,6 +32,7 @@ pib_internacional_job = define_asset_job(
 )
 dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
+transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 
 JOBS = [
     ipca_job,
@@ -43,6 +44,7 @@ JOBS = [
     pib_internacional_job,
     dieese_job,
     clima_job,
+    transacional_job,
 ]
 
 
@@ -95,6 +97,8 @@ SCHEDULES = [
     # 1×/dia: 9 requisições cabem na cota de 25/dia.
     ScheduleDefinition(job=commodities_job, cron_schedule="0 8 * * *", execution_timezone=FUSO),
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
+    # De hora em hora: cada leitura só traz o que mudou, e o WAL segura o resto entre as leituras.
+    ScheduleDefinition(job=transacional_job, cron_schedule="0 * * * *", execution_timezone=FUSO),
     agendamento_pib,
     # 1×/mês: o Banco Mundial revisa fora de calendário.
     ScheduleDefinition(

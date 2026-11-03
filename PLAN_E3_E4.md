@@ -536,6 +536,12 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 
 ### 5.1 Lucas — *IPCA/INPC, Banco do Lojista (PostgreSQL), CDC e Tabelas Principais da Gold*
 
+> **Situação em 31/10:** pendências de antes e Entrega 3 **feitas** ([evidência](docs/evidencias/e3/ipca_lojista.md), [EXPLAIN](docs/evidencias/e3/explain_serie.md), [ADR do CDC](docs/adr/cdc-vs-lote.md)). Entrega 4 ainda não começada. Divergências deste texto, decididas na implementação:
+> * `produto_preco_atual` continua **view**, como na migration `0002`: o preço corrente deriva de `reajuste`, e o CDC captura `reajuste`.
+> * O custo ganhou tabela própria, `reajuste_custo`, porque `reajuste` não aceita evento sem mudança de preço.
+> * `fct_inflacao_mensal` tem grão **índice x categoria x localidade x mês**, para caber o INPC e os níveis acima de subitem. Não existe `serie.serie_mensal`: a vitrine é a cópia das tabelas da Gold, com o mesmo nome.
+> * O peso mensal não abre versão em `dim_cesta_ipca_scd2`, porque muda todo mês. Ele é medida da fato, e a versão abre na troca de estrutura (POF), de nome ou de pai.
+
 * **O que ficou pendente de antes:**
   * **Em `bronze/`:** Fundir `ingest.py` + `bronze_ipca.py` → `ipca.py`.
   * **Em `loaders/`:** Criar `loaders/load_ipca.py` e o loader transacional `loaders/load_transacional.py`.
@@ -681,3 +687,7 @@ Decisões e armadilhas confirmadas na prática. Antes de mudar algo destes ponto
 * **Git Bash no Windows converte caminhos** como `/duckdb` em `C:/Program Files/Git/...` nos argumentos do `docker`. Use `MSYS_NO_PATHCONV=1`.
 * **No Postgres, `public.observacao` só acrescenta:** com revisão do IBGE, vale a linha mais recente (`ingerido_em`).
 * **Portas:** Dagster em `localhost:3000`, Metabase em `localhost:3001`.
+* **Mudou algum `.yml` do dbt e os testes do Dagster quebraram com ativo faltando ou repetido?** O `target/manifest.json` está velho e só é refeito sozinho em `dagster dev`. Rode `uv run dbt parse`.
+* **`source` do dbt com `asset_key`:** o Dagster exige uma chave por `source`. Um loader que escreve duas tabelas vira `@multi_asset` (exemplo em `orchestration/assets/ipca.py`).
+* **Migration nova não roda sozinha em volume existente:** as de `migrations/` só rodam na primeira subida. Use `just migrar <arquivo>`. As tabelas de `serie` precisam ter as colunas na mesma ordem da Gold, ou a cópia falha sem alterar nada.
+* **Processo curto que só lê Delta pelo Arrow aborta ao terminar** (código 134, "terminate called without an active exception"), mesmo depois de ter dado certo, com `deltalake` 1.6.6 e `pyarrow` 25.0.1 no Linux. Com uma conexão DuckDB no mesmo processo, não acontece. Causa não investigada.

@@ -52,3 +52,43 @@ seeds:
           - accepted_values:
               arguments:
                 values: [daily, monthly]
+
+  - name: seed_localidade_ibge
+    description: As 17 localidades medidas pelo IPCA (Brasil, regiões metropolitanas e capitais).
+    config:
+      column_types:
+        codigo_localidade: integer
+        nome_localidade: varchar
+        tipo_localidade: varchar
+        uf: varchar
+    columns:
+      - name: codigo_localidade
+        data_tests: [unique, not_null]
+
+  - name: seed_variavel_sidra
+    description: >
+      Traduz o código da variável do SIDRA para a medida. O IPCA e o INPC têm códigos diferentes
+      para a mesma medida (variação mensal: 63 no IPCA, 44 no INPC).
+    config:
+      column_types:
+        codigo_variavel: integer
+        indice: varchar
+        medida: varchar
+        nome_variavel: varchar
+    columns:
+      - name: codigo_variavel
+        data_tests: [unique, not_null]
+
+  - name: seed_agregado_sidra
+    description: >
+      Uma linha por agregado do SIDRA: o índice e a estrutura da cesta (POF) que ele usa. A troca
+      de agregado em jan/2012 e jan/2020 é quando o IBGE muda os pesos de referência da cesta.
+    config:
+      column_types:
+        agregado: smallint
+        indice: varchar
+        estrutura_cesta: varchar
+        nome_agregado: varchar
+    columns:
+      - name: agregado
+        data_tests: [unique, not_null]

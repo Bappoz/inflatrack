@@ -23,3 +23,99 @@ models:
       - name: trimestre_inicio
         description: Primeiro dia do trimestre do mês (chave do PIB trimestral).
         data_tests: [not_null]
+
+  - name: dim_localidade
+    description: Uma linha por localidade medida pelo IPCA (17, incluindo o Brasil).
+    columns:
+      - name: codigo_localidade
+        data_tests: [unique, not_null]
+      - name: nome_localidade
+        data_tests: [not_null]
+
+  - name: dim_cesta_ipca_scd2
+    description: >
+      SCD tipo 2. Uma linha por versão de uma categoria da cesta em um índice: abre versão quando a
+      estrutura muda (troca de agregado/POF, quando o IBGE muda os pesos de referência) ou quando o
+      nome ou o pai mudam. O peso mensal é medida e fica em fct_inflacao_mensal; aqui estão os pesos
+      do Brasil no início e no fim de cada versão.
+    columns:
+      - name: id_versao_cesta
+        data_tests: [unique, not_null]
+      - name: indice
+        data_tests: [not_null]
+      - name: codigo_categoria
+        data_tests: [not_null]
+      - name: agregado
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_agregado_sidra')
+                field: agregado
+      - name: nome_categoria
+        description: O nome naquela versão (1111004 foi "Leite pasteurizado" e virou "Leite longa vida").
+        data_tests: [not_null]
+      - name: nivel_categoria
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [geral, grupo, subgrupo, item, subitem]
+      - name: vigencia_inicio
+        description: Primeiro mês da versão (entra).
+        data_tests: [not_null]
+      - name: vigencia_fim
+        description: Primeiro mês depois da versão (não entra). Nulo = versão aberta.
+      - name: versao_atual
+        description: Verdadeiro se a versão está aberta no último mês publicado do índice.
+        data_tests: [not_null]
+      - name: peso_brasil_inicio_pct
+        description: Peso no Brasil no primeiro mês da versão. Nulo onde o agregado não publica peso.
+      - name: peso_brasil_fim_pct
+        description: Peso no Brasil no último mês da versão.
+
+  - name: fct_inflacao_mensal
+    description: >
+      Fato central. Uma linha representa o IPCA ou o INPC de uma categoria da cesta (do índice geral
+      ao subitem), em uma localidade, em um mês. Contém só dado público do IBGE. Responde às
+      perguntas 1 (acumulado em 12 meses), 2 (sazonalidade) e 4 (Brasil x região, IPCA x INPC).
+    columns:
+      - name: indice
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [IPCA, INPC]
+      - name: codigo_categoria
+        data_tests: [not_null]
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_localidade')
+                field: codigo_localidade
+      - name: mes_referencia
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: id_versao_cesta
+        description: A versão da cesta vigente naquele mês (nome, pai e estrutura da época).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cesta_ipca_scd2')
+                field: id_versao_cesta
+      - name: nivel_categoria
+        description: Filtro mais usado do painel; copiado da versão da cesta.
+      - name: variacao_acum_12m_pct
+        description: Publicado pelo IBGE; onde não há (2006-2011), o produto das 12 variações mensais.
+      - name: origem_acum_12m
+        description: publicado ou calculado.
+      - name: peso_mensal_pct
+        description: Peso da categoria na cesta da localidade no mês.
+      - name: numero_indice
+        description: Só no índice geral do Brasil (agregado 1737, base dez/1993 = 100).
