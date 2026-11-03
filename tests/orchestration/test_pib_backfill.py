@@ -17,7 +17,8 @@ from dagster._core.storage.tags import (
     ASSET_PARTITION_RANGE_START_TAG,
 )
 
-from inflatrack import bronze, ingest_pib
+from inflatrack.bronze import pib as bronze_pib
+from inflatrack.common import bronze
 from orchestration.assets import pib
 from orchestration.assets.comum import RETRY_REDE, executar
 from orchestration.partitions import PIB_ANUAL
@@ -42,7 +43,7 @@ def test_backfill_de_varios_anos_vira_uma_execucao_com_de_e_ate(
         chamadas.append(argv)
         return 0
 
-    monkeypatch.setattr(pib.ingest_pib, "main", ingestor)
+    monkeypatch.setattr(pib.bronze_pib, "main", ingestor)
     with instance_for_test() as instancia:
         resultado = materialize(
             [pib.pib_parquet],
@@ -51,7 +52,7 @@ def test_backfill_de_varios_anos_vira_uma_execucao_com_de_e_ate(
         )
 
     assert resultado.success
-    assert chamadas == [["--de", "2025", "--ate", "2026"]]
+    assert chamadas == [["coletar", "--de", "2025", "--ate", "2026"]]
 
 
 def test_agendamento_rele_o_ano_corrente_e_o_anterior() -> None:
@@ -87,7 +88,7 @@ def sidra_que_cai_uma_vez(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         def now(cls, tz=None):
             return datetime(2026, 10, 13, 12, tzinfo=UTC)
 
-    monkeypatch.setattr(ingest_pib, "datetime", AgoraFixo)
+    monkeypatch.setattr(bronze_pib, "datetime", AgoraFixo)
     return pedidos
 
 
@@ -101,10 +102,9 @@ def test_dagster_tenta_de_novo_quando_o_sidra_devolve_503(
     def pib_2026(context) -> None:
         executar(
             context,
-            ingest_pib.main,
-            "--de", "2026", "--ate", "2026",
-            "--raw-dir", str(tmp_path / "raw"),
+            bronze_pib.main,
             "--parquet-dir", str(tmp_path / "pib"),
+            "coletar", "--de", "2026", "--ate", "2026",
         )  # fmt: skip
 
     with instance_for_test() as instancia:
@@ -116,16 +116,18 @@ def test_dagster_tenta_de_novo_quando_o_sidra_devolve_503(
     assert len(tentativas) == 1
     assert sum("metadados" in pedido for pedido in sidra_que_cai_uma_vez) == 2
     assert bronze.ler(tmp_path / "pib", "valor").num_rows == 46  # 2 trimestres x 23 setores
+    # Só as duas tabelas Delta: nada de data/raw/ nem Parquet por ano (fim do caminho antigo).
+    assert sorted(p.name for p in (tmp_path / "pib").iterdir()) == ["resposta", "valor"]
+    assert not (tmp_path / "raw").exists()
 
 
 def test_reprocessar_o_mesmo_ano_nao_duplica_a_bronze(
     tmp_path: Path, sidra_que_cai_uma_vez: list[str]
 ) -> None:
-    argv = ["--de", "2026", "--ate", "2026", "--raw-dir", str(tmp_path / "raw")]
-    argv += ["--parquet-dir", str(tmp_path / "pib")]
+    argv = ["--parquet-dir", str(tmp_path / "pib"), "coletar", "--de", "2026", "--ate", "2026"]
 
-    assert ingest_pib.main(argv) == 1  # primeira chamada: SIDRA fora do ar
-    assert ingest_pib.main(argv) == 0
-    assert ingest_pib.main(argv) == 0  # backfill do mesmo ano, sem revisão nova
+    assert bronze_pib.main(argv) == 1  # primeira chamada: SIDRA fora do ar
+    assert bronze_pib.main(argv) == 0
+    assert bronze_pib.main(argv) == 0  # backfill do mesmo ano, sem revisão nova
 
     assert bronze.ler(tmp_path / "pib", "valor").num_rows == 46

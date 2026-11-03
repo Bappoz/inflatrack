@@ -1,6 +1,6 @@
 """Ativos da fonte `pib`: SIDRA 1846 → Bronze em Delta → `bronze.pib_valor` no DuckDB.
 
-A coleta é particionada por ano (`partitions.PIB_ANUAL`): o ingestor já faz uma requisição
+A coleta é particionada por ano (`partitions.PIB_ANUAL`): a coleta já faz uma requisição
 por ano, então reprocessar anos passados (*backfill*) custa só as requisições desses anos.
 Um backfill de vários anos roda numa execução só (`BackfillPolicy.single_run`), com
 `--de`/`--ate`. A carga no DuckDB não é particionada: ela espelha o Delta inteiro e só
@@ -9,7 +9,8 @@ acrescenta linhas novas, então rodar de novo não duplica nada.
 
 from dagster import AssetExecutionContext, BackfillPolicy, asset
 
-from inflatrack import ingest_pib, load_pib
+from inflatrack import load_pib
+from inflatrack.bronze import pib as bronze_pib
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 from orchestration.partitions import PIB_ANUAL
 
@@ -24,7 +25,7 @@ from orchestration.partitions import PIB_ANUAL
 )
 def pib_parquet(context: AssetExecutionContext) -> None:
     faixa = context.partition_key_range
-    executar(context, ingest_pib.main, "--de", faixa.start, "--ate", faixa.end)
+    executar(context, bronze_pib.main, "coletar", "--de", faixa.start, "--ate", faixa.end)
 
 
 @asset(

@@ -7,7 +7,8 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from inflatrack import bronze, bronze_pib
+from inflatrack.bronze import pib as bronze_pib
+from inflatrack.common import bronze
 from inflatrack.loaders.load_pib import carregar, main
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "pib"

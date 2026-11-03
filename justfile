@@ -133,23 +133,22 @@ verificar-carga:
     docker compose cp scripts/sql/verificar_carga.sql db:/tmp/verificar_carga.sql
     docker compose exec -T db psql -U {{PG_USER}} -d {{PG_DB}} -f /tmp/verificar_carga.sql
 
-# Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
-pib-ingest de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.bronze.ingest_pib --de {{de}} --ate {{ate}}
-
-# Bronze do PIB em Delta (data/parquet/pib/): o mesmo ingestor grava pib_resposta e pib_valor.
+# Bronze do PIB em Delta (data/parquet/pib/): SIDRA 1846 -> pib_resposta e pib_valor. ~10 s.
 bronze-pib de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.bronze.ingest_pib --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.pib coletar --de {{de}} --ate {{ate}}
+
+# Alias antigo de bronze-pib (desde a E3 não há mais raw nem Parquet por ano).
+pib-ingest de="1996" ate=datetime("%Y"): (bronze-pib de ate)
 
 # Leva os .json.gz antigos de data/raw/pib_raw/ para as tabelas Delta. Reexecutável.
 bronze-pib-importar:
-    uv run python -m inflatrack.bronze.bronze_pib importar
+    uv run python -m inflatrack.bronze.pib importar
 
 # Trimestres, setores por trimestre e revisões de pib_valor. Sai com erro se houver buraco.
 bronze-pib-checar:
-    uv run python -m inflatrack.bronze.bronze_pib checar
+    uv run python -m inflatrack.bronze.pib checar
 
-# Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
+# Espelha o Delta do PIB em bronze.pib_valor no DuckDB.
 pib-load:
     uv run python -m inflatrack.loaders.load_pib
 
@@ -234,22 +233,22 @@ bronze-selic-checar:
 # Bronze de Macroeconomia em Delta (Dólar + Selic).
 bronze-macro: bronze-dolar bronze-selic
 
-# Carga isolada das Commodities (AlphaVantage -> DuckDB)
+# Carga isolada das Commodities (AlphaVantage -> Delta -> DuckDB). Gasta 9 das 25 req./dia.
 seed-commodities:
-    uv run python -m inflatrack.bronze.ingest_commodities --commodity ALL --modo historico
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
     uv run python -m inflatrack.loaders.load_commodities
 
 # Bronze das commodities em Delta (data/parquet/commodities/). Gasta 9 das 25 req./dia.
 bronze-commodities:
-    uv run python -m inflatrack.bronze.ingest_commodities --commodity ALL
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
 
 # Leva os .json.gz antigos de data/raw/commodities_raw/ para as tabelas Delta. Sem requisição.
 bronze-commodities-importar:
-    uv run python -m inflatrack.bronze.ingest_commodities importar
+    uv run python -m inflatrack.bronze.commodities importar
 
 # Símbolos, volume e datas repetidas de commodities_cotacao.
 bronze-commodities-checar:
-    uv run python -m inflatrack.bronze.ingest_commodities checar
+    uv run python -m inflatrack.bronze.commodities checar
 
 # CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
 bronze-transacional:
