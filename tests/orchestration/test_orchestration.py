@@ -83,7 +83,15 @@ def test_grafo_unico_carrega_todos_os_modulos_sem_ativo_duplicado():
     chaves = [chave.to_user_string() for ativo in ativos for chave in ativo.keys]
     assert len(chaves) == len(set(chaves))
     grupos = {ativo.group_names_by_key[chave] for ativo in ativos for chave in ativo.keys}
-    assert {"sidra", "macro", "commodities", "pib", "pib_china", "dieese", "clima"} <= grupos
+    assert {
+        "sidra",
+        "macro",
+        "commodities",
+        "pib",
+        "pib_internacional",
+        "dieese",
+        "clima",
+    } <= grupos
 
 
 def test_todo_ativo_que_escreve_no_duckdb_usa_o_pool():

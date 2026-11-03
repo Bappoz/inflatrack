@@ -1,0 +1,98 @@
+-- select
+--     f.mes_referencia,
+--     c.nome_categoria,
+--     f.variacao_mensal_pct,
+--     f.variacao_acum_12m_pct
+-- from serie.fct_inflacao_mensal as f
+-- inner join serie.dim_cesta_ipca_scd2 as c on c.id_versao_cesta = f.id_versao_cesta
+-- where f.codigo_categoria = '1101002'
+--     and f.codigo_localidade = 5300108
+--     and f.indice = 'IPCA'
+-- order by f.mes_referencia desc
+-- limit 12
+
+=== Execução 1 de 3 ===
+Limit  (cost=46155.89..46157.29 rows=12 width=47) (actual time=123.083..126.797 rows=12 loops=1)
+  Buffers: shared hit=2408 read=30804
+  ->  Gather Merge  (cost=46155.89..46161.72 rows=50 width=47) (actual time=123.081..126.791 rows=12 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=2408 read=30804
+        ->  Sort  (cost=45155.86..45155.93 rows=25 width=47) (actual time=117.342..117.346 rows=4 loops=3)
+              Sort Key: f.mes_referencia DESC
+              Sort Method: top-N heapsort  Memory: 26kB
+              Buffers: shared hit=2408 read=30804
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              Worker 1:  Sort Method: quicksort  Memory: 25kB
+              ->  Hash Join  (cost=54.66..45155.29 rows=25 width=47) (actual time=57.943..116.866 rows=81 loops=3)
+                    Hash Cond: (f.id_versao_cesta = c.id_versao_cesta)
+                    Buffers: shared hit=2294 read=30804
+                    ->  Parallel Seq Scan on fct_inflacao_mensal f  (cost=0.00..45100.51 rows=49 width=34) (actual time=56.801..115.692 rows=81 loops=3)
+                          Filter: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+                          Rows Removed by Filter: 554024
+                          Buffers: shared hit=2176 read=30804
+                    ->  Hash  (cost=43.18..43.18 rows=918 width=64) (actual time=1.338..1.339 rows=1834 loops=2)
+                          Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 138kB
+                          Buffers: shared hit=68
+                          ->  Seq Scan on dim_cesta_ipca_scd2 c  (cost=0.00..43.18 rows=918 width=64) (actual time=0.036..0.504 rows=1834 loops=2)
+                                Buffers: shared hit=68
+Planning:
+  Buffers: shared hit=124
+Planning Time: 0.875 ms
+Execution Time: 126.940 ms
+
+=== Execução 2 de 3 ===
+Limit  (cost=46155.89..46157.29 rows=12 width=47) (actual time=101.099..106.106 rows=12 loops=1)
+  Buffers: shared hit=2504 read=30708
+  ->  Gather Merge  (cost=46155.89..46161.72 rows=50 width=47) (actual time=101.097..106.101 rows=12 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=2504 read=30708
+        ->  Sort  (cost=45155.86..45155.93 rows=25 width=47) (actual time=97.028..97.034 rows=4 loops=3)
+              Sort Key: f.mes_referencia DESC
+              Sort Method: top-N heapsort  Memory: 26kB
+              Buffers: shared hit=2504 read=30708
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              Worker 1:  Sort Method: quicksort  Memory: 25kB
+              ->  Hash Join  (cost=54.66..45155.29 rows=25 width=47) (actual time=49.311..96.758 rows=81 loops=3)
+                    Hash Cond: (f.id_versao_cesta = c.id_versao_cesta)
+                    Buffers: shared hit=2390 read=30708
+                    ->  Parallel Seq Scan on fct_inflacao_mensal f  (cost=0.00..45100.51 rows=49 width=34) (actual time=48.340..95.733 rows=81 loops=3)
+                          Filter: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+                          Rows Removed by Filter: 554024
+                          Buffers: shared hit=2272 read=30708
+                    ->  Hash  (cost=43.18..43.18 rows=918 width=64) (actual time=1.270..1.276 rows=1834 loops=2)
+                          Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 138kB
+                          Buffers: shared hit=68
+                          ->  Seq Scan on dim_cesta_ipca_scd2 c  (cost=0.00..43.18 rows=918 width=64) (actual time=0.023..0.451 rows=1834 loops=2)
+                                Buffers: shared hit=68
+Planning Time: 0.329 ms
+Execution Time: 106.286 ms
+
+=== Execução 3 de 3 ===
+Limit  (cost=46155.89..46157.29 rows=12 width=47) (actual time=103.978..107.560 rows=12 loops=1)
+  Buffers: shared hit=2600 read=30612
+  ->  Gather Merge  (cost=46155.89..46161.72 rows=50 width=47) (actual time=103.976..107.555 rows=12 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=2600 read=30612
+        ->  Sort  (cost=45155.86..45155.93 rows=25 width=47) (actual time=98.290..98.293 rows=4 loops=3)
+              Sort Key: f.mes_referencia DESC
+              Sort Method: top-N heapsort  Memory: 26kB
+              Buffers: shared hit=2600 read=30612
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              Worker 1:  Sort Method: quicksort  Memory: 25kB
+              ->  Hash Join  (cost=54.66..45155.29 rows=25 width=47) (actual time=49.626..97.833 rows=81 loops=3)
+                    Hash Cond: (f.id_versao_cesta = c.id_versao_cesta)
+                    Buffers: shared hit=2486 read=30612
+                    ->  Parallel Seq Scan on fct_inflacao_mensal f  (cost=0.00..45100.51 rows=49 width=34) (actual time=48.518..96.693 rows=81 loops=3)
+                          Filter: ((codigo_categoria = '1101002'::text) AND (codigo_localidade = 5300108) AND (indice = 'IPCA'::text))
+                          Rows Removed by Filter: 554024
+                          Buffers: shared hit=2368 read=30612
+                    ->  Hash  (cost=43.18..43.18 rows=918 width=64) (actual time=1.310..1.311 rows=1834 loops=2)
+                          Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 138kB
+                          Buffers: shared hit=68
+                          ->  Seq Scan on dim_cesta_ipca_scd2 c  (cost=0.00..43.18 rows=918 width=64) (actual time=0.035..0.478 rows=1834 loops=2)
+                                Buffers: shared hit=68
+Planning Time: 0.288 ms
+Execution Time: 107.763 ms

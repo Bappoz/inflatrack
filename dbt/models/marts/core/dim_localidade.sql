@@ -1,6 +1,8 @@
+-- As 17 localidades medidas pelo IPCA. Só elas são válidas como praça do lojista.
+
 select
-    cast(codigo_ibge as varchar) as codigo_localidade,
-    nome,
-    tipo,
+    codigo_localidade,
+    nome_localidade,
+    tipo_localidade,
     uf
 from {{ ref('seed_localidade_ibge') }}

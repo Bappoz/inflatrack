@@ -3,7 +3,8 @@ from datetime import date
 import psycopg
 import pytest
 
-from inflatrack import ingest, ingest_pib
+from inflatrack import ingest_pib
+from inflatrack.bronze import ipca
 
 
 def test_ingest_desiste_rapido_sem_postgres(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -14,9 +15,9 @@ def test_ingest_desiste_rapido_sem_postgres(monkeypatch: pytest.MonkeyPatch) -> 
         chamadas.append(kwargs)
         raise psycopg.OperationalError("connection refused")
 
-    monkeypatch.setattr(ingest.psycopg, "connect", conectar_falhando)
+    monkeypatch.setattr(ipca.psycopg, "connect", conectar_falhando)
 
-    codigo = ingest.main(["--agregado", "7060", "--de", "2026-01", "--ate", "2026-01"])
+    codigo = ipca.main(["coletar", "--agregado", "7060", "--de", "2026-01", "--ate", "2026-01"])
 
     assert codigo == 1
     assert 0 < chamadas[0]["connect_timeout"] <= 10
@@ -39,20 +40,20 @@ def test_ingest_falha_em_mes_nao_publicado(monkeypatch: pytest.MonkeyPatch, tmp_
     Tratar isso como sucesso fazia o Dagster marcar a partição como materializada, e o
     agendamento pulava os dias seguintes: o mês nunca era carregado.
     """
-    monkeypatch.setattr(ingest.psycopg, "connect", lambda *a, **k: _ConexaoFalsa())
-    monkeypatch.setattr(ingest.sidra, "buscar_metadados", lambda cliente, agregado: {})
-    vazia = ingest.sidra.Resposta("https://sidra.invalid", 200, "application/json", "[]")
-    monkeypatch.setattr(ingest.sidra, "buscar_resposta", lambda *a, **k: vazia)
+    monkeypatch.setattr(ipca.psycopg, "connect", lambda *a, **k: _ConexaoFalsa())
+    sem_cesta = ipca.sidra.Resposta("https://sidra.invalid/m", 200, "application/json", "{}")
+    monkeypatch.setattr(ipca.sidra, "buscar_metadados_resposta", lambda cliente, ag: sem_cesta)
+    vazia = ipca.sidra.Resposta("https://sidra.invalid", 200, "application/json", "[]")
+    monkeypatch.setattr(ipca.sidra, "buscar_resposta", lambda *a, **k: vazia)
 
-    raw, bronze = tmp_path / "raw", tmp_path / "bronze"
-    codigo = ingest.main(
-        ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10"]
-        + ["--raw-dir", str(raw), "--parquet-dir", str(bronze)]
+    bronze = tmp_path / "bronze"
+    codigo = ipca.main(
+        ["--parquet-dir", str(bronze), "coletar"]
+        + ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10"]
     )
 
     assert codigo == 1
-    assert not raw.exists()  # Raw vazio não é gravado
-    assert not bronze.exists()  # nem a Bronze
+    assert not (bronze / "observacao").exists()  # mês vazio não entra na Bronze
 
 
 def test_ingest_pib_vai_ate_o_ano_corrente_por_padrao(monkeypatch: pytest.MonkeyPatch) -> None:

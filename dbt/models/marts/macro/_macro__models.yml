@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: fct_pib_internacional_anual
+    description: >
+      Tabela Fato da camada Gold contendo a série anual comparativa do PIB internacional
+      (China, EUA e Rússia) com crescimento percentual e PIB nominal em dólares.
+      Fonte para análises macroeconômicas de demanda externa e correlação com preços de commodities.
+    columns:
+      - name: ano
+        description: Ano da observação anual.
+        data_tests: [not_null]
+      - name: data_referencia
+        description: Data de referência anual (YYYY-01-01).
+        data_tests: [not_null]
+      - name: pais_iso3
+        description: Código ISO3 do país parceiro (CHN, USA, RUS).
+        data_tests: [not_null]
+      - name: pais_nome
+        description: Nome do país parceiro.
+        data_tests: [not_null]
+      - name: crescimento_pib_pct
+        description: Taxa anual de crescimento do PIB em %.
+      - name: pib_nominal_usd
+        description: PIB nominal a preços correntes em dólares americanos (USD).

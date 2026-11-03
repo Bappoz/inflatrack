@@ -1,4 +1,4 @@
-estacao_id,codigo_ibge,justificativa
+estacao_id,codigo_localidade,justificativa
 A409,2800308,Estação INMET identificada como Aracaju no catálogo
 A201,1501,Estação INMET identificada como Belém no catálogo
 A521,3101,Estação INMET no município de Belo Horizonte

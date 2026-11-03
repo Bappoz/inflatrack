@@ -39,6 +39,9 @@ sobrescreve. Para rascunhos, use outra coleção.
 |---|---|---|---|
 | `p1_inflacao_12m_por_setor.sql` | 1. Inflação acumulada do meu setor nos últimos 12 meses | Postgres | **Provisória:** lê o IPCA do Postgres até a `gold.fct_inflacao_mensal` existir |
 
+A `gold.fct_inflacao_mensal` já existe e é copiada para `serie.fct_inflacao_mensal`. A troca da
+pergunta 1 para ler de lá (filtrando `indice = 'IPCA'`) está pendente.
+
 ## De onde o painel lê: só do Postgres
 
 ```

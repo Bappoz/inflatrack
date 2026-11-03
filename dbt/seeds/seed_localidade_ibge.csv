@@ -1,4 +1,4 @@
-codigo_ibge,nome,tipo,uf
+codigo_localidade,nome_localidade,tipo_localidade,uf
 1,Brasil,pais,
 1501,Belém,regiao_metropolitana,PA
 2301,Fortaleza,regiao_metropolitana,CE
