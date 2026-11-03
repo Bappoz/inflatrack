@@ -140,7 +140,7 @@ def buscar_valores(
 ) -> list[dict[str, str]]:
     """Busca um período de um agregado no formato compacto (só códigos).
 
-    Devolve a lista crua da API. A conversão fica em :mod:`inflatrack.ingest`
+    Devolve a lista crua da API. A conversão fica em :mod:`inflatrack.bronze.ipca`
     para que a camada bruta possa ser gravada exatamente como veio.
     """
     return buscar_resposta(

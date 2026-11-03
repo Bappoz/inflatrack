@@ -1,28 +1,37 @@
-"""Bronze do IPCA/INPC: tabela de respostas e tabela extraída, em Delta.
+"""Bronze do IPCA/INPC: coleta no SIDRA e gravação nas tabelas Delta, num único ponto de entrada.
 
 Cada resposta do SIDRA vira duas coisas, gravadas no mesmo passo::
 
     data/parquet/ipca/resposta/     ipca_resposta    uma linha por resposta DIFERENTE
     data/parquet/ipca/observacao/   ipca_observacao  uma linha por valor da resposta
+    data/parquet/ipca/metadados/    ipca_metadados   uma linha por versão de categoria da cesta
 
-``ipca_resposta`` guarda o corpo inteiro e substitui os ``.json.gz`` de ``data/raw/``.
-``ipca_observacao`` é a entrada do DuckDB e do dbt: tipada, com TODAS as linhas da
-resposta, inclusive os marcadores de ausência (``valor`` nulo, ``valor_bruto`` com o
-texto original). Descartar marcador, traduzir a categoria para o código da cesta e
-unir os agregados são regras de negócio e ficam para o dbt.
+``ipca_resposta`` guarda o corpo inteiro (valores e metadados) e substituiu os ``.json.gz`` de
+``data/raw/``. ``ipca_observacao`` é a entrada do DuckDB e do dbt: tipada, com TODAS as linhas
+da resposta, inclusive os marcadores de ausência (``valor`` nulo, ``valor_bruto`` com o texto
+original). Descartar marcador, traduzir a categoria para o código da cesta e unir os agregados
+são regras de negócio e ficam para o dbt. ``ipca_metadados`` é o que permite essa tradução: os
+valores trazem o id interno do SIDRA (``D4C``), e só os metadados dizem qual código e nome ele
+tem em cada agregado.
 
-As duas tabelas só acrescentam. Reexecutar o mesmo mês não grava nada; se o IBGE
-revisar um valor, a revisão entra como linha nova e a anterior permanece (mesma
+As três tabelas só acrescentam. Reexecutar o mesmo mês não grava nada; se o IBGE revisar um
+valor ou renomear um subitem, a revisão entra como linha nova e a anterior permanece (mesma
 semântica *insert-only* da tabela ``observacao`` do Postgres, ADR 0001).
+
+O Delta é gravado antes do Postgres, para que uma falha do banco não deixe o formato aberto
+para trás; a reexecução não duplica nada em nenhum dos dois. O Postgres continua recebendo a
+cesta (``classificacao``, alvo da FK ``produto.codigo_subitem_ipca``) e ``observacao``.
 
 Uso::
 
-    uv run python -m inflatrack.bronze_ipca importar --raw-dir data/raw/ipca-inpc
-    uv run python -m inflatrack.bronze_ipca checar
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2026-01 --ate 2026-07
+    uv run python -m inflatrack.bronze.ipca metadados
+    uv run python -m inflatrack.bronze.ipca importar --raw-dir data/raw/ipca-inpc
+    uv run python -m inflatrack.bronze.ipca checar
 
-A tabela de respostas é gravada pelo helper comum :mod:`inflatrack.bronze`. A tabela de
-observações continua aqui, porque filtra as chaves existentes por agregado e mês para
-não ler os 9 milhões de linhas a cada mês.
+A tabela de respostas é gravada pelo helper comum :mod:`inflatrack.common.bronze`. A tabela de
+observações continua aqui, porque filtra as chaves existentes por agregado e mês para não ler
+os 9 milhões de linhas a cada mês.
 """
 
 from __future__ import annotations
@@ -39,13 +48,16 @@ from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+import httpx
+import psycopg
 import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
 from inflatrack import bronze, sidra
+from inflatrack.common.db import dsn_do_ambiente
 
-logger = logging.getLogger("inflatrack.bronze_ipca")
+logger = logging.getLogger("inflatrack.ipca")
 
 FONTE = "ipca"
 DIRETORIO_PADRAO = "data/parquet/ipca"
@@ -72,6 +84,20 @@ ESQUEMA_OBSERVACAO = pa.schema(
         pa.field("_ingerido_em", pa.timestamp("us", tz="UTC"), nullable=False),
     ]
 )
+
+ESQUEMA_METADADOS = bronze.esquema_extraido(
+    [
+        pa.field("agregado", pa.int16(), nullable=False),
+        pa.field("id_categoria", pa.int32(), nullable=False),
+        pa.field("codigo", pa.string(), nullable=False),
+        pa.field("nome", pa.string(), nullable=False),
+        pa.field("codigo_pai", pa.string()),
+        pa.field("nivel", pa.string(), nullable=False),
+    ]
+)
+
+# O nome e o pai entram na chave: renomear um subitem vira uma versão nova, não uma troca.
+CHAVE_METADADOS = ("agregado", "id_categoria", "codigo", "nome", "codigo_pai")
 
 # Uma observação é "a mesma" quando repete estas colunas. O valor entra na chave de
 # propósito: é o que faz a revisão do IBGE virar linha nova em vez de ser ignorada.
@@ -113,6 +139,23 @@ REFERENCIA = {
 # A cesta ganha e perde subitem sem trocar de agregado; variação maior que esta no
 # número de categorias indica resposta truncada ou mudança de estrutura a investigar.
 TOLERANCIA_CATEGORIAS = 0.05
+
+# Agregados com a classificação 315 (a cesta). O 1737 só tem o índice geral.
+AGREGADO_SEM_CESTA = 1737
+AGREGADOS_COM_CESTA = tuple(a for a in REFERENCIA if a != AGREGADO_SEM_CESTA)
+
+# Sem limite, uma conexão a um Postgres fora do ar fica minutos pendurada no Windows. O
+# valor vale por endereço: `localhost` tenta ::1 e 127.0.0.1, então a falha leva ~2x isso.
+TIMEOUT_CONEXAO_S = 5
+
+COLUNAS_OBSERVACAO_POSTGRES = (
+    "id_fonte",
+    "codigo_classificacao",
+    "codigo_localidade",
+    "codigo_variavel",
+    "mes_referencia",
+    "valor",
+)
 
 _NOME_ARQUIVO_RAW = re.compile(r"^(?P<agregado>\d+)-(?P<periodo>\d{6})\.json\.gz$")
 
@@ -345,6 +388,265 @@ def gravar(
     return Gravacao(id_resposta, nova, len(linhas), novas)
 
 
+# --- Metadados da cesta ------------------------------------------------------------
+
+
+def transformar_metadados(metadados: dict, agregado: int) -> list[dict]:
+    """Uma linha por categoria da classificação 315, com o código natural e o nome.
+
+    ``id_categoria`` é o valor que chega em ``D4C``; é por ele que o dbt traduz a
+    observação para o código da cesta. O 1737 não tem classificação e devolve lista vazia.
+    """
+    return [
+        {
+            "agregado": agregado,
+            "id_categoria": int(id_sidra),
+            "codigo": codigo,
+            "nome": nome,
+            "codigo_pai": pai,
+            "nivel": sidra.nivel_do_codigo(codigo),
+        }
+        for id_sidra, codigo, nome, pai in sidra.categorias(metadados)
+    ]
+
+
+def checar_metadados(linhas: list[dict], agregado: int) -> None:
+    """Falha se a cesta veio vazia ou muito diferente do tamanho conhecido do agregado."""
+    if agregado == AGREGADO_SEM_CESTA:
+        return
+    esperadas = REFERENCIA[agregado].categorias
+    if abs(len(linhas) - esperadas) > esperadas * TOLERANCIA_CATEGORIAS:
+        raise ChecagemError(
+            f"agregado {agregado}: {len(linhas)} categorias nos metadados (esperado ~{esperadas})"
+        )
+
+
+def gravar_metadados(
+    destino: Path, agregado: int, resposta: sidra.Resposta, ingerido_em: datetime | None = None
+) -> Gravacao:
+    """Guarda a resposta dos metadados e acrescenta as versões novas de categoria."""
+    ingerido_em = ingerido_em or datetime.now(UTC)
+    linhas = transformar_metadados(resposta.json(), agregado)
+    checar_metadados(linhas, agregado)
+    id_resposta, nova = gravar_resposta(
+        destino,
+        requisicao=resposta.url,
+        corpo=resposta.corpo,
+        ingerido_em=ingerido_em,
+        status_http=resposta.status_http,
+        tipo_conteudo=resposta.tipo_conteudo,
+    )
+    novas = bronze.acrescentar(
+        destino,
+        "metadados",
+        _com_metadados(linhas, id_resposta, resposta.url, ingerido_em),
+        ESQUEMA_METADADOS,
+        CHAVE_METADADOS,
+        partition_by=["agregado"],
+    )
+    return Gravacao(id_resposta, nova, len(linhas), novas)
+
+
+# --- Postgres: a cesta com vigência e a observação ---------------------------------
+
+
+def mes_para_data(periodo: str) -> date:
+    """``"202607"`` -> ``date(2026, 7, 1)``."""
+    return date(int(periodo[:4]), int(periodo[4:]), 1)
+
+
+def _mes_seguinte(mes: date) -> date:
+    return date(mes.year + mes.month // 12, mes.month % 12 + 1, 1)
+
+
+def _mes_anterior(mes: date) -> date:
+    return date(mes.year - (mes.month == 1), (mes.month - 2) % 12 + 1, 1)
+
+
+def sincronizar_cesta(
+    conexao: psycopg.Connection, agregado: int, metadados: dict
+) -> dict[str, str]:
+    """Insere a classificação e mantém o histórico de versões daquele agregado (SCD tipo 2).
+
+    A versão existe porque o mesmo código muda de nome entre agregados: 43 subitens foram
+    renomeados entre 2006 e 2026 (docs/adr/0001). Quando o nome ou o pai mudam, a versão
+    aberta é fechada e uma nova é aberta; antes, o ``UPDATE`` apagava o nome antigo.
+
+    A nova versão vale a partir do último mês publicado pelo agregado (``periodicidade.fim``):
+    é o primeiro mês em que os metadados atuais podem ter sido vistos. Se a versão aberta
+    começou nesse mesmo mês, a nova começa no seguinte, para nunca haver duas faixas iguais.
+
+    Devolve o mapa ``id_sidra -> codigo`` desse agregado: os valores da API identificam a
+    categoria pelo ``id`` interno (``D4C``), não pelo código natural gravado em `classificacao`.
+    """
+    categorias = sidra.categorias(metadados)
+    periodo = metadados["periodicidade"]
+    inicio_do_agregado = mes_para_data(str(periodo["inicio"]))
+    ultimo_publicado = mes_para_data(str(periodo["fim"]))
+
+    with conexao.cursor() as cursor:
+        cursor.executemany(
+            "insert into classificacao (codigo, nivel) values (%s, %s)"
+            " on conflict (codigo) do nothing",
+            [(codigo, sidra.nivel_do_codigo(codigo)) for _, codigo, _, _ in categorias],
+        )
+        cursor.execute(
+            "select codigo, nome, codigo_pai, vigencia_inicio from classificacao_versao"
+            " where id_fonte = %s and vigencia_fim is null",
+            (agregado,),
+        )
+        abertas = {linha[0]: linha[1:] for linha in cursor.fetchall()}
+
+        fechar, abrir = [], []
+        for _, codigo, nome, pai in categorias:
+            aberta = abertas.get(codigo)
+            if aberta is None:
+                abrir.append((codigo, agregado, nome, pai, inicio_do_agregado))
+            elif (aberta[0], aberta[1]) != (nome, pai):
+                inicio = max(ultimo_publicado, _mes_seguinte(aberta[2]))
+                fechar.append((_mes_anterior(inicio), codigo, agregado))
+                abrir.append((codigo, agregado, nome, pai, inicio))
+                logger.info(
+                    "cesta %s/%s: %r -> %r desde %s", agregado, codigo, aberta[0], nome, inicio
+                )
+        cursor.executemany(
+            "update classificacao_versao set vigencia_fim = %s"
+            " where codigo = %s and id_fonte = %s and vigencia_fim is null",
+            fechar,
+        )
+        cursor.executemany(
+            "insert into classificacao_versao"
+            " (codigo, id_fonte, nome, codigo_pai, vigencia_inicio)"
+            " values (%s, %s, %s, %s, %s)",
+            abrir,
+        )
+    return {id_sidra: codigo for id_sidra, codigo, _, _ in categorias}
+
+
+def carregar_periodo(
+    conexao: psycopg.Connection,
+    agregado: int,
+    periodo: str,
+    payload: list[dict],
+    mapa_classificacao: dict[str, str] | None,
+) -> int:
+    """Copia um mês para uma tabela temporária e funde em ``observacao``.
+
+    ``mapa_classificacao`` traduz o ``D4C`` (id interno do SIDRA) para o código natural
+    gravado em `classificacao` (ver :func:`sincronizar_cesta`). Agregados sem dimensão de
+    classificação (1737) não têm ``D4C`` no payload e caem sempre no índice geral.
+    """
+    mes = mes_para_data(periodo)
+    linhas = [
+        (
+            agregado,
+            mapa_classificacao[linha["D4C"]] if mapa_classificacao else sidra.CODIGO_INDICE_GERAL,
+            int(linha["D1C"]),
+            int(linha["D2C"]),
+            mes,
+            linha["V"],
+        )
+        for linha in payload
+        if not sidra.eh_ausente(linha["V"])
+    ]
+    if not linhas:
+        return 0
+
+    with conexao.cursor() as cursor:
+        cursor.execute(
+            "create temp table carga (like observacao including defaults including identity)"
+            " on commit drop"
+        )
+        colunas = ", ".join(COLUNAS_OBSERVACAO_POSTGRES)
+        with cursor.copy(f"copy carga ({colunas}) from stdin") as copia:
+            for linha in linhas:
+                copia.write_row(linha)
+        cursor.execute(
+            f"insert into observacao ({colunas}) select {colunas} from carga on conflict do nothing"
+        )
+        return cursor.rowcount
+
+
+# --- Coleta ------------------------------------------------------------------------
+
+
+def coletar(args: argparse.Namespace) -> int:
+    """Baixa um intervalo de meses de um agregado: Delta primeiro, depois Postgres."""
+    inicio, fim = mes_para_data(args.de.replace("-", "")), mes_para_data(args.ate.replace("-", ""))
+    destino = Path(args.parquet_dir)
+    total = 0
+
+    with (
+        httpx.Client() as cliente,
+        psycopg.connect(
+            args.dsn or dsn_do_ambiente(), connect_timeout=TIMEOUT_CONEXAO_S
+        ) as conexao,
+    ):
+        resposta_metadados = sidra.buscar_metadados_resposta(cliente, args.agregado)
+        gravar_metadados(destino, args.agregado, resposta_metadados)
+        mapa_classificacao: dict[str, str] | None = None
+        if args.agregado != AGREGADO_SEM_CESTA:
+            mapa_classificacao = sincronizar_cesta(
+                conexao, args.agregado, resposta_metadados.json()
+            )
+            conexao.commit()
+            logger.info(
+                "cesta sincronizada: %d categorias do agregado %d",
+                len(mapa_classificacao),
+                args.agregado,
+            )
+
+        niveis, classificacao = sidra.consulta_do_agregado(args.agregado)
+        for periodo in sidra.meses(inicio, fim):
+            resposta = sidra.buscar_resposta(
+                cliente, args.agregado, periodo, niveis=niveis, classificacao=classificacao
+            )
+            payload = resposta.json()
+            if not payload:
+                # Mês ainda não divulgado vem como 200 + lista vazia. Falhar (sem gravar nada)
+                # mantém a partição pendente no Dagster, e o agendamento tenta no dia seguinte.
+                raise sidra.SidraError(f"{args.agregado}/{periodo}: sem dados publicados")
+            gravacao = gravar(destino, args.agregado, periodo, resposta)
+            logger.info(
+                "%s/%s: bronze com %d de %d linhas novas (resposta %s)",
+                args.agregado,
+                periodo,
+                gravacao.linhas_novas,
+                gravacao.linhas_lidas,
+                "nova" if gravacao.resposta_nova else "já guardada",
+            )
+            inseridas = carregar_periodo(
+                conexao, args.agregado, periodo, payload, mapa_classificacao
+            )
+            conexao.commit()
+            total += inseridas
+            logger.info("%s/%s: %d linhas novas", args.agregado, periodo, inseridas)
+
+    logger.info("total inserido: %d linhas", total)
+    return total
+
+
+def coletar_metadados(destino: Path, agregados: Iterable[int] = AGREGADOS_COM_CESTA) -> int:
+    """Baixa só os metadados (uma requisição por agregado), sem precisar do Postgres.
+
+    Basta para quem já tem ``observacao`` no Delta: o dbt precisa de ``ipca_metadados`` para
+    traduzir ``id_categoria`` em código da cesta, e isso não exige refazer as 886 requisições.
+    """
+    novas = 0
+    with httpx.Client() as cliente:
+        for agregado in agregados:
+            resposta = sidra.buscar_metadados_resposta(cliente, agregado)
+            gravacao = gravar_metadados(destino, agregado, resposta)
+            logger.info(
+                "metadados %d: %d de %d categorias novas",
+                agregado,
+                gravacao.linhas_novas,
+                gravacao.linhas_lidas,
+            )
+            novas += gravacao.linhas_novas
+    return novas
+
+
 # --- Importação do Raw antigo -----------------------------------------------------
 
 
@@ -484,6 +786,16 @@ def resumo_da_bronze(destino: Path) -> list[dict]:
     return saida
 
 
+def _comando_coletar(args: argparse.Namespace) -> int:
+    coletar(args)
+    return 0
+
+
+def _comando_metadados(args: argparse.Namespace) -> int:
+    coletar_metadados(Path(args.parquet_dir), args.agregado or AGREGADOS_COM_CESTA)
+    return 0
+
+
 def _comando_importar(args: argparse.Namespace) -> int:
     agregados = set(args.agregado) if args.agregado else None
     respostas, observacoes, falhas = importar_raw(
@@ -506,6 +818,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--parquet-dir", default=DIRETORIO_PADRAO)
     comandos = parser.add_subparsers(dest="comando", required=True)
 
+    coleta = comandos.add_parser(
+        "coletar", help="SIDRA -> Delta -> Postgres, um intervalo de meses"
+    )
+    coleta.add_argument(
+        "--agregado", type=int, required=True, help="2938, 1419, 7060, 7063 ou 1737"
+    )
+    coleta.add_argument("--de", required=True, metavar="AAAA-MM")
+    coleta.add_argument("--ate", required=True, metavar="AAAA-MM")
+    coleta.add_argument("--dsn", default=None, help="padrão: montado do .env")
+    coleta.set_defaults(funcao=_comando_coletar)
+
+    meta = comandos.add_parser("metadados", help="só a cesta de cada agregado, sem Postgres")
+    meta.add_argument("--agregado", type=int, action="append", help="repita para vários")
+    meta.set_defaults(funcao=_comando_metadados)
+
     importar = comandos.add_parser("importar", help="leva data/raw/ipca-inpc/ para o Delta")
     importar.add_argument("--raw-dir", default="data/raw/ipca-inpc")
     importar.add_argument("--agregado", type=int, action="append", help="repita para vários")
@@ -518,8 +845,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         return args.funcao(args)
-    except ChecagemError as erro:
-        logger.error("%s", erro)
+    except (sidra.SidraError, ChecagemError, psycopg.Error, httpx.HTTPError) as erro:
+        logger.error("carga abortada: %s", erro)
         return 1
 
 

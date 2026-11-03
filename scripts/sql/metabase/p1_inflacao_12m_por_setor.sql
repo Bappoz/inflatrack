@@ -31,6 +31,7 @@ select
     to_char(x.mes_referencia, 'MM/YYYY') as ate_o_mes
 from valores x
 join classificacao c on c.codigo = x.codigo_classificacao
-join classificacao_versao v on v.codigo = x.codigo_classificacao and v.id_fonte = 7060
+join classificacao_versao v
+    on v.codigo = x.codigo_classificacao and v.id_fonte = 7060 and v.vigencia_fim is null
 where c.nivel in ('geral', 'grupo')
 order by c.nivel = 'geral' desc, x.valor desc;
