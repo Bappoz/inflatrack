@@ -34,6 +34,12 @@ dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 
+# Silver, Gold e a cópia para o Postgres (serie), na ordem do grafo, depois que as fontes do
+# dia já rodaram. Quem lê o painel vê o dado do dia seguinte de manhã.
+analitico_job = define_asset_job(
+    "analitico_job", AssetSelection.groups("silver", "gold", "vitrine")
+)
+
 JOBS = [
     ipca_job,
     inpc_job,
@@ -45,6 +51,7 @@ JOBS = [
     dieese_job,
     clima_job,
     transacional_job,
+    analitico_job,
 ]
 
 
@@ -88,6 +95,10 @@ def agendamento_pib(context: ScheduleEvaluationContext):
         yield RunRequest(run_key=f"pib-{ano}-{execucao:%Y-%m-%d}", partition_key=str(ano))
 
 
+# Ordem do dia (fuso de São Paulo): clima 7h, commodities 8h, 9h para PIB (meses de
+# divulgação), PIB internacional (dia 1) e DIEESE (dia 5), IPCA 10h (dias 9 a 13),
+# Dólar/Selic 19h (dias úteis), transacional de hora em hora; o analitico_job fecha o dia
+# às 20h30. Um escritor por vez no DuckDB (pool).
 SCHEDULES = [
     _agendamento_sidra(ipca_job, "ipca"),
     _agendamento_sidra(inpc_job, "inpc"),
@@ -105,4 +116,5 @@ SCHEDULES = [
         job=pib_internacional_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO
     ),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),
+    ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
 ]

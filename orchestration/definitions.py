@@ -3,7 +3,7 @@
 import importlib
 import pkgutil
 
-from dagster import Definitions, load_assets_from_modules
+from dagster import Definitions, load_asset_checks_from_modules, load_assets_from_modules
 
 from orchestration import assets
 from orchestration.schedules import JOBS, SCHEDULES
@@ -19,8 +19,11 @@ def _carregar_modulos_de_assets():
     return modulos
 
 
+_modulos = _carregar_modulos_de_assets()
+
 defs = Definitions(
-    assets=load_assets_from_modules(_carregar_modulos_de_assets()),
+    assets=load_assets_from_modules(_modulos),
+    asset_checks=load_asset_checks_from_modules(_modulos),
     jobs=JOBS,
     schedules=SCHEDULES,
 )

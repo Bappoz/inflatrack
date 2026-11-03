@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_dolar__cotacao_diaria
+    description: >
+      Uma linha por dia útil com a cotação oficial PTAX de fechamento apurada pelo BACEN.
+      Extraída do último boletim publicado em cada data de referência.
+    columns:
+      - name: data_referencia
+        description: Data da cotação diária oficial (dia útil).
+        data_tests:
+          - not_null
+          - unique
+      - name: ano
+        data_tests: [not_null]
+      - name: cotacao_compra
+        description: Taxa de compra em reais por dólar norte-americano.
+        data_tests: [not_null]
+      - name: cotacao_venda
+        description: Taxa de venda em reais por dólar norte-americano.
+        data_tests: [not_null]
+      - name: spread_fechamento
+        description: Diferença entre a cotação de venda e de compra do fechamento.
+        data_tests: [not_null]
+      - name: tipo_boletim
+        description: "Tipo do boletim selecionado (esperado: Fechamento PTAX)."
+        data_tests: [not_null]
+      - name: boletins_no_dia
+        description: Quantidade de boletins publicados pelo BACEN na data.
+        data_tests: [not_null]
+      - name: _ingerido_em
+        data_tests: [not_null]
