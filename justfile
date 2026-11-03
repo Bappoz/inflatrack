@@ -41,13 +41,17 @@ db-ui:
 seed-amostra:
     uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2026-05 --ate 2026-07
 
-# World Bank -> raw + Parquet anual.
+# World Bank -> Delta via pipeline unificado.
 pib-china-ingest:
-    uv run python -m inflatrack.bronze.ingest_pib_china
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN coletar
 
-# Sobe o Parquet do PIB da China para o mesmo DuckDB das commodities.
+# Sobe o PIB da China para o DuckDB compartilhado via loader unificado.
 pib-china-load:
-    uv run python -m inflatrack.loaders.load_pib_china
+    uv run python -m inflatrack.loaders.load_pib_internacional --pais CHN
+
+# Carga das tabelas Delta do PIB Internacional no DuckDB compartilhado.
+pib-internacional-load pais="todos":
+    uv run python -m inflatrack.loaders.load_pib_internacional --pais {{pais}}
 
 # Ingestão + carga do PIB da China, de ponta a ponta.
 pib-china: pib-china-ingest pib-china-load
@@ -57,31 +61,43 @@ seed-pib-china: pib-china
 
 # Bronze do PIB da China em Delta (data/parquet/pib_china/): coleta direta da API do Banco Mundial.
 bronze-pib-china:
-    uv run python -m inflatrack.bronze.bronze_pib_china coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN coletar
 
 # Leva os .json.gz antigos de data/raw/pib_china/ para as tabelas Delta. Reexecutável.
 bronze-pib-china-importar:
-    uv run python -m inflatrack.bronze.bronze_pib_china importar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN importar
 
 # Checagens de integridade e volume das tabelas Delta do PIB da China.
 bronze-pib-china-checar:
-    uv run python -m inflatrack.bronze.bronze_pib_china checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN checar
 
 # Bronze do PIB dos EUA em Delta (data/parquet/pib_usa/): coleta da API do Banco Mundial.
 bronze-pib-usa:
-    uv run python -m inflatrack.bronze.bronze_pib_usa coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais USA coletar
 
 # Checagens das tabelas Delta do PIB dos EUA.
 bronze-pib-usa-checar:
-    uv run python -m inflatrack.bronze.bronze_pib_usa checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais USA checar
 
 # Bronze do PIB da Rússia em Delta (data/parquet/pib_russia/): coleta da API do Banco Mundial.
 bronze-pib-russia:
-    uv run python -m inflatrack.bronze.bronze_pib_russia coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais RUS coletar
 
 # Checagens das tabelas Delta do PIB da Rússia.
 bronze-pib-russia-checar:
-    uv run python -m inflatrack.bronze.bronze_pib_russia checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais RUS checar
+
+# Bronze do PIB Internacional (China, EUA e Rússia) unificada em Delta.
+bronze-pib-internacional pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} coletar
+
+# Checagens de integridade das tabelas Delta do PIB Internacional.
+bronze-pib-internacional-checar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} checar
+
+# Importação dos .json.gz antigos de raw/ para as tabelas Delta do PIB Internacional.
+bronze-pib-internacional-importar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} importar
 
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
 # (ver docs/evidencias/e2/ipca.md). Grava a Bronze em Delta e o Postgres; reexecutar não duplica.

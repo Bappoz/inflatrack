@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: bronze_pib_internacional
+    description: >
+      Tabelas Delta de PIB Internacional (China, EUA e Rússia) espelhadas no DuckDB
+      por inflatrack.loaders.load_pib_internacional.
+    schema: bronze
+    tables:
+      - name: pib_internacional_indicador
+        config:
+          meta:
+            dagster:
+              asset_key: ["pib_internacional_duckdb"]
+        description: >
+          Observações anuais dos indicadores do Banco Mundial para China (CHN),
+          Estados Unidos (USA) e Rússia (RUS).
+        columns:
+          - name: pais_iso3
+            description: Código ISO3 do país (CHN, USA, RUS).
+            data_tests: [not_null]
+          - name: indicador
+            description: Código oficial do indicador no Banco Mundial.
+            data_tests: [not_null]
+          - name: ano
+            description: Ano da observação histórica.
+            data_tests: [not_null]
+          - name: valor
+            description: Valor numérico divulgado (anulável para períodos sem dados).
+          - name: _ingerido_em
+            data_tests: [not_null]

@@ -15,6 +15,7 @@ _CLIENT_NAMES = [
     "pib",
     "selic_sgs",
     "sidra",
+    "worldbank",
 ]
 for _name in _CLIENT_NAMES:
     _mod = importlib.import_module(f"inflatrack.clients.{_name}")
@@ -26,7 +27,7 @@ _LOADER_NAMES = [
     "load_clima",
     "load_commodities",
     "load_pib",
-    "load_pib_china",
+    "load_pib_internacional",
     "load_salario_minimo",
 ]
 for _name in _LOADER_NAMES:
@@ -39,11 +40,9 @@ _BRONZE_NAMES = [
     "bronze_clima",
     "bronze_dolar",
     "bronze_pib",
-    "bronze_pib_china",
-    "bronze_pib_russia",
-    "bronze_pib_usa",
     "bronze_salario_minimo",
     "bronze_selic",
+    "pib_internacional",
 ]
 for _name in _BRONZE_NAMES:
     _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
@@ -56,9 +55,6 @@ _INGEST_NAMES = [
     "ingest_commodities",
     "ingest_dolar",
     "ingest_pib",
-    "ingest_pib_china",
-    "ingest_pib_russia",
-    "ingest_pib_usa",
     "ingest_salario_minimo",
     "ingest_selic",
 ]

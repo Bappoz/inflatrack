@@ -14,9 +14,7 @@ from dagster import AssetExecutionContext, asset
 
 from inflatrack import (
     ingest_dolar,
-    ingest_pib_china,
     ingest_selic,
-    load_pib_china,
 )
 from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 
@@ -43,26 +41,3 @@ def dolar(context: AssetExecutionContext) -> None:
 )
 def selic(context: AssetExecutionContext) -> None:
     executar(context, ingest_selic.main, "--de", "2020-01-01")
-
-
-# --- PIB da China (Banco Mundial → Parquet → DuckDB) --------------------------------
-
-
-@asset(
-    group_name="pib_china",
-    retry_policy=RETRY_REDE,
-    kinds={"python", "parquet"},
-    description="Crescimento e PIB em US$ da China (World Bank), anual.",
-)
-def pib_china_parquet(context: AssetExecutionContext) -> None:
-    executar(context, ingest_pib_china.main)
-
-
-@asset(
-    group_name="pib_china",
-    deps=[pib_china_parquet],
-    pool=POOL_DUCKDB,
-    kinds={"python", "duckdb"},
-)
-def pib_china_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_pib_china.main)
