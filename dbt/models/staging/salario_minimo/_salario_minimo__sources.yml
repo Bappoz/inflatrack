@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: bronze_salario_minimo
+    description: Série mensal do DIEESE, promovida da Bronze Delta pelo loader.
+    schema: bronze
+    tables:
+      - name: salario_minimo_mes
+        config:
+          meta:
+            dagster:
+              asset_key: ["salario_minimo_duckdb"]
+        description: Uma linha por mês e revisão histórica da resposta do DIEESE.
+        columns:
+          - name: ano_mes
+            data_tests: [not_null]
+          - name: data_referencia
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

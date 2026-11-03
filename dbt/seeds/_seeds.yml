@@ -92,3 +92,25 @@ seeds:
     columns:
       - name: agregado
         data_tests: [unique, not_null]
+
+  - name: seed_de_para_estacao_localidade
+    description: >
+      Relação manual de estações do INMET a localidades do IPCA. Inclui apenas
+      vínculos conferidos pelo nome e pelas coordenadas do catálogo do INMET.
+    config:
+      column_types:
+        estacao_id: varchar
+        codigo_localidade: integer
+        justificativa: varchar
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_localidade_ibge')
+                field: codigo_localidade
+      - name: justificativa
+        data_tests: [not_null]

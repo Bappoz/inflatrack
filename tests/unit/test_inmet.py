@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 import pytest
 from inflatrack.inmet import (
     InmetError,
@@ -73,6 +74,37 @@ def test_transformar_clima_diario_valido() -> None:
         df.loc[df["data_referencia"].astype(str) == "2024-09-02", "precipitacao_total_mm"].item()
         == 12.5
     )
+
+
+def test_transformar_clima_preserva_zero_e_nulifica_sentinela() -> None:
+    payload = [
+        {
+            "CD_ESTACAO": "A001",
+            "DT_MEDICAO": "2024-09-01",
+            "TEM_MIN": "0.0",
+            "TEM_MAX": "-9999",
+            "TEM_MED": "0.0",
+            "CHUVA": "0.0",
+            "UMD_MED": "-9999",
+        },
+        {
+            "CD_ESTACAO": "A001",
+            "DT_MEDICAO": "2024-09-02",
+            "TEM_MIN": "9999.9",
+        },
+    ]
+
+    df = transformar_clima_diario(payload)
+    primeiro_dia = df.loc[df["data_referencia"].astype(str) == "2024-09-01"].iloc[0]
+    segundo_dia = df.loc[df["data_referencia"].astype(str) == "2024-09-02"].iloc[0]
+
+    assert primeiro_dia["temp_min"] == 0.0
+    assert primeiro_dia["temp_media"] == 0.0
+    assert primeiro_dia["precipitacao_total_mm"] == 0.0
+    assert pd.isna(primeiro_dia["temp_max"])
+    assert pd.isna(primeiro_dia["umidade_relativa_media_pct"])
+    assert pd.isna(segundo_dia["temp_min"])
+    assert pd.isna(segundo_dia["precipitacao_total_mm"])
 
 
 def test_transformar_rejeita_payload_invalido() -> None:
