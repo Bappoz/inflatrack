@@ -52,7 +52,8 @@ def test_ingest_falha_em_mes_nao_publicado(monkeypatch: pytest.MonkeyPatch, tmp_
         + ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10"]
     )
 
-    assert codigo == 1
+    # Falha, e com o código que o Dagster não repete (esperar não faz o IBGE publicar).
+    assert codigo == ipca.bronze.SAIDA_NAO_DIVULGADO
     assert not (bronze / "observacao").exists()  # mês vazio não entra na Bronze
 
 

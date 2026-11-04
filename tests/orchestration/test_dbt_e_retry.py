@@ -106,3 +106,23 @@ def test_sem_retry_a_falha_da_api_derruba_o_ativo() -> None:
     with instance_for_test() as instancia:
         resultado = materialize([ingestao_sem_retry], instance=instancia, raise_on_error=False)
     assert not resultado.success
+
+
+def test_dado_nao_divulgado_falha_sem_retry() -> None:
+    """Esperar não faz o IBGE publicar: o código SAIDA_NAO_DIVULGADO não gasta retentativa."""
+    from inflatrack.common.bronze import SAIDA_NAO_DIVULGADO
+
+    chamadas = []
+
+    def ingestor_adiantado(argv: list[str]) -> int:
+        chamadas.append(argv)
+        return SAIDA_NAO_DIVULGADO
+
+    @asset(retry_policy=RetryPolicy(max_retries=RETRY_REDE.max_retries, delay=0))
+    def ingestao_adiantada(context) -> None:
+        executar(context, ingestor_adiantado)
+
+    with instance_for_test() as instancia:
+        resultado = materialize([ingestao_adiantada], instance=instancia, raise_on_error=False)
+    assert not resultado.success
+    assert len(chamadas) == 1

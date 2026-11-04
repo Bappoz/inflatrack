@@ -297,3 +297,25 @@ def test_cesta_recusa_duas_versoes_abertas_para_o_mesmo_codigo(pg) -> None:
             " values (%s, 7060, 'Outro', '2026-01-01')",
             (codigo,),
         )
+
+
+def test_mes_nao_divulgado_falha_antes_de_baixar_o_resto(tmp_path, monkeypatch) -> None:
+    """Backfill que termina num mês que o IBGE ainda não divulgou: uma requisição só, nada
+    gravado, nenhum acesso ao Postgres, e o código de saída que o Dagster não repete."""
+    pedidos = []
+
+    def buscar_resposta(cliente, agregado, periodo, **_):
+        pedidos.append(periodo)
+        return resposta_1737(periodo, texto="[]")
+
+    monkeypatch.setattr(sidra, "buscar_resposta", buscar_resposta)
+    monkeypatch.setattr(psycopg, "connect", lambda *a, **k: pytest.fail("abriu o Postgres"))
+
+    codigo = ipca.main(
+        ["--parquet-dir", str(tmp_path), "coletar", "--agregado", "1737",
+         "--de", "1979-12", "--ate", "2026-10"]
+    )  # fmt: skip
+
+    assert codigo == ipca.bronze.SAIDA_NAO_DIVULGADO
+    assert pedidos == ["202610"]
+    assert not any(tmp_path.iterdir())

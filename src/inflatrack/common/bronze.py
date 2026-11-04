@@ -54,6 +54,11 @@ CAMPOS_METADADOS = [
 ]
 
 
+# Código de saída de um ingestor quando o dado pedido ainda não foi publicado pela fonte. Não é
+# falha de rede: o orquestrador não deve repetir na hora (ver orchestration/assets/comum.py).
+SAIDA_NAO_DIVULGADO = 3
+
+
 class ChecagemError(ValueError):
     """A resposta não tem a forma esperada e não deve ser promovida à Bronze."""
 

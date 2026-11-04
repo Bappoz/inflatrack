@@ -576,6 +576,28 @@ def coletar(args: argparse.Namespace) -> int:
     destino = Path(args.parquet_dir)
     total = 0
 
+    niveis, classificacao = sidra.consulta_do_agregado(args.agregado)
+
+    def baixar(cliente: httpx.Client, periodo: str) -> tuple[sidra.Resposta, list]:
+        resposta = sidra.buscar_resposta(
+            cliente, args.agregado, periodo, niveis=niveis, classificacao=classificacao
+        )
+        payload = resposta.json()
+        if not payload:
+            # Mês ainda não divulgado vem como 200 + lista vazia. Falhar mantém a partição
+            # pendente no Dagster, e o agendamento tenta no dia seguinte.
+            raise sidra.MesNaoDivulgado(
+                f"{args.agregado}/{periodo}: o IBGE ainda não divulgou este mês"
+                f" (peça até o mês anterior)"
+            )
+        return resposta, payload
+
+    with httpx.Client() as cliente:
+        # O último mês é o único que pode não ter saído: conferir antes evita baixar um
+        # backfill inteiro para falhar no fim. A resposta é reaproveitada no laço.
+        ultimo = f"{fim:%Y%m}"
+        ja_baixado = {ultimo: baixar(cliente, ultimo)}
+
     with (
         httpx.Client() as cliente,
         psycopg.connect(
@@ -596,16 +618,8 @@ def coletar(args: argparse.Namespace) -> int:
                 args.agregado,
             )
 
-        niveis, classificacao = sidra.consulta_do_agregado(args.agregado)
         for periodo in sidra.meses(inicio, fim):
-            resposta = sidra.buscar_resposta(
-                cliente, args.agregado, periodo, niveis=niveis, classificacao=classificacao
-            )
-            payload = resposta.json()
-            if not payload:
-                # Mês ainda não divulgado vem como 200 + lista vazia. Falhar (sem gravar nada)
-                # mantém a partição pendente no Dagster, e o agendamento tenta no dia seguinte.
-                raise sidra.SidraError(f"{args.agregado}/{periodo}: sem dados publicados")
+            resposta, payload = ja_baixado.pop(periodo, None) or baixar(cliente, periodo)
             gravacao = gravar(destino, args.agregado, periodo, resposta)
             logger.info(
                 "%s/%s: bronze com %d de %d linhas novas (resposta %s)",
@@ -845,6 +859,9 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         return args.funcao(args)
+    except sidra.MesNaoDivulgado as erro:
+        logger.error("carga abortada: %s", erro)
+        return bronze.SAIDA_NAO_DIVULGADO
     except (sidra.SidraError, ChecagemError, psycopg.Error, httpx.HTTPError) as erro:
         logger.error("carga abortada: %s", erro)
         return 1

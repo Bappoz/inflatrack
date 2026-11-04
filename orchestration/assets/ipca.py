@@ -57,7 +57,9 @@ def _coletar(context: AssetExecutionContext, agregado: int, de, ate) -> None:
 )
 def ipca(context: AssetExecutionContext) -> None:
     inicio, fim = _intervalo(context)
-    for agregado, de, ate in segmentos_ipca(inicio, fim):
+    # Do agregado mais novo para o mais antigo: se o último mês ainda não saiu, o passo falha
+    # antes de baixar os agregados antigos de um backfill.
+    for agregado, de, ate in reversed(list(segmentos_ipca(inicio, fim))):
         _coletar(context, agregado, de, ate)
 
 
