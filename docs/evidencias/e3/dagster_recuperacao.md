@@ -69,5 +69,5 @@ O que isso garante: quando uma etapa falha, as camadas de baixo não rodam em ci
 
 ```bash
 uv run pytest tests/orchestration          # retry, backfill, grafo e agendamento (nível 4)
-just orquestrador                          # interface em http://localhost:3000
+just orquestrador                          # interface em http://localhost:3002
 ```

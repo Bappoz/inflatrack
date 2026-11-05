@@ -99,7 +99,7 @@ Fontes com calendário irregular (o IBGE às vezes antecipa, o DIEESE não tem d
 ## Execução local
 
 ```bash
-just orquestrador           # interface em http://localhost:3000, histórico em .dagster/
+just orquestrador           # interface em http://localhost:3002 (DAGSTER_PORT), histórico em .dagster/
 just materializar macro_job # roda um job sem abrir a interface
 ```
 

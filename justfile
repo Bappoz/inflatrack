@@ -9,6 +9,7 @@ export DAGSTER_HOME := justfile_directory() / ".dagster"
 
 PG_USER := env("POSTGRES_USER", "inflatrack")
 PG_DB := env("POSTGRES_DB", "inflatrack")
+DAGSTER_PORT := env("DAGSTER_PORT", "3002")
 
 _default:
     @just --list
@@ -36,6 +37,10 @@ migrar arquivo:
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
+
+# Interface web do DuckDB (bronze/silver/gold) em http://localhost:4213, somente leitura. Ctrl+C encerra.
+duckdb-ui:
+    uv run python scripts/duckdb_ui.py
 
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
@@ -321,9 +326,9 @@ bronze-clima-checar:
 bronze-clima-load modo="substitui":
     uv run python -m inflatrack.loaders.load_clima --modo {{modo}}
 
-# Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
+# Dagster: interface em http://localhost:3002 (DAGSTER_PORT no .env), histórico em .dagster/.
 orquestrador:
-    uv run dagster dev
+    uv run dagster dev --port {{DAGSTER_PORT}}
 
 # Materializa um job sem subir a interface. Ex.: just materializar macro_job
 materializar job:
