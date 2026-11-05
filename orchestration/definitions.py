@@ -6,6 +6,7 @@ import pkgutil
 from dagster import Definitions, load_asset_checks_from_modules, load_assets_from_modules
 
 from orchestration import assets
+from orchestration.popular import DisparadorGraphQL, popular_banco_job
 from orchestration.schedules import JOBS, SCHEDULES
 
 
@@ -24,6 +25,8 @@ _modulos = _carregar_modulos_de_assets()
 defs = Definitions(
     assets=load_assets_from_modules(_modulos),
     asset_checks=load_asset_checks_from_modules(_modulos),
-    jobs=JOBS,
+    jobs=[*JOBS, popular_banco_job],
     schedules=SCHEDULES,
+    # popular_banco_job dispara os outros jobs pelo webserver (DAGSTER_PORT).
+    resources={"disparador": DisparadorGraphQL()},
 )

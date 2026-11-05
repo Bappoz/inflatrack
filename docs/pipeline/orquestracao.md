@@ -66,7 +66,8 @@ orchestration/
 │   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
 │   └── checks.py           # asset checks de frescura e volume
 ├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado
-└── schedules.py            # um job e um agendamento por grupo de ativos
+├── schedules.py            # um job e um agendamento por grupo de ativos
+└── popular.py              # popular_banco_job: dispara todos os jobs de fonte numa máquina nova
 .dagster/dagster.yaml       # instância local: pool duckdb_writer com limite 1
 ```
 
@@ -107,6 +108,14 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 
 !!! warning "Agendamentos nascem desligados"
     Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
+
+### Primeira execução numa máquina nova
+
+`popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
+
+Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
+
+Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos; as medições de clima não entram (o ativo `clima_medicoes` é manual).
 
 Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
 
