@@ -37,22 +37,26 @@ def test_particao_anual_vai_de_1996_ate_o_ano_corrente() -> None:
 def test_backfill_de_varios_anos_vira_uma_execucao_com_de_e_ate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    chamadas: list[list[str]] = []
+    """Uma chamada para o intervalo inteiro. O ano corrente ainda sem trimestre publicado
+    (fora de `Gravacao.anos`) fica pendente, não materializado."""
+    chamadas: list[tuple[int, int]] = []
 
-    def ingestor(argv: list[str]) -> int:
-        chamadas.append(argv)
-        return 0
+    def coletar(destino: Path, de: int, ate: int) -> bronze_pib.Gravacao:
+        chamadas.append((de, ate))
+        return bronze_pib.Gravacao(1, 23, 23, anos=(2025,))
 
-    monkeypatch.setattr(pib.bronze_pib, "main", ingestor)
+    monkeypatch.setattr(pib.bronze_pib, "coletar", coletar)
     with instance_for_test() as instancia:
         resultado = materialize(
             [pib.pib_parquet],
             instance=instancia,
             tags={ASSET_PARTITION_RANGE_START_TAG: "2025", ASSET_PARTITION_RANGE_END_TAG: "2026"},
         )
+        materializadas = instancia.get_materialized_partitions(pib.pib_parquet.key)
 
     assert resultado.success
-    assert chamadas == [["coletar", "--de", "2025", "--ate", "2026"]]
+    assert chamadas == [(2025, 2026)]
+    assert materializadas == {"2025"}
 
 
 def test_agendamento_rele_o_ano_corrente_e_o_anterior() -> None:

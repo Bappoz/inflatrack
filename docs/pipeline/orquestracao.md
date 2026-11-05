@@ -70,7 +70,7 @@ orchestration/
 .dagster/dagster.yaml       # instância local: pool duckdb_writer com limite 1
 ```
 
-A lógica de negócio **não muda de lugar**: cada asset chama o mesmo `main(argv)` que a receita do `justfile` chama e transforma código de saída ≠ 0 em falha. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
+A lógica de negócio **não muda de lugar**: cada asset chama o mesmo `main(argv)` que a receita do `justfile` chama e transforma código de saída ≠ 0 em falha. A exceção são as coletas particionadas (IPCA, INPC, número-índice e PIB): elas chamam a função de coleta que o `main` usa, porque precisam saber quais períodos vieram. Período ainda não divulgado (o mês corrente, o ano sem trimestre) é pulado e a partição dele fica *pendente*, não materializada; um backfill até o mês corrente traz o resto sem falhar. Se nada do intervalo saiu, o passo falha sem retry. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
 
 Só o IPCA/INPC é particionado. As demais fontes já baixam a janela inteira e fazem *upsert*; particioná-las por dia multiplicaria chamadas de API sem ganho, porque o reprocesso já é idempotente.
 

@@ -54,8 +54,8 @@ CAMPOS_METADADOS = [
 ]
 
 
-# Código de saída de um ingestor quando o dado pedido ainda não foi publicado pela fonte. Não é
-# falha de rede: o orquestrador não deve repetir na hora (ver orchestration/assets/comum.py).
+# Código de saída de um ingestor quando nenhum período pedido foi publicado ainda pela fonte.
+# Não é falha de rede: repetir na hora não adianta.
 SAIDA_NAO_DIVULGADO = 3
 
 

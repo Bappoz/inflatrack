@@ -30,7 +30,7 @@ import json
 import logging
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -77,6 +77,8 @@ class Gravacao:
     respostas_novas: int
     linhas_lidas: int
     linhas_novas: int
+    # Anos que vieram com dado nesta coleta (o Dagster materializa só as partições deles).
+    anos: tuple[int, ...] = ()
 
 
 def _decimal(texto: str) -> Decimal | None:
@@ -300,7 +302,8 @@ def coletar(destino: Path, de: int, ate: int) -> Gravacao:
 
     Os metadados vêm primeiro (são a origem dos nomes dos setores). Cada ano é checado
     antes de qualquer escrita: um ano reprovado aborta a coleta inteira e nenhum valor é
-    gravado. Só o ano corrente pode vir vazio (o 1º trimestre sai em junho).
+    gravado. Só o ano corrente pode vir vazio (o 1º trimestre sai em junho): ele é pulado e
+    fica fora de ``Gravacao.anos``.
     """
     ingerido_em = datetime.now(UTC)
     respostas: list[tuple[int, bronze.Resposta]] = []
@@ -332,7 +335,7 @@ def coletar(destino: Path, de: int, ate: int) -> Gravacao:
         gravacao.linhas_novas,
         gravacao.linhas_lidas,
     )
-    return gravacao
+    return replace(gravacao, anos=tuple(ano for ano, _ in respostas))
 
 
 def _comando_coletar(args: argparse.Namespace) -> int:

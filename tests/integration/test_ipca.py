@@ -299,23 +299,33 @@ def test_cesta_recusa_duas_versoes_abertas_para_o_mesmo_codigo(pg) -> None:
         )
 
 
-def test_mes_nao_divulgado_falha_antes_de_baixar_o_resto(tmp_path, monkeypatch) -> None:
-    """Backfill que termina num mês que o IBGE ainda não divulgou: uma requisição só, nada
-    gravado, nenhum acesso ao Postgres, e o código de saída que o Dagster não repete."""
-    pedidos = []
+class _ConexaoFalsa:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def commit(self) -> None:
+        pass
+
+
+def test_backfill_pula_o_mes_nao_divulgado_e_grava_os_outros(tmp_path, monkeypatch) -> None:
+    """Backfill que termina num mês que o IBGE ainda não divulgou: os meses publicados entram,
+    o vazio é pulado sem gravar nada, e a função diz quais vieram (o Dagster usa isso)."""
+    monkeypatch.setattr(psycopg, "connect", lambda *a, **k: _ConexaoFalsa())
+    monkeypatch.setattr(ipca, "carregar_periodo", lambda *a, **k: 6)
+    sem_cesta = sidra.Resposta("https://sidra.invalid/m", 200, "application/json", "{}")
+    monkeypatch.setattr(sidra, "buscar_metadados_resposta", lambda cliente, agregado: sem_cesta)
 
     def buscar_resposta(cliente, agregado, periodo, **_):
-        pedidos.append(periodo)
-        return resposta_1737(periodo, texto="[]")
+        return resposta_1737("202609") if periodo == "202609" else resposta_1737(periodo, "[]")
 
     monkeypatch.setattr(sidra, "buscar_resposta", buscar_resposta)
-    monkeypatch.setattr(psycopg, "connect", lambda *a, **k: pytest.fail("abriu o Postgres"))
 
-    codigo = ipca.main(
-        ["--parquet-dir", str(tmp_path), "coletar", "--agregado", "1737",
-         "--de", "1979-12", "--ate", "2026-10"]
-    )  # fmt: skip
+    coletados = ipca.coletar_intervalo(1737, date(2026, 9, 1), date(2026, 10, 1), tmp_path)
 
-    assert codigo == ipca.bronze.SAIDA_NAO_DIVULGADO
-    assert pedidos == ["202610"]
-    assert not any(tmp_path.iterdir())
+    assert coletados == ["202609"]
+    requisicoes = [linha["_requisicao"] for linha in tabela(tmp_path, "resposta")]
+    assert not any("202610" in url for url in requisicoes)  # outubro não entra
+    assert len(tabela(tmp_path, "observacao")) == 6

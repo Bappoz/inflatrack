@@ -5,12 +5,17 @@ dois meses de uma vez. Um backfill vira uma execução só (`BackfillPolicy.sing
 `segmentos_ipca` esconde a troca de agregado do IBGE (2938 → 1419 → 7060). A carga no DuckDB
 não é particionada: ela espelha o Delta inteiro e só acrescenta linhas novas.
 
-Os ativos não reimplementam nada: chamam o mesmo `main(argv)` que o `justfile` chama e
-transformam código de saída ≠ 0 em falha do Dagster.
+A coleta chama a mesma função que o `coletar` do `justfile` (`coletar_intervalo`), porque o
+ativo precisa saber quais meses vieram: mês ainda não divulgado é pulado e a partição dele
+fica pendente (`materializar_coletadas`). A carga no DuckDB chama o `main(argv)` do loader.
 """
+
+from collections.abc import Iterator
+from pathlib import Path
 
 from dagster import (
     AssetExecutionContext,
+    AssetMaterialization,
     AssetSpec,
     BackfillPolicy,
     MaterializeResult,
@@ -20,12 +25,16 @@ from dagster import (
 
 from inflatrack.bronze import ipca as bronze_ipca
 from inflatrack.loaders import load_ipca
-from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
+from orchestration.assets.comum import (
+    POOL_DUCKDB,
+    RETRY_REDE,
+    executar,
+    materializar_coletadas,
+)
 from orchestration.partitions import (
     INPC_MENSAL,
     IPCA_INDICE_MENSAL,
     IPCA_MENSAL,
-    formato_sidra,
     mes_da_chave,
     segmentos_ipca,
 )
@@ -36,15 +45,11 @@ def _intervalo(context: AssetExecutionContext):
     return mes_da_chave(faixa.start), mes_da_chave(faixa.end)
 
 
-def _coletar(context: AssetExecutionContext, agregado: int, de, ate) -> None:
-    executar(
-        context,
-        bronze_ipca.main,
-        "coletar",
-        "--agregado", str(agregado),
-        "--de", formato_sidra(de),
-        "--ate", formato_sidra(ate),
-    )  # fmt: skip
+def _coletar(context: AssetExecutionContext, agregado: int, de, ate) -> list[str]:
+    """Coleta um trecho e devolve as chaves de partição ('2026-09-01') dos meses gravados."""
+    context.log.info("agregado %d: %s a %s", agregado, f"{de:%Y-%m}", f"{ate:%Y-%m}")
+    periodos = bronze_ipca.coletar_intervalo(agregado, de, ate, Path(bronze_ipca.DIRETORIO_PADRAO))
+    return [f"{periodo[:4]}-{periodo[4:]}-01" for periodo in periodos]
 
 
 @asset(
@@ -54,13 +59,14 @@ def _coletar(context: AssetExecutionContext, agregado: int, de, ate) -> None:
     retry_policy=RETRY_REDE,
     kinds={"python", "delta", "postgres"},
     description="IPCA mensal por subitem e região (agregados 2938, 1419 e 7060).",
+    output_required=False,
 )
-def ipca(context: AssetExecutionContext) -> None:
+def ipca(context: AssetExecutionContext) -> Iterator[AssetMaterialization]:
     inicio, fim = _intervalo(context)
-    # Do agregado mais novo para o mais antigo: se o último mês ainda não saiu, o passo falha
-    # antes de baixar os agregados antigos de um backfill.
-    for agregado, de, ate in reversed(list(segmentos_ipca(inicio, fim))):
-        _coletar(context, agregado, de, ate)
+    coletadas = []
+    for agregado, de, ate in segmentos_ipca(inicio, fim):
+        coletadas += _coletar(context, agregado, de, ate)
+    yield from materializar_coletadas(context, coletadas)
 
 
 @asset(
@@ -70,9 +76,10 @@ def ipca(context: AssetExecutionContext) -> None:
     retry_policy=RETRY_REDE,
     kinds={"python", "delta", "postgres"},
     description="INPC mensal por subitem e região (agregado 7063).",
+    output_required=False,
 )
-def inpc(context: AssetExecutionContext) -> None:
-    _coletar(context, 7063, *_intervalo(context))
+def inpc(context: AssetExecutionContext) -> Iterator[AssetMaterialization]:
+    yield from materializar_coletadas(context, _coletar(context, 7063, *_intervalo(context)))
 
 
 @asset(
@@ -82,9 +89,10 @@ def inpc(context: AssetExecutionContext) -> None:
     retry_policy=RETRY_REDE,
     kinds={"python", "delta", "postgres"},
     description="Número-índice do IPCA, Brasil (agregado 1737).",
+    output_required=False,
 )
-def ipca_numero_indice(context: AssetExecutionContext) -> None:
-    _coletar(context, 1737, *_intervalo(context))
+def ipca_numero_indice(context: AssetExecutionContext) -> Iterator[AssetMaterialization]:
+    yield from materializar_coletadas(context, _coletar(context, 1737, *_intervalo(context)))
 
 
 # Dois ativos, um passo só: o dbt exige uma chave de ativo por `source`, e o loader escreve as duas
