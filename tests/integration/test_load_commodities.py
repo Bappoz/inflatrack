@@ -5,10 +5,11 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from inflatrack.alphavantage import AlphaVantageClient
 from inflatrack.load_commodities import carregar_bronze, main
 
-from inflatrack import bronze, ingest_commodities
+from inflatrack.bronze import commodities
+from inflatrack.clients.alphavantage import AlphaVantageClient
+from inflatrack.common import bronze
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "commodities"
 COLETA = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
@@ -17,12 +18,12 @@ COLETA = datetime(2026, 10, 13, 12, 0, tzinfo=UTC)
 @pytest.fixture(autouse=True)
 def volume_do_recorte(monkeypatch: pytest.MonkeyPatch) -> None:
     """Os recortes têm poucas linhas; o mínimo real é testado na evidência."""
-    monkeypatch.setattr(ingest_commodities, "LINHAS_MINIMAS", dict.fromkeys(["WTI", "CORN"], 1))
+    monkeypatch.setattr(commodities, "LINHAS_MINIMAS", dict.fromkeys(["WTI", "CORN"], 1))
 
 
 def _resposta(symbol: str) -> bronze.Resposta:
     corpo = (FIXTURES / f"{symbol.lower()}-recorte.json").read_text(encoding="utf-8")
-    intervalo = ingest_commodities.COMMODITY_CONFIGS[symbol]["interval"]
+    intervalo = commodities.COMMODITY_CONFIGS[symbol]["interval"]
     return bronze.Resposta(
         AlphaVantageClient.url_publica(symbol, intervalo), 200, "application/json", corpo
     )
@@ -33,7 +34,7 @@ def delta_com_dados(tmp_path: Path) -> Path:
     """Grava WTI e CORN no Delta e devolve o diretório da Bronze."""
     delta_dir = tmp_path / "bronze_commodities"
     for symbol in ("WTI", "CORN"):
-        ingest_commodities.gravar(delta_dir, symbol, _resposta(symbol), COLETA)
+        commodities.gravar(delta_dir, symbol, _resposta(symbol), COLETA)
     return delta_dir
 
 

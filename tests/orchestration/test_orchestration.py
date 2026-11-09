@@ -104,6 +104,34 @@ def test_todo_ativo_que_escreve_no_duckdb_usa_o_pool():
             assert no.pools == {POOL_DUCKDB}, chave.to_user_string()
 
 
+def test_toda_carga_no_duckdb_roda_por_algum_job_agendado():
+    """Uma carga fora de todo job agendado deixa a Gold parada mesmo com a coleta rodando.
+
+    Foi o caso do IPCA: `ipca_job` só coletava, e nada levava o Delta para `bronze.*`.
+    `clima_medicoes_duckdb` fica de fora: chama o mesmo `load_clima` que `clima_duckdb`.
+    """
+    agendados = {agendamento.job_name for agendamento in SCHEDULES}
+    cobertas = set()
+    for job in defs.resolve_all_job_defs():
+        if job.name in agendados:
+            cobertas |= {c.to_user_string() for c in job.asset_layer.executable_asset_keys}
+
+    grafo = defs.resolve_asset_graph()
+    cargas = {
+        chave.to_user_string()
+        for chave in grafo.get_all_asset_keys()
+        if chave.to_user_string().endswith("_duckdb") and "dbt" not in grafo.get(chave).kinds
+    }
+    assert cargas - {"clima_medicoes_duckdb"} <= cobertas, cargas - cobertas
+
+
+def test_analitico_job_carrega_o_ipca_antes_do_dbt():
+    job = defs.resolve_job_def("analitico_job")
+    selecionadas = {c.to_user_string() for c in job.asset_layer.executable_asset_keys}
+    assert {"ipca_duckdb", "ipca_metadados_duckdb", "serie_postgres"} <= selecionadas
+    assert "gold/fct_inflacao_mensal" in selecionadas
+
+
 def test_dependencias_e_configuracao_dolar_e_selic():
     """Valida o grafo de dependências, particionamento e pools de Dólar e Selic."""
     from dagster import AssetKey
@@ -149,4 +177,3 @@ def test_execucao_assets_dolar_e_selic_com_mock():
         ctx = build_asset_context()
         asset_selic.selic_duckdb(ctx)
         mock_selic_main.assert_called_once_with([])
-

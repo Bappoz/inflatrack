@@ -141,20 +141,15 @@ def test_checagem_rejeita_volume_insuficiente() -> None:
 def test_checagem_regras_especificas_russia() -> None:
     # Caso 1: Rússia com volume pós-1990 insuficiente deve falhar
     linhas_sem_pos_1990 = [
-        {"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": None}
-        for ano in range(1960, 2020)
+        {"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": None} for ano in range(1960, 2020)
     ]
     with pytest.raises(ChecagemError, match="volume pós-1990 insuficiente"):
         checar(linhas_sem_pos_1990, pais="RUS")
 
     # Caso 2: Rússia válida com nulos soviéticos legítimos pré-1990 e dados pós-1990
     linhas_validas_rus = [
-        {"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": None}
-        for ano in range(1960, 1990)
-    ] + [
-        {"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": 2.5}
-        for ano in range(1990, 2022)
-    ]
+        {"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": None} for ano in range(1960, 1990)
+    ] + [{"indicador": "NY.GDP.MKTP.KD.ZG", "ano": ano, "valor": 2.5} for ano in range(1990, 2022)]
     # Não deve lançar erro
     checar(linhas_validas_rus, pais="RUS")
 

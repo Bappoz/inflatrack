@@ -35,15 +35,21 @@ Cada caixa é um **ativo**: uma coisa que precisa existir e estar atualizada. O 
 
 ### Ativos implementados hoje
 
+Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez).
+
 | Grupo | Ativos | Destino | Módulo chamado |
 |---|---|---|---|
-| `sidra` | `ipca`, `inpc`, `ipca_numero_indice` | PostgreSQL | `ingest` (o agregado é escolhido pelo mês da partição: 2938, 1419 ou 7060) |
-| `macro` | `dolar`, `selic` | DuckDB | `ingest_dolar`, `ingest_selic` |
-| `commodities` | `commodities_parquet` → `commodities_duckdb` | Parquet → DuckDB | `ingest_commodities`, `load_commodities` |
-| `pib` | `pib_parquet` → `pib_duckdb` | Parquet → DuckDB | `ingest_pib`, `load_pib` |
-| `pib_china` | `pib_china_parquet` → `pib_china_duckdb` | Parquet → DuckDB | `ingest_pib_china`, `load_pib_china` |
-| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Parquet → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
-| `clima` | `clima_parquet` → `clima_duckdb` | Parquet → DuckDB | `ingest_clima`, `load_clima` |
+| `sidra` | `ipca`, `inpc`, `ipca_numero_indice` → `ipca_duckdb` + `ipca_metadados_duckdb` | Delta (+ Postgres) → DuckDB | `bronze.ipca`, `loaders.load_ipca` |
+| `macro` | `dolar_parquet` → `dolar_duckdb`, `selic_parquet` → `selic_duckdb` | Delta → DuckDB | `bronze.dolar`, `bronze.selic`, `loaders.load_dolar`, `loaders.load_selic` |
+| `commodities` | `commodities_parquet` → `commodities_duckdb` | Delta → DuckDB | `bronze.commodities`, `loaders.load_commodities` |
+| `pib` | `pib_parquet` → `pib_duckdb` | Delta → DuckDB | `bronze.pib`, `loaders.load_pib` |
+| `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
+| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
+| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
+| `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
+| `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
 ## Organização do código
 
@@ -53,18 +59,19 @@ orchestration/
 ├── assets/
 │   ├── comum.py            # pool duckdb_writer, retry de rede e a chamada do main(argv)
 │   ├── pib.py              # um módulo por fonte (modelo para as outras)
-│   ├── commodities.py
-│   ├── ingestao.py         # fontes que ainda não têm módulo próprio
+│   ├── commodities.py, dolar.py, selic.py, salario_minimo.py, clima.py, pib_internacional.py
 │   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
 │   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
-│   ├── dbt.py              # (planejado) @dbt_assets — carrega o manifest do projeto dbt
-│   └── publicacao.py       # (planejado) cópia da Gold lida pelo Streamlit
+│   ├── dbt_assets.py       # @dbt_assets: Silver e Gold, ligados às cargas pelo meta.dagster.asset_key
+│   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
+│   └── checks.py           # asset checks de frescura e volume
 ├── partitions.py           # partições mensais do IPCA/INPC e a vigência de cada agregado
-└── schedules.py            # um job e um agendamento por grupo de ativos
+├── schedules.py            # um job e um agendamento por grupo de ativos
+└── popular.py              # popular_banco_job: dispara todos os jobs de fonte numa máquina nova
 .dagster/dagster.yaml       # instância local: pool duckdb_writer com limite 1
 ```
 
-A lógica de negócio **não muda de lugar**: cada asset chama o mesmo `main(argv)` que a receita do `justfile` chama e transforma código de saída ≠ 0 em falha. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
+A lógica de negócio **não muda de lugar**: cada asset chama o mesmo `main(argv)` que a receita do `justfile` chama e transforma código de saída ≠ 0 em falha. A exceção são as coletas particionadas (IPCA, INPC, número-índice e PIB): elas chamam a função de coleta que o `main` usa, porque precisam saber quais períodos vieram. Período ainda não divulgado (o mês corrente, o ano sem trimestre) é pulado e a partição dele fica *pendente*, não materializada; um backfill até o mês corrente traz o resto sem falhar. Se nada do intervalo saiu, o passo falha sem retry. O Dagster fica com a orquestração, e nada mais — o mesmo princípio que mantém o cliente de origem ignorante sobre disco e banco.
 
 Só o IPCA/INPC é particionado. As demais fontes já baixam a janela inteira e fazem *upsert*; particioná-las por dia multiplicaria chamadas de API sem ganho, porque o reprocesso já é idempotente.
 
@@ -93,7 +100,7 @@ Fontes com calendário irregular (o IBGE às vezes antecipa, o DIEESE não tem d
 ## Execução local
 
 ```bash
-just orquestrador           # interface em http://localhost:3000, histórico em .dagster/
+just orquestrador           # interface em http://localhost:3002 (DAGSTER_PORT), histórico em .dagster/
 just materializar macro_job # roda um job sem abrir a interface
 ```
 
@@ -101,6 +108,14 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 
 !!! warning "Agendamentos nascem desligados"
     Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
+
+### Primeira execução numa máquina nova
+
+`popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
+
+Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
+
+Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos; as medições de clima não entram (o ativo `clima_medicoes` é manual).
 
 Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
 

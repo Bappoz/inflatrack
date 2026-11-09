@@ -3,8 +3,8 @@ from datetime import date
 import psycopg
 import pytest
 
-from inflatrack import ingest_pib
 from inflatrack.bronze import ipca
+from inflatrack.bronze import pib as bronze_pib
 
 
 def test_ingest_desiste_rapido_sem_postgres(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,11 +52,12 @@ def test_ingest_falha_em_mes_nao_publicado(monkeypatch: pytest.MonkeyPatch, tmp_
         + ["--agregado", "1737", "--de", "2026-10", "--ate", "2026-10"]
     )
 
-    assert codigo == 1
+    # Falha, e com o código que o Dagster não repete (esperar não faz o IBGE publicar).
+    assert codigo == ipca.bronze.SAIDA_NAO_DIVULGADO
     assert not (bronze / "observacao").exists()  # mês vazio não entra na Bronze
 
 
-def test_ingest_pib_vai_ate_o_ano_corrente_por_padrao(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_coleta_do_pib_vai_ate_o_ano_corrente_por_padrao(monkeypatch: pytest.MonkeyPatch) -> None:
     """O padrão era 2026 fixo: em 2027 o job seguia com sucesso sem baixar o ano novo."""
 
     class Em2027(date):
@@ -65,8 +66,8 @@ def test_ingest_pib_vai_ate_o_ano_corrente_por_padrao(monkeypatch: pytest.Monkey
             return date(2027, 3, 15)
 
     recebido = {}
-    monkeypatch.setattr(ingest_pib, "date", Em2027, raising=False)
-    monkeypatch.setattr(ingest_pib, "executar", lambda args: recebido.update(vars(args)) or 0)
+    monkeypatch.setattr(bronze_pib, "date", Em2027, raising=False)
+    monkeypatch.setattr(bronze_pib, "coletar", lambda destino, de, ate: recebido.update(ate=ate))
 
-    assert ingest_pib.main([]) == 0
+    assert bronze_pib.main(["coletar"]) == 0
     assert recebido["ate"] == 2027

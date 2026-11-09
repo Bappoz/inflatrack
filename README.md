@@ -118,17 +118,20 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 | Caminho | Papel |
 |---|---|
 | `migrations/` | Esquema físico do PostgreSQL, aplicado em ordem na primeira subida do container |
-| `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
+| `src/inflatrack/clients/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
 | `src/inflatrack/bronze/ipca.py` | IPCA/INPC: coleta no SIDRA, Bronze em Delta e `COPY` para o banco |
 | `src/inflatrack/loaders/load_ipca.py` | Sobe o Delta do IPCA para o DuckDB (`just ipca-load`) |
 | `src/inflatrack/cdc/` | CDC do banco do lojista para a Bronze, sem CNPJ (`just bronze-transacional`, `just simular-cdc`) |
 | `src/inflatrack/loaders/load_transacional.py` | Sobe o Delta do CDC para o DuckDB (`just transacional-load`) |
-| `src/inflatrack/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
-| `src/inflatrack/ingest_pib.py` | CLI do PIB: crua em `data/raw/pib_raw/`, depois Parquet em `data/parquet/pib/` |
-| `src/inflatrack/load_pib.py` | Sobe o Parquet do PIB para o DuckDB (`just pib-load`) |
-| `src/inflatrack/ingest_pib_china.py` | World Bank: resposta crua e Parquet anual do PIB da China |
-| `src/inflatrack/load_pib_china.py` | Sobe o PIB da China para o DuckDB analítico (`just pib-china-load`) |
-| `sql/` | Consultas de verificação de carga |
+| `src/inflatrack/clients/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
+| `src/inflatrack/bronze/pib.py` | PIB: coleta no SIDRA e Bronze em Delta (`just bronze-pib`) |
+| `src/inflatrack/loaders/load_pib.py` | Sobe o Delta do PIB para o DuckDB (`just pib-load`) |
+| `src/inflatrack/bronze/commodities.py` | Commodities: coleta na Alpha Vantage e Bronze em Delta (`just bronze-commodities`) |
+| `src/inflatrack/loaders/load_commodities.py` | Sobe o Delta das commodities para o DuckDB |
+| `src/inflatrack/bronze/pib_internacional.py` | World Bank: Bronze em Delta do PIB de China, EUA e Rússia |
+| `src/inflatrack/loaders/load_pib_internacional.py` | Sobe o PIB internacional para o DuckDB (`just pib-internacional-load`) |
+| `src/inflatrack/reverse_etl/exportar_serie.py` | Copia a Gold para o schema `serie` do Postgres (`just serie`) |
+| `scripts/sql/` | Consultas de verificação de carga, EXPLAIN e o painel do Metabase (`metabase/`) |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/fontes/pib_china.md` | Caracterização completa da fonte do PIB da China |
 | `docs/fontes/salario_minimo.md` | Caracterização completa da fonte de Salário Mínimo (DIEESE) |

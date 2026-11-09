@@ -41,6 +41,10 @@ class SidraError(RuntimeError):
     """Falha ao consultar o SIDRA que não vale a pena repetir."""
 
 
+class MesNaoDivulgado(SidraError):
+    """O mês pedido ainda não saiu: a API responde 200 com lista vazia até a divulgação."""
+
+
 def meses(inicio: date, fim: date) -> Iterator[str]:
     """Gera períodos ``AAAAMM`` de `inicio` a `fim`, inclusive."""
     ano, mes = inicio.year, inicio.month
