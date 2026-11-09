@@ -12,7 +12,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
-| Lucas Zanetti | 6 | 2026-09-08 a 2026-10-31 | Claude Code (Opus 5.5) (3), Claude Code (Opus 5) (1), Codex (2) |
+| Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
@@ -68,6 +68,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
+| 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
 
 ---
 
@@ -256,6 +257,32 @@ separados e um PR.
 **Decisões que continuam sendo da Squad**
 - Numeração do ADR do CDC.
 - Revisar as divergências do plano registradas na Seção 5.1.
+
+---
+
+### 2026-11-08 — Claude Code (Opus 5.5) — revisão e integração da E3 em clone limpo
+
+**O que a ferramenta fez**
+- Constatou que `feat/ajusteClima-entrega3` não tinha commits além da `E3`. A pedido, revisou a E3 contra a Seção 5 do `PLAN_E3_E4.md` e mergeou a `E3-pipeline` (João Pedro, 9 commits sem PR) na integração.
+- Rodou a E3 do zero num clone limpo, com Postgres e Dagster próprios: `popular_banco_job`, `simular-cdc`, `analitico_job`, Metabase e `just metabase-painel`.
+- Corrigiu três defeitos achados nessa execução: `pib_duckdb` pulado pelo Dagster no `pib_job` (a carga foi para o `analitico_job`), slot do CDC invalidado por WAL da carga do IPCA (o CDC passou a esperar o SIDRA no `popular_banco_job`) e o healthcheck do Postgres que liberava o `just up` durante as migrations. Escreveu primeiro os testes que falhavam nos dois primeiros.
+- `just test` passou a rodar `dbt parse`; atualizou README (como reproduzir a E3), `docs/pipeline/orquestracao.md`, nav do MkDocs e escreveu `docs/evidencias/e3/release_notes.md`.
+
+**O que foi verificado e como**
+- No clone limpo: os 10 jobs de fonte em SUCCESS (32,8 min); 243 partições do IPCA com out/2026 pendente; `analitico_job` em SUCCESS depois da correção; `serie.fct_inflacao_mensal` com 1.662.314 linhas; as 6 perguntas do painel executadas pela API do Metabase com o usuário só-leitura, todas com linhas.
+- `just check` (306 testes, nenhum pulado), `just dbt-test` (224/224) e `just docs-build`.
+
+**Erros da ferramenta encontrados durante a verificação**
+- O primeiro teste da invariante pegava os modelos do dbt (multi-asset de saída opcional) e o job implícito do Dagster: restringido a ativos particionados e jobs declarados.
+
+**O que NÃO foi verificado**
+- Medições do INMET: o endpoint diário respondeu 404 e depois derrubou a conexão; não deu para saber se exige token.
+- O `popular_banco_job` inteiro de novo com a nova ordem do CDC: a ordem foi coberta por teste e o CDC rodou depois da carga, num slot recriado à mão.
+- O volume de desenvolvimento local não foi tocado.
+
+**Decisões que continuam sendo da Squad**
+- Recriar o slot do CDC automaticamente quando ele se perde, ou manter a falha explícita de hoje.
+- Levar o salário mínimo e o clima até a Gold, e fundir `ingest_*`/`bronze_*` dessas fontes.
 
 ---
 
