@@ -43,10 +43,32 @@ Postgres novo com as migrations `0001..0005`, Dagster local e o `.env` do grupo.
 ## Limitações conhecidas
 
 * **Clima sem medições no pipeline.** O catálogo de estações é coletado todo dia (668 estações em 2026-11-08), mas as medições diárias (`clima_medicoes`) exigem estações e intervalo por config e ficam fora do `clima_job` e do `popular_banco_job`. Em 2026-11-08 o endpoint `estacao/diaria` respondeu 404 e, logo depois, derrubou a conexão. Por isso `int_clima__anomalia_mensal` está vazia, e a P2 sai sem o efeito do clima.
-* **Salário mínimo fora da Gold.** A Silver existe (387 meses), mas não chega a `serie`; a P3 mostra só a inflação pelo número-índice.
+* **Salário mínimo fora da Gold.** A Silver existe (387 meses), mas não chega a `serie`; a P3 mostra só a inflação pelo número-índice. *Resolvido depois da release, ver abaixo.*
 * **Lojista fictício.** O banco do lojista nasce vazio; os dados vêm de `just simular-cdc`. A P5 mostra todas as lojas até o RLS da E4.
-* **Frescura** declarada só para Dólar, Selic e `fct_macroeconomia_mensal`.
-* **Pendências de organização do plano:** `ingest_*`/`bronze_*` do clima e do salário mínimo ainda não foram fundidos num arquivo por fonte; `tests/e2e/` ainda vazio; diários de bordo só de Lucas e Artur.
+* **Frescura** declarada só para Dólar, Selic e `fct_macroeconomia_mensal`. *Resolvido depois da release, ver abaixo.*
+* **Pendências de organização do plano:** `ingest_*`/`bronze_*` do clima e do salário mínimo ainda não foram fundidos num arquivo por fonte *(resolvido depois da release, ver abaixo)*; `tests/e2e/` ainda vazio; diários de bordo só de Lucas e Artur.
+
+## Fechado depois da release
+
+| Pendência | O que mudou |
+|---|---|
+| Salário mínimo fora da Gold | `fct_salario_minimo_mensal` (reajuste e ganho real em 12 meses, valores corrigidos pelo IPCA), copiada para `serie` (tabela acrescentada à migration `0005`; num volume que já a tinha, `just migrar 0005_serie_historica.sql`) e nova pergunta P3 no painel (`p3_salario_minimo_real.sql`) |
+| Frescura só para Dólar, Selic e a macro | Checks de frescura e volume para IPCA/INPC, salário mínimo, PIB, PIB internacional, catálogo de clima e commodities; SLA por fonte em [SLA e frescura](sla_e_freshness.md) |
+| `ingest_*` e `bronze_*` separados | Um arquivo por fonte: `bronze/salario_minimo.py` e `bronze/clima.py`. A linha de comando passou a ser `coletar`, `checar`, `importar` e `load` (as receitas do `justfile` e os ativos do Dagster já usam) |
+
+Verificado em 2026-11-09, numa cópia isolada da árvore de trabalho com dados reais (Postgres e portas próprios; o IPCA, já coletado, veio do banco de desenvolvimento):
+
+| Passo | Resultado |
+|---|---|
+| Jobs `macro_job`, `commodities_job`, `pib_internacional_job`, `dieese_job` e `clima_job` | SUCCESS, com os 9 checks de frescura passando dentro do Dagster |
+| Coleta do PIB (2015 a 2026) e `analitico_job` | SUCCESS; `serie.fct_salario_minimo_mensal` com 387 linhas (jul/1994 a set/2026) |
+| `just dbt-test` | 230 testes, 230 PASS (eram 224) |
+| `pytest` com Postgres no ar | 331 passaram, 0 pulados |
+| `just metabase-painel` | 7 perguntas criadas (eram 6) |
+
+O Parquet e o HTML legados que a coleta do salário mínimo ainda grava em `data/parquet/dieese/` e `data/raw/dieese/` foram **mantidos** de propósito (decisão de 2026-11-09): o loader do DuckDB os usa para as tabelas da E1. O prazo de 75 dias do SLA de IPCA/INPC e do salário mínimo também foi confirmado (ver [SLA e frescura](sla_e_freshness.md#5-decisoes-registradas)).
+
+Continuam abertas as medições do clima no pipeline, `tests/e2e/` e os diários de bordo que faltam.
 
 ## Fica para a E4
 
