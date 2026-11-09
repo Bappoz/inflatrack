@@ -1,15 +1,16 @@
 # 0001 — Modelar a origem como insert-only, com a cesta do IPCA em dimensão de vigência
 
-- **Status:** implementação parcial; dimensão histórica pendente
+- **Status:** implementado na E3; comparação de desempenho entre B e C pendente
 - **Data:** 2026-09-08
-- **Revisado em:** 2026-10-18
+- **Revisado em:** 2026-11-09
 - **Decisores:** Squad InflaTrack; aprovação formal da dimensão histórica pendente
 
-> **Estado deste ADR.** O histórico de valores está implementado como append-only
-> no PostgreSQL. A dimensão de nomes com vigência ainda não está implementada:
-> o esquema e o ingestor atual substituem o nome anterior. Portanto, a decisão
-> completa continua pendente e esta página não afirma que a cesta histórica já
-> pode ser consultada com fidelidade.
+> **Estado deste ADR.** O histórico de valores é append-only no PostgreSQL, e a
+> dimensão de nomes com vigência foi implementada na E3: `classificacao_versao`
+> (migration `0004`) no Postgres e `gold.dim_cesta_ipca_scd2` no DuckDB. Uma
+> renomeação fecha a versão aberta e abre outra, em vez de sobrescrever. Continua
+> pendente a medição de desempenho entre as alternativas B e C (seção Medição); a
+> escolha foi por auditabilidade e continuidade da série, não por latência.
 
 ## Contexto
 
@@ -78,7 +79,7 @@ Cobra o histórico de decisão: depois de um `UPDATE`, não há como responder "
 que número a plataforma sugeriu aquele reajuste em março". Para um produto cuja
 razão de existir é justificar reajuste, isso é perder a prova.
 
-### C. Insert-only com cesta em dimensão de vigência _(proposta)_
+### C. Insert-only com cesta em dimensão de vigência _(adotada)_
 
 `observacao` só recebe `INSERT`; revisão do IBGE entra como linha nova. O nome
 da categoria mora em `classificacao_versao` com `vigencia_inicio`/`vigencia_fim`,
@@ -86,8 +87,8 @@ separado da chave natural estável em `classificacao`.
 
 Cobra volume (cada revisão duplica as linhas do mês afetado) e cobra uma junção
 a mais em toda consulta que precise do nome. Dá de graça o histórico e a
-continuidade da série sob renomeação — e é o mesmo padrão que a E3 vai exigir
-como dimensão de variação lenta.
+continuidade da série sob renomeação — e é o mesmo padrão que a E3 exigiu
+como dimensão de variação lenta (SCD tipo 2).
 
 ## Medição
 
@@ -108,11 +109,11 @@ populado e os scripts de consulta versionados:
 
 ## Decisão
 
-A proposta é a **alternativa C**, porque uma revisão do IBGE não deve apagar o
+A decisão é a **alternativa C**, porque uma revisão do IBGE não deve apagar o
 valor que fundamentou uma sugestão anterior de reajuste. A escolha é por
 auditabilidade e continuidade da série, não por uma medição de desempenho.
 
-O estado real do código é parcial:
+O estado do código:
 
 - `observacao` preserva valores distintos para a mesma chave e mês; uma
   reexecução do mesmo valor é idempotente.
@@ -120,12 +121,14 @@ O estado real do código é parcial:
   uma linha por vigência e, no máximo, uma aberta por `(codigo, id_fonte)`.
   `sincronizar_cesta()` fecha a versão aberta e abre outra quando o nome ou o
   pai mudam. Até a E2, uma renomeação apagava o nome anterior e sua vigência.
+- `gold.dim_cesta_ipca_scd2` (dbt) abre versão quando a estrutura do IBGE (POF) muda
+  ou quando o nome ou o pai da categoria mudam: 1.834 versões, e 44 códigos do IPCA
+  com mais de um nome ([evidência da E3](evidencias/e3/ipca_lojista.md#cesta)).
 
-Assim, o histórico de valores é uma decisão já materializada; a modelagem de
-vigência permanece proposta até que o esquema permita múltiplas versões e a
-ingestão feche a vigência anterior em vez de sobrescrevê-la. A avaliação de
-latência e disco também continua pendente e não deve ser apresentada como
-resultado medido.
+Assim, tanto o histórico de valores quanto a modelagem de vigência estão
+materializados. A avaliação de latência e disco entre B e C continua pendente e
+não deve ser apresentada como resultado medido; a consulta medida na E3 é a da
+vitrine `serie`, com e sem índice ([evidência](evidencias/e3/explain_serie.md)).
 
 ## Consequências
 
@@ -133,10 +136,11 @@ resultado medido.
 idempotência quando o mesmo conteúdo é ingerido novamente. A FK mantém a
 classificação referenciada por produtos.
 
-**O que perdemos:** até a dimensão tipo 2 ser concluída, não é possível
-reconstruir pelo banco o nome que o IBGE usava quando uma observação antiga foi
-carregada. Quando concluída, consultas que precisem do nome terão de filtrar a
-versão válida para o período.
+**O que perdemos:** consultas que precisem do nome da categoria têm de filtrar a
+versão válida para o período. A vigência de uma renomeação é aproximada pelo mês
+em que os metadados a mostraram, porque o IBGE não publica a data; renomeações
+anteriores a 2026-10-31, quando a Bronze de metadados começou, não são
+recuperáveis.
 
 **O que se torna difícil de reverter:** consumidores que usem apenas o valor
 mais recente deixarão de ver a revisão anterior; por isso relatórios de
@@ -145,8 +149,8 @@ continuam preservados no fato.
 
 ## Gatilho de revisão
 
-Revisar após a migration e a sincronização de cesta passarem a preservar duas
-versões para um mesmo `(codigo, id_fonte)`, com períodos sem sobreposição. Nesse
-ponto, medir `EXPLAIN (ANALYZE, BUFFERS)` das cinco consultas e o espaço em disco
-com a carga completa. Reabrir a decisão se a consulta 1 exceder 300 ms p95 ou
+A condição de revisão foi cumprida na E3: a migration `0004` e a sincronização da
+cesta passaram a preservar mais de uma versão para um mesmo `(codigo, id_fonte)`,
+com períodos sem sobreposição. Falta medir `EXPLAIN (ANALYZE, BUFFERS)` das cinco
+consultas sobre B e C e o espaço em disco com a carga completa. Reabrir a decisão se a consulta 1 exceder 300 ms p95 ou
 qualquer relatório exceder 5 s, os limites definidos para o produto.
