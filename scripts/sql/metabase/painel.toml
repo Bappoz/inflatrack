@@ -60,12 +60,22 @@ posicao = { linha = 9, coluna = 12, largura = 12, altura = 8 }
 [[perguntas]]
 arquivo = "p3_poder_de_compra_desde_2006.sql"
 titulo = "Poder de compra de R$ 100 de jan/2006"
-descricao = "Pergunta 3 (parcial). IPCA geral, Brasil, pelo número-índice. Falta o salário mínimo do DIEESE na Gold."
+descricao = "Pergunta 3. IPCA geral, Brasil, pelo número-índice. Lê serie.fct_inflacao_mensal."
 banco = "postgres"
 grafico = "line"
 eixo_x = "mes_referencia"
 eixo_y = ["poder_de_compra_de_100_reais"]
-posicao = { linha = 17, coluna = 0, largura = 24, altura = 8 }
+posicao = { linha = 17, coluna = 0, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "p3_salario_minimo_real.sql"
+titulo = "Salário mínimo: nominal x corrigido pelo IPCA"
+descricao = "Pergunta 3. DIEESE desde jan/2006, corrigido pelo IPCA geral para reais do último mês. Lê serie.fct_salario_minimo_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["salario_nominal", "salario_corrigido_pelo_ipca"]
+posicao = { linha = 17, coluna = 12, largura = 12, altura = 8 }
 
 [[perguntas]]
 arquivo = "p5_reajuste_minimo_por_produto.sql"
