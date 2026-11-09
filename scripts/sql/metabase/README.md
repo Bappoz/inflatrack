@@ -48,7 +48,8 @@ sobrescreve. Para rascunhos, use outra coleção.
 |---|---|---|---|
 | `p1_inflacao_12m_por_setor.sql` | 1. Inflação acumulada do meu setor nos últimos 12 meses | Postgres | Lê `serie.fct_inflacao_mensal` + `serie.dim_cesta_ipca_scd2` |
 | `p2_sazonalidade_por_mes.sql` | 2. Sazonalidade e meses de pico da inflação | Postgres | Média por mês do ano, de jul/2006 em diante. **Falta** o efeito do clima (não chega à Gold; INMET exige token) |
-| `p3_poder_de_compra_desde_2006.sql` | 3. Poder de compra desde 2006 | Postgres | **Parcial:** só a inflação pelo número-índice (1737). Falta o salário mínimo do DIEESE na Gold |
+| `p3_poder_de_compra_desde_2006.sql` | 3. Poder de compra desde 2006 | Postgres | Inflação pelo número-índice (1737) |
+| `p3_salario_minimo_real.sql` | 3. O salário mínimo acompanhou a inflação? | Postgres | Lê `serie.fct_salario_minimo_mensal`: nominal x corrigido pelo IPCA, desde jan/2006 |
 | `p4_brasil_x_regiao.sql` | 4. Brasil x praça do lojista, IPCA x INPC | Postgres | Último mês, todas as localidades |
 | `p4_brasil_ipca_x_inpc_5_anos.sql` | 4. (evolução) IPCA x INPC nos últimos 5 anos | Postgres | Brasil, 60 meses |
 | `p5_reajuste_minimo_por_produto.sql` | 5. Reajuste mínimo para não perder margem | Postgres | Visão interna (todas as lojas); por lojista depende do RLS da E4. A projeção (`recomendacao_reajuste`) é E4 |

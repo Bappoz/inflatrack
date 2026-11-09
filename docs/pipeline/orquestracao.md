@@ -3,7 +3,7 @@
 O **Dagster** é o orquestrador do InflaTrack: é ele que decide *quando* cada pedaço do dado é produzido, *em que ordem* e *o que refazer* quando algo falha. Ele substitui o disparo manual das receitas do `justfile` sem mudar o código de ingestão — as receitas continuam existindo como caminho manual de emergência.
 
 !!! info "Status: em uso de ponta a ponta (E3)"
-    O código está em `orchestration/` e cobre a Bronze de todas as fontes, a Silver e a Gold do dbt (`dbt_assets.py`), a cópia da Gold para o `serie` do Postgres (`serie.py`) e os *asset checks* de frescura (`checks.py`). Falta o ETL reverso da recomendação ao lojista (E4). A divisão de responsabilidades sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
+    O código está em `orchestration/` e cobre a Bronze de todas as fontes, a Silver e a Gold do dbt (`dbt_assets.py`), a cópia da Gold para o `serie` do Postgres (`serie.py`) e os *asset checks* de frescura e volume de todas as fontes que chegam ao DuckDB (`checks.py`, [SLA por fonte](../evidencias/e3/sla_e_freshness.md)). Falta o ETL reverso da recomendação ao lojista (E4). A divisão de responsabilidades sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
 
 ## Por que Dagster e não Airflow
 
@@ -44,9 +44,9 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `commodities` | `commodities_parquet` → `commodities_duckdb` | Delta → DuckDB | `bronze.commodities`, `loaders.load_commodities` |
 | `pib` | `pib_parquet` → `pib_duckdb` (a carga roda no `analitico_job`, como a do IPCA) | Delta → DuckDB | `bronze.pib`, `loaders.load_pib` |
 | `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
-| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
-| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
-| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `bronze.salario_minimo`, `load_salario_minimo` |
+| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `bronze.clima`, `load_clima` |
+| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `bronze.clima`, `load_clima` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
@@ -125,7 +125,6 @@ Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia. O mê
 
 ## O que falta
 
-1. *Freshness checks* das outras fontes: hoje só Dólar, Selic e `gold.fct_macroeconomia_mensal` têm SLA declarado e checado (`checks.py`, ver [evidência](../evidencias/e3/sla_e_freshness.md)).
-2. Medições do clima no agendamento: `clima_medicoes` exige estações e intervalo por config e fica fora do `clima_job` e do `popular_banco_job`.
-3. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
-4. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.
+1. Medições do clima no agendamento: `clima_medicoes` exige estações e intervalo por config e fica fora do `clima_job` e do `popular_banco_job`.
+2. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
+3. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.

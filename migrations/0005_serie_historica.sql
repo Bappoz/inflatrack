@@ -144,6 +144,25 @@ create table if not exists serie.fct_macroeconomia_mensal (
 comment on table serie.fct_macroeconomia_mensal is
     'Uma linha por mês. Cópia de gold.fct_macroeconomia_mensal.';
 
+-- Salário mínimo do DIEESE frente ao IPCA (pergunta 3). Dado público: o lojista também lê.
+create table if not exists serie.fct_salario_minimo_mensal (
+    mes_referencia                date primary key,
+    salario_nominal               numeric(14, 2),
+    salario_necessario            numeric(14, 2),
+    multiplos_salario_necessario  numeric(12, 4),
+    variacao_nominal_pct          numeric(12, 4),
+    variacao_necessario_pct       numeric(12, 4),
+    media_movel_nominal_3m        numeric(14, 2),
+    variacao_nominal_12m_pct      numeric(12, 4),
+    ipca_12m_pct                  numeric(12, 4),
+    ganho_real_12m_pct            numeric(12, 4),
+    mes_base_real                 date,
+    salario_nominal_real          numeric(14, 2),
+    salario_necessario_real       numeric(14, 2)
+);
+comment on table serie.fct_salario_minimo_mensal is
+    'Uma linha por mês. Cópia de gold.fct_salario_minimo_mensal.';
+
 -- Papéis sem login: quem conecta recebe o papel. Criar papel não aceita IF NOT EXISTS, e papel é
 -- objeto do servidor, não do banco.
 do $$
@@ -174,6 +193,7 @@ alter default privileges in schema serie grant select, insert, delete on tables 
 -- O lojista lê só o que é público. As duas tabelas do lojista ficam de fora até a E4 ter RLS por
 -- estabelecimento: com um GRANT aqui, cada loja leria os preços de todas as outras.
 grant select on serie.dim_calendario, serie.dim_localidade, serie.dim_cesta_ipca_scd2,
-    serie.fct_inflacao_mensal, serie.fct_macroeconomia_mensal to lojista_app;
+    serie.fct_inflacao_mensal, serie.fct_macroeconomia_mensal, serie.fct_salario_minimo_mensal
+    to lojista_app;
 
 commit;

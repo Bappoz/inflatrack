@@ -22,3 +22,36 @@ models:
         description: IPCA acumulado em 12 meses, índice geral, Brasil (fct_inflacao_mensal).
       - name: juro_real_12m_pct
         description: (1 + Selic 12m) / (1 + IPCA 12m) - 1, em %.
+
+  - name: fct_salario_minimo_mensal
+    description: >
+      Uma linha por mês (mes_referencia = YYYY-MM-01), de jul/1994 ao último mês do DIEESE, com o
+      salário mínimo nominal e o necessário lado a lado com o IPCA do Brasil: reajuste nominal e
+      ganho real em 12 meses, e os dois valores corrigidos pelo IPCA para o último mês com
+      número-índice. Responde se o piso acompanhou a inflação.
+    columns:
+      - name: mes_referencia
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: salario_nominal
+        data_tests: [not_null]
+      - name: salario_necessario
+        data_tests: [not_null]
+      - name: variacao_nominal_12m_pct
+        description: Reajuste do salário mínimo nominal em 12 meses. Nulo nos 12 primeiros meses.
+      - name: ipca_12m_pct
+        description: IPCA acumulado em 12 meses, índice geral, Brasil (fct_inflacao_mensal).
+      - name: ganho_real_12m_pct
+        description: (1 + reajuste nominal 12m) / (1 + IPCA 12m) - 1, em %. Nulo sem IPCA de 12m.
+      - name: mes_base_real
+        description: Mês do número-índice usado para corrigir os valores (o mais recente do IPCA).
+        data_tests: [not_null]
+      - name: salario_nominal_real
+        description: Salário nominal em reais de mes_base_real (corrigido pelo IPCA geral, Brasil).
+      - name: salario_necessario_real
+        description: Salário necessário em reais de mes_base_real (corrigido pelo IPCA geral).

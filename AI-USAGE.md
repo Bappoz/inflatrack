@@ -69,6 +69,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
+| 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
 
 ---
 
@@ -283,6 +284,36 @@ separados e um PR.
 **Decisões que continuam sendo da Squad**
 - Recriar o slot do CDC automaticamente quando ele se perde, ou manter a falha explícita de hoje.
 - Levar o salário mínimo e o clima até a Gold, e fundir `ingest_*`/`bronze_*` dessas fontes.
+
+---
+
+### 2026-11-09 — Claude Code (Sonnet 5.5) — pendências da E3: salário mínimo na Gold, freshness em todas as fontes e fusão da Bronze
+
+**O que a ferramenta fez**
+- Fundiu `ingest_salario_minimo` + `bronze_salario_minimo` em `bronze/salario_minimo.py` e `ingest_clima` + `bronze_clima` em `bronze/clima.py` (subcomandos `coletar`, `checar`, `importar`, `load`); atualizou aliases do pacote, ativos do Dagster, `justfile` e testes.
+- Criou `gold.fct_salario_minimo_mensal` (reajuste e ganho real em 12 meses, valores corrigidos pelo IPCA), acrescentou-a à migration `0005` e a `exportar_serie.TABELAS`, e abriu uma segunda pergunta da P3 no painel (`p3_salario_minimo_real.sql`).
+- Reescreveu `orchestration/assets/checks.py` em torno de um `Sla` por fonte: checks de frescura e volume para IPCA, salário mínimo, PIB, PIB internacional, catálogo do clima e commodities, além dos três que já existiam.
+- Atualizou `sla_e_freshness.md`, `orquestracao.md`, o dicionário do salário mínimo, as release notes e `GUIA-PROJETO.md`.
+
+**O que foi verificado e como**
+- `dbt build` dos três modelos (Silver e Gold do salário mínimo) numa cópia do DuckDB com o HTML de fixture do DIEESE: 17 de 17 PASS; valores conferidos à mão em meses de referência.
+- Migration `0005`, cópia para `serie` (duas vezes, para provar o delete+insert), `tests/integration/test_serie_permissoes.py` (6 passaram) e a nova consulta da P3, lida com os papéis `metabase_leitor` e `lojista_app`, num Postgres descartável em projeto Compose separado, removido depois.
+- `tests/orchestration/test_checks.py`: 33 passaram; os checks de IPCA e salário mínimo também rodaram contra o DuckDB real (69 dias de defasagem, SLA cumprido).
+- `ruff check` sem erro; `pytest` completo: 309 passaram, 22 pulados (sem o Postgres do projeto no ar).
+- Numa cópia isolada da árvore de trabalho (Postgres e portas próprios, dados reais; IPCA copiado do banco de desenvolvimento): `macro_job`, `commodities_job`, `pib_internacional_job`, `dieese_job`, `clima_job`, coleta do PIB (2015 a 2026) e `analitico_job` em SUCCESS, com os 9 checks de frescura passando dentro do Dagster; `just dbt-test` 230/230; `pytest` 331 passaram e 0 pulados; `just metabase-painel` com 7 perguntas. A cópia foi desmontada depois.
+- A migration `0005` foi aplicada ao volume de desenvolvimento do usuário (`just migrar`): `serie.fct_salario_minimo_mensal` existe, com leitura para `metabase_leitor` e `lojista_app`.
+- `mkdocs build --strict` sem erro depois das mudanças de documentação.
+
+**Erros da ferramenta encontrados durante a verificação**
+- Reescrevi `sla_e_freshness.md` inteiro, contra a regra de preservar a estrutura de documentos de entrega; restaurei o original e refiz só com acréscimos.
+
+**O que NÃO foi verificado**
+- As medições diárias do clima (`clima_medicoes`) seguem fora do pipeline e sem check; o endpoint do INMET não foi testado.
+- O `popular_banco_job` inteiro e o CDC (`simular-cdc` e `transacional_job`) não foram rodados na cópia: o IPCA e o `bronze.transacional_mudanca` vieram do banco de desenvolvimento.
+
+**Decisões tomadas pelo usuário depois da entrega**
+- O prazo de 75 dias do SLA de IPCA e salário mínimo foi mantido e registrado em `sla_e_freshness.md`, seção 5.
+- O Parquet e o raw legados da coleta do salário mínimo foram mantidos, por causa do loader da E1.
 
 ---
 
