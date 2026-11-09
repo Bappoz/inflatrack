@@ -102,3 +102,24 @@ def test_definicoes_registram_o_job_com_o_disparador_real() -> None:
     repositorio = defs.get_repository_def()
     assert repositorio.has_job("popular_banco_job")
     assert "disparador" in defs.resources
+
+
+SIDRA = ("ipca_job", "inpc_job", "ipca_indice_job")
+
+
+def test_cdc_so_e_disparado_depois_das_coletas_do_sidra() -> None:
+    """A carga completa do IPCA gera mais de 2 GB de WAL. Com o slot do CDC criado no meio dela
+    e sem leitura, o Postgres o invalida (max_slot_wal_keep_size), como num clone limpo em
+    2026-11-08. O CDC espera o SIDRA, mesmo quando uma coleta do SIDRA falha."""
+    SUBMETIDOS.clear()
+    popular_banco_job.execute_in_process(
+        resources={"disparador": DisparadorFalso(falham=["inpc_job"])}, raise_on_error=False
+    )
+
+    ordem = [job for job, _ in SUBMETIDOS]
+    assert "transacional_job" in ordem
+    assert all(ordem.index(job) < ordem.index("transacional_job") for job in SIDRA)
+    upstream = popular_banco_job.graph.dependency_structure.all_upstream_outputs_from_node(
+        "popular_transacional_job"
+    )
+    assert {saida.node_name for saida in upstream} == {f"popular_{job}" for job in SIDRA}

@@ -41,8 +41,8 @@ transacional_job = define_asset_job("transacional_job", AssetSelection.groups("t
 # entram no analitico_job, que roda depois das fontes.
 CARGAS_SEM_JOB_PROPRIO = AssetSelection.assets("ipca_duckdb", "ipca_metadados_duckdb", "pib_duckdb")
 
-# Cargas do IPCA e do PIB, Silver, Gold e a cópia para o Postgres (serie), na ordem do grafo, depois que
-# as fontes do dia já rodaram. Quem lê o painel vê o dado do dia seguinte de manhã.
+# Cargas do IPCA e do PIB, Silver, Gold e a cópia para o Postgres (serie), na ordem do grafo,
+# depois que as fontes do dia já rodaram. Quem lê o painel vê o dado do dia seguinte de manhã.
 analitico_job = define_asset_job(
     "analitico_job",
     AssetSelection.groups("silver", "gold", "vitrine") | CARGAS_SEM_JOB_PROPRIO,

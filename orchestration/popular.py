@@ -48,6 +48,12 @@ JOBS_DE_FONTE = {
     "transacional_job": None,
 }
 
+# Quem espera quem. O CDC cria o slot lógico na primeira leitura; disparado junto com a carga
+# completa do IPCA (~6 mi de linhas em public.observacao, mais de 2 GB de WAL), o slot fica sem
+# leitura além de max_slot_wal_keep_size e o Postgres o invalida (visto num clone limpo em
+# 2026-11-08). Esperar não é condicionar: o CDC roda mesmo se uma coleta do SIDRA falhar.
+ESPERA = {"transacional_job": ("ipca_job", "inpc_job", "ipca_indice_job")}
+
 TERMINAIS = {DagsterRunStatus.SUCCESS, DagsterRunStatus.FAILURE, DagsterRunStatus.CANCELED}
 
 
@@ -104,7 +110,12 @@ INTERVALO_ESPERA_S = 15
 
 
 def _op_de_fonte(pedido: Pedido):
-    @op(name=f"popular_{pedido.job}", required_resource_keys={"disparador"})
+    # Entradas `Nothing` só ordenam: a op recebe o fim das anteriores, não o status delas.
+    @op(
+        name=f"popular_{pedido.job}",
+        required_resource_keys={"disparador"},
+        ins={f"apos_{job}": In(Nothing) for job in ESPERA.get(pedido.job, ())},
+    )
     def _popular(context: OpExecutionContext) -> str:
         disparador: Disparador = context.resources.disparador
         try:
@@ -148,4 +159,8 @@ def resumo(context: OpExecutionContext, **status_por_job: str) -> Nothing:
     ),
 )
 def popular_banco_job():
-    resumo(**{nome: op_fonte() for nome, op_fonte in OPS_DE_FONTE.items()})
+    status = {}
+    # JOBS_DE_FONTE lista o SIDRA antes do CDC, então quem é esperado já tem saída aqui.
+    for nome, op_fonte in OPS_DE_FONTE.items():
+        status[nome] = op_fonte(**{f"apos_{job}": status[job] for job in ESPERA.get(nome, ())})
+    resumo(**status)
