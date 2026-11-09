@@ -26,7 +26,8 @@ inpc_job = define_asset_job("inpc_job", AssetSelection.assets("inpc"))
 ipca_indice_job = define_asset_job("ipca_indice_job", AssetSelection.assets("ipca_numero_indice"))
 macro_job = define_asset_job("macro_job", AssetSelection.groups("macro"))
 commodities_job = define_asset_job("commodities_job", AssetSelection.groups("commodities"))
-pib_job = define_asset_job("pib_job", AssetSelection.groups("pib"))
+# Só a coleta: a carga no DuckDB vai no analitico_job (ver CARGAS_SEM_JOB_PROPRIO).
+pib_job = define_asset_job("pib_job", AssetSelection.assets("pib_parquet"))
 pib_internacional_job = define_asset_job(
     "pib_internacional_job", AssetSelection.groups("pib_internacional")
 )
@@ -34,11 +35,13 @@ dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 
-# A carga do IPCA no DuckDB não é particionada (espelha o Delta inteiro) e depende dos três
-# ativos mensais, então não cabe em nenhum dos jobs particionados acima: entra no analitico_job.
-CARGAS_SEM_JOB_PROPRIO = AssetSelection.assets("ipca_duckdb", "ipca_metadados_duckdb")
+# As cargas do IPCA e do PIB no DuckDB não são particionadas (espelham o Delta inteiro) e
+# dependem de coletas particionadas que só materializam o que a fonte publicou, sem `Output`
+# (`output_required=False`). No mesmo run da coleta, o Dagster pularia a carga; por isso elas
+# entram no analitico_job, que roda depois das fontes.
+CARGAS_SEM_JOB_PROPRIO = AssetSelection.assets("ipca_duckdb", "ipca_metadados_duckdb", "pib_duckdb")
 
-# Cargas do IPCA, Silver, Gold e a cópia para o Postgres (serie), na ordem do grafo, depois que
+# Cargas do IPCA e do PIB, Silver, Gold e a cópia para o Postgres (serie), na ordem do grafo, depois que
 # as fontes do dia já rodaram. Quem lê o painel vê o dado do dia seguinte de manhã.
 analitico_job = define_asset_job(
     "analitico_job",

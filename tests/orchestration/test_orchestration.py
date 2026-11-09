@@ -177,3 +177,28 @@ def test_execucao_assets_dolar_e_selic_com_mock():
         ctx = build_asset_context()
         asset_selic.selic_duckdb(ctx)
         mock_selic_main.assert_called_once_with([])
+
+
+def test_nenhum_job_roda_algo_abaixo_de_um_ativo_de_saida_opcional():
+    """Um ativo com `output_required=False` (IPCA, INPC, número-índice e PIB) só emite
+    `AssetMaterialization` das partições publicadas, sem `Output`. O Dagster então pula todo
+    passo do mesmo run que depende dele. Foi o caso do `pib_duckdb` dentro do `pib_job`:
+    `bronze.pib_valor` nunca era criada, e o `dbt build` caía no clone limpo (2026-11-08).
+    A carga desses ativos roda em outro job (`analitico_job`)."""
+    repositorio = defs.get_repository_def()
+    grafo = repositorio.asset_graph
+    opcionais = {
+        chave
+        for chave in grafo.get_all_asset_keys()
+        if (no := grafo.get(chave)).is_partitioned
+        and not all(saida.is_required for saida in no.assets_def.node_def.output_defs)
+    }
+    assert {"ipca", "pib_parquet"} <= {chave.to_user_string() for chave in opcionais}
+
+    for job in repositorio.get_all_jobs():
+        if job.name.startswith("__") or job.asset_layer is None:
+            continue
+        selecionados = job.asset_layer.selected_asset_keys
+        for chave in selecionados:
+            presos = grafo.get(chave).parent_keys & opcionais & selecionados
+            assert not presos, f"{job.name}: {chave.to_user_string()} depende de {presos}"
