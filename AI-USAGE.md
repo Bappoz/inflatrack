@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
+| Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
 
 
 ## Todas as sessões
@@ -69,6 +69,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
 
 ---
 
@@ -1517,3 +1518,18 @@ de tarefas nessa linha.
 
 ---
 
+### 2026-11-09 — GitHub Copilot — Automação de clima e preparo do DuckDB
+
+**O que a ferramenta fez**
+- Incluiu coleta e carga de medições no `clima_job`, com as 15 estações do mapeamento e janela dos últimos 7 dias completos, conforme escolhas confirmadas pelo usuário. Preservou overrides para histórico e fixou as datas no tick diário.
+- Reutilizou os DDLs existentes antes do dbt no just e no Dagster, respeitando `DBT_DUCKDB_PATH`, sem consultas à API, dados fictícios ou exclusão de cargas anteriores.
+- Acrescentou testes de configuração, datas, grafo, idempotência e build de clima em banco vazio; atualizou a documentação da fonte e da orquestração.
+
+**O que foi verificado e como**
+- Testes automatizados das trilhas de clima e orquestração, incluindo execução real do dbt para modelos e testes de clima em DuckDB temporário sem ingestão.
+- Ruff nos arquivos Python alterados, checagem de whitespace do diff e `just --dry-run dbt`, confirmando que a preparação antecede o build.
+- O build isolado usa seleção indireta `cautious` e inclui os seeds necessários, sem exigir tabelas de fontes fora da trilha.
+
+**O que NÃO foi verificado**
+- Disponibilidade atual do endpoint de medições do INMET, coleta real das 15 estações, execução do agendador em produção ou build completo das demais fontes.
+- A validação final por Pylance ficou indisponível por falha de conexão do servidor; a verificação executável foi feita pelos testes e pelo Ruff.

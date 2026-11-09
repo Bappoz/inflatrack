@@ -281,6 +281,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sucesso = False
     with duckdb.connect(str(db)) as conexao:
+        conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
         if DeltaTable.is_deltatable(str(delta_dir / "estacao")):
             total_bronze = carregar_bronze_estacoes(conexao, delta_dir, modo=args.modo)
             logger.info(

@@ -8,11 +8,18 @@ Ele nunca escreve em `bronze`. Exemplos prontos: `staging/pib/`, `staging/commod
 ```bash
 uv sync                      # instala dbt-core e dbt-duckdb
 uv run python -m inflatrack.loaders.load_<fonte>   # a Bronze precisa existir antes
-just dbt                     # = uv run dbt build (seeds, modelos e testes)
+just dbt                     # prepara DDLs existentes e roda dbt build (seeds, modelos e testes)
+just duckdb-init             # preparo sem coleta, antes de usar dbt diretamente
 uv run dbt build --select +int_<fonte>__mensal     # só a sua trilha
 ```
 
 `dbt_project.yml` e `profiles.yml` ficam na raiz: rode tudo a partir dela.
+
+O preparo aplica os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql` no banco
+selecionado por `DBT_DUCKDB_PATH` (ou no caminho padrão). Cria, entre outras, as tabelas
+vazias `bronze.clima_estacao` e `bronze.clima_medicao`, sem exigir ingestão real e sem
+apagar dados. O ativo dbt do Dagster faz o mesmo antes do build. Fontes sem DDL inicial
+continuam exigindo seu loader; a preparação não coleta dados nem substitui essa carga.
 
 ## O que criar (um arquivo por fonte, para não dar conflito)
 

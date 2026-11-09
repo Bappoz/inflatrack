@@ -19,6 +19,7 @@ from dagster import AssetExecutionContext, AutomationCondition
 from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
 
 from orchestration.assets.comum import POOL_DUCKDB
+from scripts.init_db import init_db
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -60,4 +61,5 @@ class TradutorInflatrack(DagsterDbtTranslator):
 )
 def dbt_inflatrack(context: AssetExecutionContext):
     """`dbt build` dos modelos selecionados: cria as views e tabelas e roda os testes."""
+    init_db()
     yield from DbtCliResource(project_dir=PROJETO_DBT).cli(["build"], context=context).stream()

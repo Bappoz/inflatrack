@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import logging
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from inflatrack import bronze_clima
-from inflatrack.inmet import (
+from inflatrack.bronze import bronze_clima
+from inflatrack.clients.inmet import (
     InmetClient,
     InmetError,
     transformar_estacoes,
@@ -19,6 +22,18 @@ from inflatrack.inmet import (
 logger = logging.getLogger("inflatrack.ingest_clima")
 
 DELTA_DIR_PADRAO = Path("data/parquet/clima")
+MAPEAMENTO_ESTACOES = (
+    Path(__file__).resolve().parents[3] / "dbt/seeds/seed_de_para_estacao_localidade.csv"
+)
+
+
+def estacoes_mapeadas() -> list[str]:
+    """Lê as estações do mesmo mapeamento usado pela Silver."""
+    with MAPEAMENTO_ESTACOES.open(encoding="utf-8", newline="") as arquivo:
+        estacoes = {linha["estacao_id"].strip() for linha in csv.DictReader(arquivo)}
+    if not estacoes or "" in estacoes:
+        raise ValueError(f"Mapeamento de estações vazio ou inválido: {MAPEAMENTO_ESTACOES}")
+    return sorted(estacoes)
 
 
 def processar_estacoes(
@@ -81,37 +96,50 @@ def processar_medicoes(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--delta-dir", default=str(DELTA_DIR_PADRAO))
-    parser.add_argument(
+    modos = parser.add_mutually_exclusive_group()
+    modos.add_argument(
         "--apenas-estacoes",
         action="store_true",
         help="Sincroniza apenas o cadastro de estações meteorológicas",
     )
-    parser.add_argument(
+    modos.add_argument(
         "--medicoes",
         action="store_true",
-        help="Busca medições diárias das estações informadas",
+        help="Coleta as estações mapeadas nos últimos 7 dias completos, salvo overrides",
     )
     parser.add_argument("--estacao", action="append", default=[], help="ID INMET; pode repetir")
     parser.add_argument("--de", dest="data_inicio", help="Data inicial no formato AAAA-MM-DD")
     parser.add_argument("--ate", dest="data_fim", help="Data final no formato AAAA-MM-DD")
     args = parser.parse_args(argv)
+    if bool(args.data_inicio) != bool(args.data_fim):
+        parser.error("--de e --ate devem ser informados juntos")
+    if not args.medicoes and (args.estacao or args.data_inicio):
+        parser.error("--estacao, --de e --ate exigem --medicoes")
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cliente = InmetClient()
+    estacoes = args.estacao
+    inicio = args.data_inicio
+    fim = args.data_fim
 
     try:
+        if args.medicoes:
+            estacoes = args.estacao or estacoes_mapeadas()
+            ontem = datetime.now(ZoneInfo("America/Sao_Paulo")).date() - timedelta(days=1)
+            inicio = args.data_inicio or (ontem - timedelta(days=6)).isoformat()
+            fim = args.data_fim or ontem.isoformat()
+            if pd.Timestamp(inicio).date() > pd.Timestamp(fim).date():
+                parser.error("--de deve ser anterior ou igual a --ate")
         processar_estacoes(
             cliente,
             delta_dir=Path(args.delta_dir),
         )
         if args.medicoes:
-            if not args.data_inicio or not args.data_fim:
-                parser.error("--medicoes exige --de e --ate")
             respostas, leituras = processar_medicoes(
                 cliente,
-                args.estacao,
-                args.data_inicio,
-                args.data_fim,
+                estacoes,
+                inicio,
+                fim,
                 delta_dir=Path(args.delta_dir),
             )
             logger.info(

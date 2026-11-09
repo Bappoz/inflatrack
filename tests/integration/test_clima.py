@@ -6,6 +6,9 @@ integridade geográfica e volume, idempotência em Delta e importação do Raw.
 
 import gzip
 import json
+import os
+import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -314,3 +317,95 @@ def test_carregar_duckdb_modos(tmp_path: Path, payload_estacoes) -> None:
     # Modo 2: so_acrescenta (sem novas estações, total permanece 671)
     total2 = bronze_clima.carregar_duckdb(destino, db_path, modo="so_acrescenta")
     assert total2 == 671
+
+
+def test_inicializacao_sem_delta_cria_bronze_e_preserva_dados(
+    tmp_path, monkeypatch, payload_estacoes
+) -> None:
+    import duckdb
+    from inflatrack.load_clima import carregar_bronze_estacoes
+
+    from scripts.init_db import init_db
+
+    db = tmp_path / "banco" / "teste.duckdb"
+    monkeypatch.setenv("DBT_DUCKDB_PATH", str(db))
+    init_db()
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (0,)
+        assert conexao.execute("select count(*) from bronze.clima_medicao").fetchone() == (0,)
+        destino = tmp_path / "delta"
+        bronze_clima.gravar(destino, payload_estacoes, ingerido_em=QUANDO)
+        assert carregar_bronze_estacoes(conexao, destino) == 671
+    init_db()
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (671,)
+
+
+def test_loader_sem_delta_prepara_tabelas_mas_nao_reporta_carga_com_sucesso(tmp_path):
+    import duckdb
+
+    from inflatrack import load_clima
+
+    db = tmp_path / "teste.duckdb"
+    assert (
+        load_clima.main(
+            [
+                "--db",
+                str(db),
+                "--delta-dir",
+                str(tmp_path / "ausente"),
+                "--parquet-estacoes",
+                str(tmp_path / "ausente.parquet"),
+                "--parquet-clima",
+                str(tmp_path / "ausente_diario.parquet"),
+            ]
+        )
+        == 1
+    )
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (0,)
+        assert conexao.execute("select count(*) from bronze.clima_medicao").fetchone() == (0,)
+
+
+def test_dbt_clima_build_em_banco_vazio_sem_ingestao(tmp_path, monkeypatch):
+    import duckdb
+
+    from scripts.init_db import init_db
+
+    db = tmp_path / "vazio.duckdb"
+    monkeypatch.setenv("DBT_DUCKDB_PATH", str(db))
+    init_db()
+    raiz = Path(__file__).resolve().parents[2]
+    resultado = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dbt.cli.main",
+            "build",
+            "--project-dir",
+            str(raiz),
+            "--profiles-dir",
+            str(raiz),
+            "--target-path",
+            str(tmp_path / "target"),
+            "--log-path",
+            str(tmp_path / "logs"),
+            "--indirect-selection",
+            "cautious",
+            "--select",
+            "+int_clima__anomalia_mensal",
+            "stg_clima__estacao",
+            "seed_localidade_ibge",
+        ],
+        cwd=raiz,
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute(
+            "select count(*) from silver.int_clima__anomalia_mensal"
+        ).fetchone() == (0,)
+        assert conexao.execute("select count(*) from silver.stg_clima__estacao").fetchone() == (0,)

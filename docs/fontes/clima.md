@@ -62,9 +62,17 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 ### Taxa de escrita
 
 - **Carga histórica:** Coleta por estação e intervalo explícitos via cliente INMET, gravando as respostas e medições no Delta.
-- **Regime:** O catálogo pode ser sincronizado pelo Dagster; medições são uma execução manual configurável até ser concluído o mapeamento e validado o endpoint.
+- **Regime:** O `clima_job` sincroniza catálogo, medições e carga no DuckDB diariamente às 7h (São Paulo). As medições usam as 15 estações de `dbt/seeds/seed_de_para_estacao_localidade.csv` e os últimos 7 dias completos, relendo atrasos e revisões. O tick fixa as datas mesmo se a execução atrasar.
 - **Escrita real vs. custo de coleta:** Cada payload JSON é arquivado em `resposta/` e cada medição tipada em `medicao/`; reexecuções não duplicam leituras idênticas e revisões ficam preservadas.
 - **Escrita transacional:** Nenhuma. O loader espelha a tabela Delta em `bronze.clima_medicao`; a Silver escolhe a revisão mais recente por estação e dia.
+
+### Execução e preparação do banco
+
+- `just clima`: coleta catálogo e medições com os padrões acima e promove o Delta ao DuckDB.
+- `just bronze-clima`: mantém a opção de coletar somente o catálogo.
+- Carga histórica: `uv run python -m inflatrack.bronze.ingest_clima --medicoes --estacao A001 --de 2026-10-01 --ate 2026-10-31`. Repita `--estacao` para várias estações; depois execute `just clima-load`. No Dagster, os campos opcionais `estacoes`, `data_inicio` e `data_fim` de `clima_medicoes` permitem o mesmo override; as duas datas devem ser informadas juntas.
+- `just duckdb-init` cria as tabelas vazias `bronze.clima_estacao` e `bronze.clima_medicao` a partir do DDL existente, sem API nem Delta. É idempotente e não apaga cargas anteriores. `just dbt` e o ativo dbt do Dagster fazem esse preparo antes do build. O banco selecionado por `DBT_DUCKDB_PATH` também é respeitado.
+- Para `uv run dbt build` direto, prepare o banco antes com `just duckdb-init`. Esse preparo não substitui loaders de fontes que não possuem DDL inicial; ele também não representa coleta bem-sucedida nem cria dados fictícios.
 
 ### Taxa de leitura e padrão de acesso
 

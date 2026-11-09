@@ -176,8 +176,12 @@ test:
 check: fmt lint test
 
 # Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
-# Os loaders precisam ter rodado antes: o dbt só lê bronze.*.
-dbt:
+# Prepara os schemas existentes sem consultar APIs; fontes sem DDL ainda exigem loader.
+duckdb-init:
+    uv run python scripts/init_db.py
+
+# O dbt só lê bronze.*. O preparo permite a trilha de clima mesmo antes da primeira coleta.
+dbt: duckdb-init
     uv run dbt build
 
 # Só os testes analíticos (Nível 3 da pirâmide).
@@ -309,7 +313,7 @@ bronze-salario-minimo-load modo="substitui":
 
 # INMET: Dados de Clima e Estações
 clima-ingest:
-    uv run python -m inflatrack.bronze.ingest_clima --apenas-estacoes
+    uv run python -m inflatrack.bronze.ingest_clima --medicoes
 
 clima-load:
     uv run python -m inflatrack.loaders.load_clima
