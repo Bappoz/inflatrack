@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
+| Johnnatan Salles | 7 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (4) |
 
 
 ## Todas as sessões
@@ -69,6 +69,9 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Integração do cadastro de usuário com Supabase Auth via backend Python |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Tabela pública de perfis sincronizada com Supabase Auth |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Home simples e navegação de teste entre cadastro, login e home |
 
 ---
 
@@ -1514,6 +1517,46 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Nenhuma requisição real de medições foi feita; a disponibilidade atual do endpoint do INMET precisa ser confirmada. Fortaleza não possui estação correspondente no fixture, e o projeto não possui uma fonte independente para custo da cesta básica.
 - O `dbt build` com tabelas Bronze reais, a coleta ponta a ponta e o clone limpo não foram executados.
+
+### 2026-11-09 — GitHub Copilot — Integração do cadastro com Supabase Auth
+
+**O que a ferramenta fez**
+- Implementou uma API FastAPI em `web/backend` para criar usuários pelo endpoint de signup do Supabase Auth e conectou o formulário do frontend ao endpoint.
+- Configurou o ambiente local com a URL e a chave publishable, sem armazenar nem usar a chave secreta.
+
+**O que foi verificado e como**
+- Três testes automatizados do backend passaram, cobrindo o encaminhamento ao Supabase simulado, validação da confirmação de senha e configuração ausente.
+- `ruff check` e o lint do frontend passaram.
+- O endpoint público de configurações do Supabase respondeu HTTP 200 e indicou signup habilitado; CORS autorizou a origem local do frontend.
+- O formulário enviou os quatro campos esperados e exibiu a confirmação usando uma resposta de API simulada, sem criar um usuário real.
+
+**O que NÃO foi verificado**
+- Não foi feito cadastro real nem verificada a entrega de e-mail de confirmação. A chave secreta compartilhada na conversa não foi usada; a Squad deve rotacioná-la.
+
+### 2026-11-09 — GitHub Copilot — Tabela pública de perfis do Supabase
+
+**O que a ferramenta fez**
+- Criou uma migration para `public.profiles`, vinculada a `auth.users`, com e-mail único, RLS e trigger para novos usuários; a migration também preenche perfis dos usuários já existentes.
+- Documentou a execução da migration pelo SQL Editor do Supabase. A senha permanece exclusivamente no Auth.
+
+**O que foi verificado e como**
+- Revisão do SQL, das políticas de acesso e do fluxo do trigger; a migration é idempotente para reexecução.
+
+**O que NÃO foi verificado**
+- A migration não foi aplicada no projeto Supabase remoto nesta sessão; a tabela só aparecerá no Table Editor depois que a Squad executar o arquivo no SQL Editor.
+
+### 2026-11-09 — GitHub Copilot — Home e navegação de teste
+
+**O que a ferramenta fez**
+- Criou a home em `/`, moveu a tela de login para `/login` e conectou o envio do formulário ao redirecionamento para a home.
+- Ajustou o retorno do cadastro para `/login` e preservou os links entre as rotas.
+
+**O que foi verificado e como**
+- `npm run lint` passou.
+- No navegador, a home exibiu o texto solicitado, o submit de login redirecionou para `/` e um cadastro simulado redirecionou para `/login`.
+
+**O que NÃO foi verificado**
+- O login continua sendo apenas uma navegação de teste; autenticação real não foi implementada nem validada.
 
 ---
 

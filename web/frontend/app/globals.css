@@ -33,6 +33,20 @@ button {
   color: inherit;
 }
 
+.home-page {
+  display: grid;
+  flex: 1;
+  min-height: 100dvh;
+  place-items: center;
+  background: var(--paper);
+}
+
+.home-page h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 570;
+}
+
 .login-page {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -44,6 +58,11 @@ button {
   border: 1px solid rgba(35, 25, 48, 0.07);
   border-radius: 12px;
   box-shadow: 0 24px 80px rgba(46, 31, 65, 0.1);
+}
+
+.registration-page {
+  height: auto;
+  min-height: min(820px, calc(100dvh - 48px));
 }
 
 .login-panel {
@@ -244,6 +263,12 @@ button {
   background: #30243d;
 }
 
+.submit-button:disabled {
+  transform: none;
+  cursor: wait;
+  opacity: 0.75;
+}
+
 .submit-button svg {
   color: var(--accent);
 }
@@ -269,6 +294,15 @@ button {
 
 .signup-link {
   font-size: 11px;
+  text-decoration: none;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+.registration-form > label:not(:first-child) {
+  margin-top: 12px;
 }
 
 .login-footer {
@@ -448,6 +482,11 @@ button {
     margin: 12px auto;
   }
 
+  .registration-page {
+    height: auto;
+    min-height: calc(100dvh - 24px);
+  }
+
   .login-panel {
     padding: 20px 24px 16px;
   }
@@ -481,10 +520,20 @@ button {
     box-shadow: none;
   }
 
+  .login-page.registration-page {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
   .login-panel {
     min-height: 0;
     flex: 1 1 auto;
     padding: 18px 24px 12px;
+  }
+
+  .registration-page .login-panel {
+    flex: 0 0 auto;
   }
 
   .login-content {
@@ -579,6 +628,11 @@ button {
     margin: 8px auto;
   }
 
+  .registration-page {
+    height: auto;
+    min-height: calc(100dvh - 16px);
+  }
+
   .login-panel {
     padding: 10px 18px 8px;
   }
@@ -634,6 +688,11 @@ button {
   .signup-prompt,
   .login-footer {
     display: none;
+  }
+
+  .registration-page .form-message,
+  .registration-page .signup-prompt {
+    display: flex;
   }
 
   .visual-panel {
