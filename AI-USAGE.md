@@ -70,6 +70,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
+| 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Docs de arquitetura e ADRs desatualizados (dbt, Silver, Gold, Metabase) e primeiro teste E2E |
 
 ---
 
@@ -314,6 +315,31 @@ separados e um PR.
 **Decisões tomadas pelo usuário depois da entrega**
 - O prazo de 75 dias do SLA de IPCA e salário mínimo foi mantido e registrado em `sla_e_freshness.md`, seção 5.
 - O Parquet e o raw legados da coleta do salário mínimo foram mantidos, por causa do loader da E1.
+
+---
+
+### 2026-11-09 (2) — Claude Code (Sonnet 5.5) — docs de arquitetura e ADRs desatualizados, e primeiro teste E2E
+
+**O que a ferramenta fez**
+- Atualizou, com diff mínimo por linha, as páginas que ainda chamavam dbt, Silver, Gold e painel de "planejados": `stackTecnologica.md`, `arquiteturaMedallion.md`, `visaoGeral.md`, `fluxoDados.md`, `componentes.md`, `contratoEtapas.md`, os rótulos "Streamlit" dos três diagramas SVG e os ADRs 0001 (`docs/arquitetura.md`), 0002 e 0003. O Metabase substituiu o Streamlit nas descrições.
+- Descobriu, ao conferir o código, que o ADR 0003 (calendário civil com `forward fill`) não está implementado na trilha atual: os carregadores legados foram removidos e a Silver mensal só conta os dias úteis publicados. O ADR foi corrigido para dizer isso, sem declarar a decisão superada.
+- Criou `tests/e2e/test_cadeia_salario_minimo.py` (6 testes): HTML do DIEESE até a consulta da P3 do painel, com o código real de Bronze, loader, dbt e cópia para o Postgres, e o IPCA sintético para ter um oráculo.
+- Registrou a cobertura E2E (o que existe e o que falta) nas release notes.
+
+**O que foi verificado e como**
+- `tests/e2e`: 6 passaram, com o Postgres do projeto no ar. Quebrar as fórmulas do modelo `fct_salario_minimo_mensal` de propósito fez 2 testes falharem; o modelo foi restaurado e os 6 voltaram a passar.
+- `mkdocs build --strict` sem erro depois das edições.
+- Cada afirmação nova de documento foi conferida no código (nomes de tabelas Delta, modelos da Gold, contagem de testes dbt, quais fontes ainda gravam `data/raw/`).
+
+**O que NÃO foi verificado**
+- `docs/fontes/*`, `docs/dicionario/*` (exceto o salário mínimo) e `docs/visaoGeral/onboarding.md` não foram revisados: podem ter as mesmas referências antigas.
+- A decisão formal da Squad no ADR 0001 (`Decisores`) não foi alterada: não há registro de aprovação.
+- O E2E do salário mínimo não cobre o IPCA real, o CDC nem um job do Dagster.
+- No volume de desenvolvimento do usuário, que não tem a migration `0004`, a suíte dá 327 passaram, 1 falha e 9 pulados (`test_renomear_na_cesta_...` e o CDC). Num Postgres descartável com todas as migrations: 337 passaram, 0 pulados. A `0004` não foi aplicada ao volume do usuário: não foi pedida.
+
+**Decisões que continuam sendo da Squad**
+- Marcar o ADR 0003 como superado pelo grão mensal ou reimplementar o calendário civil no dbt.
+- Estender o E2E (IPCA, lojista e isolamento) na E4.
 
 ---
 

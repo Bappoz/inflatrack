@@ -68,7 +68,20 @@ Verificado em 2026-11-09, numa cópia isolada da árvore de trabalho com dados r
 
 O Parquet e o HTML legados que a coleta do salário mínimo ainda grava em `data/parquet/dieese/` e `data/raw/dieese/` foram **mantidos** de propósito (decisão de 2026-11-09): o loader do DuckDB os usa para as tabelas da E1. O prazo de 75 dias do SLA de IPCA/INPC e do salário mínimo também foi confirmado (ver [SLA e frescura](sla_e_freshness.md#5-decisoes-registradas)).
 
-Continuam abertas as medições do clima no pipeline, `tests/e2e/` e os diários de bordo que faltam.
+Continuam abertas as medições do clima no pipeline e os diários de bordo que faltam.
+
+### Cobertura ponta a ponta (`tests/e2e/`)
+
+`tests/e2e/` estava vazio. Agora `test_cadeia_salario_minimo.py` roda a cadeia do salário mínimo com o código real: HTML da fixture, Bronze Delta, loader, `dbt build` (modelos e testes) em subprocesso, cópia para o Postgres e a consulta da P3 do painel. Só o IPCA é sintético, com um índice conhecido, para conferir o resultado do dbt contra uma conta feita em Python. Quebrar de propósito as fórmulas do modelo derrubou os testes de reajuste e de valor corrigido.
+
+| Regra do Nível 5 do plano | Situação |
+|---|---|
+| Mesma métrica, mesmo valor (DuckDB, `serie` e painel) | Coberta para o salário mínimo: Gold, cópia no Postgres e consulta do painel dão as mesmas linhas. Falta para as demais métricas |
+| Isolamento entre lojista e dados oficiais | Só por linhagem (`tests/orchestration/test_ipca_transacional.py`) e pelo teste dbt `assert_fct_inflacao_sem_vazamento_de_lojista`. Não há E2E que altere um preço no Postgres do lojista e confira as tabelas oficiais |
+| Validação *walk-forward* do modelo | E4 (o modelo ainda não existe) |
+| ETL reverso e controle de acesso por lojista (RLS) | E4 |
+
+Também não há E2E do IPCA (da coleta à Gold), do CDC até a Gold nem de um job do Dagster. Esses caminhos só foram exercitados na execução do zero de 2026-11-08 e na de 2026-11-09, feitas à mão.
 
 ## Fica para a E4
 
