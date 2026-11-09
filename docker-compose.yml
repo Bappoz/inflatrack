@@ -18,8 +18,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d:ro
+    # `-h 127.0.0.1`: na primeira subida o entrypoint roda as migrations num servidor temporário
+    # que só escuta o socket. Sem o host, o pg_isready diz "pronto" no meio das migrations e o
+    # `just up` devolve antes da hora (quem roda logo depois toma "database system is shutting
+    # down"). Pelo TCP, só o servidor definitivo responde. Visto num clone limpo em 2026-11-08.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inflatrack} -d ${POSTGRES_DB:-inflatrack}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-inflatrack} -d ${POSTGRES_DB:-inflatrack}"]
       interval: 5s
       timeout: 3s
       retries: 10
