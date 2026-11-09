@@ -104,6 +104,34 @@ def test_todo_ativo_que_escreve_no_duckdb_usa_o_pool():
             assert no.pools == {POOL_DUCKDB}, chave.to_user_string()
 
 
+def test_toda_carga_no_duckdb_roda_por_algum_job_agendado():
+    """Uma carga fora de todo job agendado deixa a Gold parada mesmo com a coleta rodando.
+
+    Foi o caso do IPCA: `ipca_job` só coletava, e nada levava o Delta para `bronze.*`.
+    `clima_medicoes_duckdb` fica de fora: chama o mesmo `load_clima` que `clima_duckdb`.
+    """
+    agendados = {agendamento.job_name for agendamento in SCHEDULES}
+    cobertas = set()
+    for job in defs.resolve_all_job_defs():
+        if job.name in agendados:
+            cobertas |= {c.to_user_string() for c in job.asset_layer.executable_asset_keys}
+
+    grafo = defs.resolve_asset_graph()
+    cargas = {
+        chave.to_user_string()
+        for chave in grafo.get_all_asset_keys()
+        if chave.to_user_string().endswith("_duckdb") and "dbt" not in grafo.get(chave).kinds
+    }
+    assert cargas - {"clima_medicoes_duckdb"} <= cobertas, cargas - cobertas
+
+
+def test_analitico_job_carrega_o_ipca_antes_do_dbt():
+    job = defs.resolve_job_def("analitico_job")
+    selecionadas = {c.to_user_string() for c in job.asset_layer.executable_asset_keys}
+    assert {"ipca_duckdb", "ipca_metadados_duckdb", "serie_postgres"} <= selecionadas
+    assert "gold/fct_inflacao_mensal" in selecionadas
+
+
 def test_dependencias_e_configuracao_dolar_e_selic():
     """Valida o grafo de dependências, particionamento e pools de Dólar e Selic."""
     from dagster import AssetKey
@@ -150,3 +178,27 @@ def test_execucao_assets_dolar_e_selic_com_mock():
         asset_selic.selic_duckdb(ctx)
         mock_selic_main.assert_called_once_with([])
 
+
+def test_nenhum_job_roda_algo_abaixo_de_um_ativo_de_saida_opcional():
+    """Um ativo com `output_required=False` (IPCA, INPC, número-índice e PIB) só emite
+    `AssetMaterialization` das partições publicadas, sem `Output`. O Dagster então pula todo
+    passo do mesmo run que depende dele. Foi o caso do `pib_duckdb` dentro do `pib_job`:
+    `bronze.pib_valor` nunca era criada, e o `dbt build` caía no clone limpo (2026-11-08).
+    A carga desses ativos roda em outro job (`analitico_job`)."""
+    repositorio = defs.get_repository_def()
+    grafo = repositorio.asset_graph
+    opcionais = {
+        chave
+        for chave in grafo.get_all_asset_keys()
+        if (no := grafo.get(chave)).is_partitioned
+        and not all(saida.is_required for saida in no.assets_def.node_def.output_defs)
+    }
+    assert {"ipca", "pib_parquet"} <= {chave.to_user_string() for chave in opcionais}
+
+    for job in repositorio.get_all_jobs():
+        if job.name.startswith("__") or job.asset_layer is None:
+            continue
+        selecionados = job.asset_layer.selected_asset_keys
+        for chave in selecionados:
+            presos = grafo.get(chave).parent_keys & opcionais & selecionados
+            assert not presos, f"{job.name}: {chave.to_user_string()} depende de {presos}"

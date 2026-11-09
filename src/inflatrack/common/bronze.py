@@ -54,6 +54,11 @@ CAMPOS_METADADOS = [
 ]
 
 
+# Código de saída de um ingestor quando nenhum período pedido foi publicado ainda pela fonte.
+# Não é falha de rede: repetir na hora não adianta.
+SAIDA_NAO_DIVULGADO = 3
+
+
 class ChecagemError(ValueError):
     """A resposta não tem a forma esperada e não deve ser promovida à Bronze."""
 

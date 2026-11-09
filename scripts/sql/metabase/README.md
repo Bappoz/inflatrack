@@ -19,9 +19,18 @@ just metabase-painel                  # = uv run python scripts/metabase_painel.
 ```
 
 O script faz a configuração inicial do Metabase com esse login (se ainda não foi feita),
-cria a conexão com o Postgres (`db:5432`), a coleção **InflaTrack (versionado)**, as
-perguntas e o dashboard **InflaTrack — Painel do lojista**. Rodar de novo atualiza sem
-duplicar. Uma conexão já criada à mão é reaproveitada se apontar para o mesmo banco.
+garante no Postgres o usuário só-leitura do painel, cria a conexão com o Postgres
+(`db:5432`), a coleção **InflaTrack (versionado)**, as perguntas e o dashboard
+**InflaTrack — Painel do lojista**. Rodar de novo atualiza sem duplicar. Uma conexão já
+criada à mão é reaproveitada se apontar para o mesmo banco, e passa a usar o usuário leitor.
+
+### Com que usuário o Metabase lê o Postgres
+
+Nunca com o dono do banco (`POSTGRES_USER`): ele enxerga `public`, onde ficam os preços de
+cada loja. O script cria (ou atualiza a senha de) um login `METABASE_PG_USER`
+(padrão `metabase_painel`, senha `METABASE_PG_PASSWORD`) que só tem o papel
+`metabase_leitor` da migration 0005: `SELECT` em `serie` e nada mais. Quem faz isso é o script,
+e não uma migration, porque a senha vem do `.env` e não pode ir para o Git.
 
 ## Mudar ou criar uma pergunta
 
@@ -37,10 +46,18 @@ sobrescreve. Para rascunhos, use outra coleção.
 
 | Arquivo | Pergunta do projeto | Banco | Situação |
 |---|---|---|---|
-| `p1_inflacao_12m_por_setor.sql` | 1. Inflação acumulada do meu setor nos últimos 12 meses | Postgres | **Provisória:** lê o IPCA do Postgres até a `gold.fct_inflacao_mensal` existir |
+| `p1_inflacao_12m_por_setor.sql` | 1. Inflação acumulada do meu setor nos últimos 12 meses | Postgres | Lê `serie.fct_inflacao_mensal` + `serie.dim_cesta_ipca_scd2` |
+| `p2_sazonalidade_por_mes.sql` | 2. Sazonalidade e meses de pico da inflação | Postgres | Média por mês do ano, de jul/2006 em diante. **Falta** o efeito do clima (não chega à Gold; INMET exige token) |
+| `p3_poder_de_compra_desde_2006.sql` | 3. Poder de compra desde 2006 | Postgres | **Parcial:** só a inflação pelo número-índice (1737). Falta o salário mínimo do DIEESE na Gold |
+| `p4_brasil_x_regiao.sql` | 4. Brasil x praça do lojista, IPCA x INPC | Postgres | Último mês, todas as localidades |
+| `p4_brasil_ipca_x_inpc_5_anos.sql` | 4. (evolução) IPCA x INPC nos últimos 5 anos | Postgres | Brasil, 60 meses |
+| `p5_reajuste_minimo_por_produto.sql` | 5. Reajuste mínimo para não perder margem | Postgres | Visão interna (todas as lojas); por lojista depende do RLS da E4. A projeção (`recomendacao_reajuste`) é E4 |
 
-A `gold.fct_inflacao_mensal` já existe e é copiada para `serie.fct_inflacao_mensal`. A troca da
-pergunta 1 para ler de lá (filtrando `indice = 'IPCA'`) está pendente.
+A P2 e a P3 fazem um cálculo leve no próprio SQL (média por mês do ano e razão entre números-índice).
+É provisório: na E4 essas métricas vão para a camada semântica do dbt (`gold.sem_*`) e as perguntas
+passam só a ler o resultado.
+
+`tests/unit/test_metabase_painel.py` falha se alguma pergunta ler fora de `serie`.
 
 ## De onde o painel lê: só do Postgres
 

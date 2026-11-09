@@ -43,7 +43,7 @@ class AlphaVantageClient:
         """Busca uma commodity e devolve a resposta como veio, sem interpretar o corpo.
 
         Erro HTTP vira exceção. A cota esgotada chega com status 200 e é tratada por
-        quem interpreta o corpo (``ingest_commodities.validar``).
+        quem interpreta o corpo (``inflatrack.bronze.commodities.validar``).
         """
         self._rate_limit()
         params = {"function": function, "interval": interval, "apikey": self.api_key}

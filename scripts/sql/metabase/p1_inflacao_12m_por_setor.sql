@@ -1,37 +1,26 @@
 -- Metabase, pergunta 1 do projeto: "Qual foi a inflação acumulada do meu setor nos últimos
 -- 12 meses?" Uma linha por grupo do IPCA (o setor do lojista), Brasil, último mês divulgado.
 --
--- PROVISÓRIO (E3): lê o IPCA oficial que já está no Postgres (public.observacao), porque a
--- gold.fct_inflacao_mensal (Lucas) ainda não existe. Quando ela existir, esta pergunta passa a
--- ler a Gold. O acumulado vem pronto do IBGE (agregado 7060, variável 2265); nada é calculado
--- aqui. A observacao só acrescenta: se o IBGE revisou um valor, vale a linha mais recente.
+-- Lê só a vitrine `serie` (cópia da Gold feita pelo ativo serie_postgres). O acumulado de 12
+-- meses vem pronto da Gold (gold.fct_inflacao_mensal): o publicado pelo IBGE quando existe,
+-- calculado no dbt quando não (coluna origem_acum_12m). Nada é calculado aqui.
 --
--- Conferência (2026-10-30, dado até 09/2026): o produto das 12 variações mensais (variável 63)
--- dá o mesmo acumulado para o Índice geral (4,58%) e o Vestuário (3,34%); em Alimentação e
--- bebidas, 4,64% contra 4,66%, diferença do arredondamento das mensais a 2 casas.
+-- Conferência (2026-11-03, dado até 09/2026): Índice geral 4,58%, Alimentação e bebidas 4,66%
+-- e Vestuário 3,34%, os mesmos números da versão provisória que lia public.observacao.
 with ultimo_mes as (
     select max(mes_referencia) as mes
-    from observacao
-    where id_fonte = 7060 and codigo_variavel = 2265 and codigo_localidade = 1
-),
-valores as (
-    select distinct on (o.codigo_classificacao)
-        o.codigo_classificacao, o.mes_referencia, o.valor
-    from observacao o, ultimo_mes u
-    where o.id_fonte = 7060
-      and o.codigo_variavel = 2265
-      and o.codigo_localidade = 1
-      and o.mes_referencia = u.mes
-    order by o.codigo_classificacao, o.ingerido_em desc
+    from serie.fct_inflacao_mensal
+    where indice = 'IPCA' and codigo_localidade = 1 and nivel_categoria = 'geral'
 )
 select
-    v.nome as setor,
-    c.nivel,
-    round(x.valor, 2) as inflacao_12m_pct,
-    to_char(x.mes_referencia, 'MM/YYYY') as ate_o_mes
-from valores x
-join classificacao c on c.codigo = x.codigo_classificacao
-join classificacao_versao v
-    on v.codigo = x.codigo_classificacao and v.id_fonte = 7060 and v.vigencia_fim is null
-where c.nivel in ('geral', 'grupo')
-order by c.nivel = 'geral' desc, x.valor desc;
+    c.nome_categoria as setor,
+    f.nivel_categoria as nivel,
+    round(f.variacao_acum_12m_pct, 2) as inflacao_12m_pct,
+    to_char(f.mes_referencia, 'MM/YYYY') as ate_o_mes
+from serie.fct_inflacao_mensal f
+join ultimo_mes u on f.mes_referencia = u.mes
+join serie.dim_cesta_ipca_scd2 c on c.id_versao_cesta = f.id_versao_cesta
+where f.indice = 'IPCA'
+  and f.codigo_localidade = 1
+  and f.nivel_categoria in ('geral', 'grupo')
+order by f.nivel_categoria = 'geral' desc, f.variacao_acum_12m_pct desc;

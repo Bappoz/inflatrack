@@ -9,6 +9,7 @@ export DAGSTER_HOME := justfile_directory() / ".dagster"
 
 PG_USER := env("POSTGRES_USER", "inflatrack")
 PG_DB := env("POSTGRES_DB", "inflatrack")
+DAGSTER_PORT := env("DAGSTER_PORT", "3002")
 
 _default:
     @just --list
@@ -36,6 +37,10 @@ migrar arquivo:
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
+
+# Interface web do DuckDB (bronze/silver/gold) em http://localhost:4213, somente leitura. Ctrl+C encerra.
+duckdb-ui:
+    uv run python scripts/duckdb_ui.py
 
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
@@ -133,23 +138,22 @@ verificar-carga:
     docker compose cp scripts/sql/verificar_carga.sql db:/tmp/verificar_carga.sql
     docker compose exec -T db psql -U {{PG_USER}} -d {{PG_DB}} -f /tmp/verificar_carga.sql
 
-# Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
-pib-ingest de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.bronze.ingest_pib --de {{de}} --ate {{ate}}
-
-# Bronze do PIB em Delta (data/parquet/pib/): o mesmo ingestor grava pib_resposta e pib_valor.
+# Bronze do PIB em Delta (data/parquet/pib/): SIDRA 1846 -> pib_resposta e pib_valor. ~10 s.
 bronze-pib de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.bronze.ingest_pib --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.pib coletar --de {{de}} --ate {{ate}}
+
+# Alias antigo de bronze-pib (desde a E3 não há mais raw nem Parquet por ano).
+pib-ingest de="1996" ate=datetime("%Y"): (bronze-pib de ate)
 
 # Leva os .json.gz antigos de data/raw/pib_raw/ para as tabelas Delta. Reexecutável.
 bronze-pib-importar:
-    uv run python -m inflatrack.bronze.bronze_pib importar
+    uv run python -m inflatrack.bronze.pib importar
 
 # Trimestres, setores por trimestre e revisões de pib_valor. Sai com erro se houver buraco.
 bronze-pib-checar:
-    uv run python -m inflatrack.bronze.bronze_pib checar
+    uv run python -m inflatrack.bronze.pib checar
 
-# Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
+# Espelha o Delta do PIB em bronze.pib_valor no DuckDB.
 pib-load:
     uv run python -m inflatrack.loaders.load_pib
 
@@ -162,7 +166,10 @@ fmt:
 lint:
     uv run ruff check src/ orchestration/
 
+# O `dbt parse` refaz o target/manifest.json que os testes do Dagster leem: com ele velho (um .yml
+# do dbt mudou num pull), os testes caem com ativo faltando ou repetido (PLAN_E3_E4, Seção 6.3).
 test:
+    uv run dbt parse --quiet
     uv run pytest
 
 # O gate antes de dizer "pronto".
@@ -234,22 +241,22 @@ bronze-selic-checar:
 # Bronze de Macroeconomia em Delta (Dólar + Selic).
 bronze-macro: bronze-dolar bronze-selic
 
-# Carga isolada das Commodities (AlphaVantage -> DuckDB)
+# Carga isolada das Commodities (AlphaVantage -> Delta -> DuckDB). Gasta 9 das 25 req./dia.
 seed-commodities:
-    uv run python -m inflatrack.bronze.ingest_commodities --commodity ALL --modo historico
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
     uv run python -m inflatrack.loaders.load_commodities
 
 # Bronze das commodities em Delta (data/parquet/commodities/). Gasta 9 das 25 req./dia.
 bronze-commodities:
-    uv run python -m inflatrack.bronze.ingest_commodities --commodity ALL
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
 
 # Leva os .json.gz antigos de data/raw/commodities_raw/ para as tabelas Delta. Sem requisição.
 bronze-commodities-importar:
-    uv run python -m inflatrack.bronze.ingest_commodities importar
+    uv run python -m inflatrack.bronze.commodities importar
 
 # Símbolos, volume e datas repetidas de commodities_cotacao.
 bronze-commodities-checar:
-    uv run python -m inflatrack.bronze.ingest_commodities checar
+    uv run python -m inflatrack.bronze.commodities checar
 
 # CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
 bronze-transacional:
@@ -322,9 +329,9 @@ bronze-clima-checar:
 bronze-clima-load modo="substitui":
     uv run python -m inflatrack.loaders.load_clima --modo {{modo}}
 
-# Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
+# Dagster: interface em http://localhost:3002 (DAGSTER_PORT no .env), histórico em .dagster/.
 orquestrador:
-    uv run dagster dev
+    uv run dagster dev --port {{DAGSTER_PORT}}
 
 # Materializa um job sem subir a interface. Ex.: just materializar macro_job
 materializar job:

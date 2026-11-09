@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Tabelas que recebem as Contas Nacionais Trimestrais do IBGE (agregado 1846, variável 585, classificação `c11255`). Esquema definido em `scripts/setup_duckdb_pib.sql` e aplicado por `scripts/init_db.py`; as linhas vêm de `src/inflatrack/load_pib.py`, a partir do Parquet gerado por `src/inflatrack/ingest_pib.py`.
+Tabelas que recebem as Contas Nacionais Trimestrais do IBGE (agregado 1846, variável 585, classificação `c11255`). Esquema definido em `scripts/setup_duckdb_pib.sql` e aplicado por `scripts/init_db.py`; as linhas vinham de `src/inflatrack/load_pib.py`, a partir do Parquet gerado por `src/inflatrack/ingest_pib.py`. **Desde a E3 este esquema é legado:** a coleta é `src/inflatrack/bronze/pib.py` (só Delta), o loader `src/inflatrack/loaders/load_pib.py` grava `bronze.pib_valor` e a Silver é `silver.stg_pib__valor` / `silver.int_pib__mensal` no dbt.
 
 Esta é uma das fontes **analíticas**, que não vivem no PostgreSQL. Fica no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo das [commodities](commodities.md), das [séries do BCB](macroeconomia.md) e do [PIB da China](pib_china.md) — ver [ADR 0002](../adr/0002-duckdb-unico.md). O critério não foi volume (2.806 linhas), e sim padrão de acesso: a pergunta do InflaTrack cruza fontes, e num arquivo só isso é `JOIN`.
 
@@ -125,7 +125,7 @@ Formato largo, **uma linha por trimestre**, uma coluna DOUBLE por categoria do n
 
 ## Bronze em Delta
 
-Desde a E2, `ingest_pib.py` grava também duas tabelas Delta em `data/parquet/pib/`. A evidência está em [evidencias/e2/pib.md](../evidencias/e2/pib.md).
+Desde a E2, a coleta grava duas tabelas Delta (desde a E3, `bronze/pib.py`, só elas) em `data/parquet/pib/`. A evidência está em [evidencias/e2/pib.md](../evidencias/e2/pib.md).
 
 | Tabela | Uma linha por | Volume (2026-10-13) |
 |---|---|---|

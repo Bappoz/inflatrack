@@ -2,10 +2,27 @@
 
 import httpx
 import pytest
-from dagster import AssetKey, RetryPolicy, asset, instance_for_test, materialize
+from dagster import (
+    AssetKey,
+    BackfillPolicy,
+    MonthlyPartitionsDefinition,
+    RetryPolicy,
+    asset,
+    instance_for_test,
+    materialize,
+)
+from dagster._core.storage.tags import (
+    ASSET_PARTITION_RANGE_END_TAG,
+    ASSET_PARTITION_RANGE_START_TAG,
+)
 
 from orchestration.assets import commodities, dolar, pib, selic
-from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
+from orchestration.assets.comum import (
+    POOL_DUCKDB,
+    RETRY_REDE,
+    executar,
+    materializar_coletadas,
+)
 from orchestration.definitions import defs
 
 GRAFO = defs.get_repository_def().asset_graph
@@ -106,3 +123,52 @@ def test_sem_retry_a_falha_da_api_derruba_o_ativo() -> None:
     with instance_for_test() as instancia:
         resultado = materialize([ingestao_sem_retry], instance=instancia, raise_on_error=False)
     assert not resultado.success
+
+
+MESES = MonthlyPartitionsDefinition(start_date="2026-01-01")
+INTERVALO = {
+    ASSET_PARTITION_RANGE_START_TAG: "2026-08-01",
+    ASSET_PARTITION_RANGE_END_TAG: "2026-10-01",
+}
+
+
+def _ativo_que_coleta(publicadas: list[str], chamadas: list[str]):
+    @asset(
+        partitions_def=MESES,
+        backfill_policy=BackfillPolicy.single_run(),
+        retry_policy=RetryPolicy(max_retries=RETRY_REDE.max_retries, delay=0),
+        output_required=False,
+    )
+    def coleta(context):
+        chamadas.append(context.partition_key_range)
+        yield from materializar_coletadas(context, publicadas)
+
+    return coleta
+
+
+def test_backfill_materializa_so_as_particoes_publicadas() -> None:
+    """Outubro ainda não saiu: agosto e setembro ficam verdes, outubro fica pendente (nem
+    materializado, nem falho), e o agendamento continua pedindo por ele."""
+    chamadas: list = []
+    ativo = _ativo_que_coleta(["2026-08-01", "2026-09-01"], chamadas)
+
+    with instance_for_test() as instancia:
+        resultado = materialize([ativo], instance=instancia, tags=INTERVALO)
+        materializadas = instancia.get_materialized_partitions(ativo.key)
+
+    assert resultado.success
+    assert sorted(materializadas) == ["2026-08-01", "2026-09-01"]
+
+
+def test_nada_publicado_falha_sem_gastar_retry() -> None:
+    """Esperar 30 s ou 90 s não faz o IBGE publicar: uma tentativa só."""
+    chamadas: list = []
+    ativo = _ativo_que_coleta([], chamadas)
+
+    with instance_for_test() as instancia:
+        resultado = materialize([ativo], instance=instancia, tags=INTERVALO, raise_on_error=False)
+        materializadas = instancia.get_materialized_partitions(ativo.key)
+
+    assert not resultado.success
+    assert len(chamadas) == 1
+    assert materializadas == set()

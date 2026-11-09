@@ -13,49 +13,48 @@ ALPHAVANTAGE_API_KEY=sua_chave_aqui
 
 > **Nota:** O plano gratuito da API possui um limite de 25 requisições por dia. O pipeline já está configurado para respeitar automaticamente a taxa de requisições permitidas por minuto (~13s entre cada requisição).
 
-## 2. Inicialização do Banco de Dados
+## 2. Bronze em Delta (coleta)
 
-Não há passo manual: a carga (`load_commodities`, etapa 4) aplica `scripts/setup_duckdb.sql` antes de gravar, e cria o arquivo `data/duckdb/inflatrack.duckdb`, as tabelas `commodity` (dimensão) e `commodity_cotacao` (fatos) e as views `vw_features_daily` e `vw_features_monthly` se ainda não existirem. O script é idempotente, então rodar de novo não apaga dado.
+`src/inflatrack/bronze/commodities.py` consulta a API pelo cliente `src/inflatrack/clients/alphavantage.py`, checa a resposta (cota esgotada, série vazia, volume mínimo) e grava duas tabelas Delta em `data/parquet/commodities/`:
 
-Para preparar todas as fontes do DuckDB de uma vez, sem carregar dados, ainda é possível rodar:
+* `resposta/`: a resposta original, deduplicada pelo hash SHA-256;
+* `cotacao/`: uma linha por data, particionada por `symbol`. A partição do símbolo é substituída quando a série muda.
+
+Desde a E3 não há mais `data/raw/commodities_raw/` nem Parquet por commodity na raiz de `data/parquet/`.
+
+Todas as commodities (9 requisições da cota diária):
 
 ```bash
-uv run python scripts/init_db.py
+just bronze-commodities
+# ou: uv run python -m inflatrack.bronze.commodities --commodity ALL
 ```
 
-## 3. Ingestão dos Dados (Raw / Parquet)
+Uma só (ex.: Petróleo Brent):
 
-O script de ingestão consulta a API, grava a resposta crua em `data/raw/commodities_raw/` (JSON gzip) e só depois transforma esse arquivo cru em `.parquet` dentro de `data/parquet/`.
-
-Para baixar o histórico de **todas** as commodities configuradas (este comando consumirá 9 requisições da sua cota diária):
 ```bash
-uv run python -m inflatrack.ingest_commodities --commodity ALL --modo historico
-```
-
-Se desejar realizar a ingestão de uma **commodity específica** (ex: Petróleo Brent):
-```bash
-uv run python -m inflatrack.ingest_commodities --commodity BRENT --modo historico
+uv run python -m inflatrack.bronze.commodities --commodity BRENT
 ```
 
 *Os símbolos disponíveis são:* `WTI`, `BRENT`, `NATURAL_GAS`, `WHEAT`, `CORN`, `COTTON`, `SUGAR`, `COFFEE`, e `ALL_COMMODITIES` (índice global).
 
-## 4. Carga para o Banco (DuckDB)
-
-Após extrair os dados e salvá-los no formato `.parquet`, é necessário carregá-los para as tabelas do banco DuckDB. 
-O script de carga processa automaticamente todos os parquets existentes em `data/parquet/` e realiza a atualização e inserção (*UPSERT*) nos dados finais:
+Checagem da Bronze gravada (símbolos, volume e datas repetidas), sem requisição:
 
 ```bash
-uv run python -m inflatrack.load_commodities
+just bronze-commodities-checar
 ```
 
-## 5. Validação dos Dados
+## 3. Carga no DuckDB (`bronze.commodities_cotacao`)
 
-Com os dados carregados, eles já estarão disponíveis, transpostos e estruturados como colunas, prontos para uso em Machine Learning pelo formato *Wide*.
-Caso deseje testar a visualização dos dados via Python, você pode rodar o seguinte teste:
+`src/inflatrack/loaders/load_commodities.py` espelha o Delta em `bronze.commodities_cotacao`, criando a tabela com o esquema do próprio Delta (`common.bronze.carregar_duckdb`). Rodar duas vezes não duplica linhas.
 
-```python
-import duckdb
-conn = duckdb.connect("data/duckdb/inflatrack.duckdb")
-df = conn.execute("SELECT * FROM vw_features_daily ORDER BY data_referencia DESC LIMIT 5").df()
-print(df)
+```bash
+uv run python -m inflatrack.loaders.load_commodities
+```
+
+## 4. Silver no dbt
+
+`silver.stg_commodities__cotacao` limpa a série e `silver.int_commodities__mensal` resume cada commodity no grão mensal (`mes_referencia` no dia 1):
+
+```bash
+uv run dbt build --select +int_commodities__mensal
 ```

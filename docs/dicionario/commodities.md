@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Tabelas que recebem as séries de preço de energia e agrícolas da Alpha Vantage. Esquema definido em `scripts/setup_duckdb.sql` e aplicado pela própria carga; as linhas vêm de `src/inflatrack/load_commodities.py`, a partir dos Parquet gerados por `src/inflatrack/ingest_commodities.py`.
+Tabelas que recebem as séries de preço de energia e agrícolas da Alpha Vantage. Esquema definido em `scripts/setup_duckdb.sql` e aplicado pela própria carga; as linhas vinham de `src/inflatrack/load_commodities.py`, a partir dos Parquet gerados por `src/inflatrack/ingest_commodities.py`. **Desde a E3 este esquema é legado:** a coleta é `src/inflatrack/bronze/commodities.py` (só Delta), o loader `src/inflatrack/loaders/load_commodities.py` grava `bronze.commodities_cotacao` e a Silver é `silver.stg_commodities__cotacao` / `silver.int_commodities__mensal` no dbt.
 
 Vive no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo do PIB e das séries do Banco Central — ver [ADR 0002](../adr/0002-duckdb-unico.md).
 
@@ -108,7 +108,7 @@ Uma linha por mês, sempre no dia 1, com as séries agrícolas e o índice globa
 
 ## Bronze em Delta
 
-Desde a E2, `ingest_commodities.py` grava também duas tabelas Delta em `data/parquet/commodities/`. A evidência está em [evidencias/e2/commodities.md](../evidencias/e2/commodities.md).
+Desde a E2, a coleta grava duas tabelas Delta (desde a E3, `bronze/commodities.py`, só elas) em `data/parquet/commodities/`. A evidência está em [evidencias/e2/commodities.md](../evidencias/e2/commodities.md).
 
 | Tabela | Uma linha por | Volume (2026-10-13) |
 |---|---|---|

@@ -1,22 +1,26 @@
-"""Bronze do PIB e setores (SIDRA 1846): tabela de respostas e tabela extraída, em Delta.
+"""Bronze do PIB e setores (SIDRA 1846): coleta e as duas tabelas Delta, num ponto só.
 
 ::
 
     data/parquet/pib/resposta/   pib_resposta   uma linha por resposta DIFERENTE
     data/parquet/pib/valor/      pib_valor      uma linha por valor da resposta
 
-Primeira fonte a usar o helper comum :mod:`inflatrack.bronze`. ``pib_valor`` guarda
-todas as linhas da resposta, com o código e o nome do setor como o SIDRA manda e o
-texto original em ``valor_bruto``. ``grupo``, ``nucleo``, ``ano`` e ``trimestre`` são
-regras de negócio e ficam para o dbt.
+O cliente HTTP fica em :mod:`inflatrack.clients.pib` e :mod:`inflatrack.clients.sidra`;
+este módulo só coleta, checa e grava no Delta. ``pib_valor`` guarda todas as linhas da
+resposta, com o código e o nome do setor como o SIDRA manda e o texto original em
+``valor_bruto``. ``grupo``, ``nucleo``, ``ano`` e ``trimestre`` são regras de negócio e
+ficam para o dbt.
 
 Só acrescenta: cada divulgação do IBGE revisa trimestres anteriores, e a revisão entra
-como linha nova, sem apagar a anterior. Reexecutar sem revisão não grava nada.
+como linha nova, sem apagar a anterior. Reexecutar sem revisão não grava nada. Desde a E3
+não há mais ``data/raw/pib_raw/`` nem Parquet por ano: a resposta original fica em
+``pib_resposta``.
 
 Uso::
 
-    uv run python -m inflatrack.bronze_pib importar --raw-dir data/raw/pib_raw
-    uv run python -m inflatrack.bronze_pib checar
+    uv run python -m inflatrack.bronze.pib coletar --de 1996 --ate 2026
+    uv run python -m inflatrack.bronze.pib importar --raw-dir data/raw/pib_raw
+    uv run python -m inflatrack.bronze.pib checar
 """
 
 from __future__ import annotations
@@ -26,7 +30,7 @@ import json
 import logging
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -34,10 +38,11 @@ from pathlib import Path
 import httpx
 import pyarrow as pa
 
-from inflatrack import bronze, pib, sidra
-from inflatrack.bronze import ChecagemError
+from inflatrack.clients import pib, sidra
+from inflatrack.common import bronze
+from inflatrack.common.bronze import ChecagemError
 
-logger = logging.getLogger("inflatrack.bronze_pib")
+logger = logging.getLogger("inflatrack.bronze.pib")
 
 FONTE = "pib"
 DIRETORIO_PADRAO = "data/parquet/pib"
@@ -72,6 +77,8 @@ class Gravacao:
     respostas_novas: int
     linhas_lidas: int
     linhas_novas: int
+    # Anos que vieram com dado nesta coleta (o Dagster materializa só as partições deles).
+    anos: tuple[int, ...] = ()
 
 
 def _decimal(texto: str) -> Decimal | None:
@@ -287,6 +294,57 @@ def resumo_da_bronze(destino: Path) -> dict:
     }
 
 
+# --- Coleta ---------------------------------------------------------------------
+
+
+def coletar(destino: Path, de: int, ate: int) -> Gravacao:
+    """Baixa os anos ``de``..``ate`` do SIDRA e grava as duas tabelas Delta.
+
+    Os metadados vêm primeiro (são a origem dos nomes dos setores). Cada ano é checado
+    antes de qualquer escrita: um ano reprovado aborta a coleta inteira e nenhum valor é
+    gravado. Só o ano corrente pode vir vazio (o 1º trimestre sai em junho): ele é pulado e
+    fica fora de ``Gravacao.anos``.
+    """
+    ingerido_em = datetime.now(UTC)
+    respostas: list[tuple[int, bronze.Resposta]] = []
+    with httpx.Client() as cliente:
+        resposta_metadados = sidra.buscar_metadados_resposta(cliente, pib.AGREGADO)
+        metadados = guardar_metadados(destino, resposta_metadados, ingerido_em)
+        for ano in range(de, ate + 1):
+            resposta = sidra.buscar_resposta(
+                cliente,
+                pib.AGREGADO,
+                pib.periodo_do_ano(ano),
+                niveis=pib.NIVEIS,
+                classificacao=pib.CLASSIFICACAO,
+            )
+            payload = resposta.json()
+            if not payload:
+                if ano == ingerido_em.year:
+                    logger.info("%d: sem dados publicados, ignorado", ano)
+                    continue
+                raise ChecagemError(f"{ano}: resposta vazia para um ano que já passou")
+            checar(transformar(payload, {}), ano, ingerido_em.date())
+            respostas.append((ano, resposta))
+
+    gravacao = gravar_anos(destino, respostas, nomes_dos_setores(metadados), ingerido_em)
+    logger.info(
+        "pib: %d respostas novas de %d; pib_valor com %d de %d linhas novas",
+        gravacao.respostas_novas,
+        len(respostas),
+        gravacao.linhas_novas,
+        gravacao.linhas_lidas,
+    )
+    return replace(gravacao, anos=tuple(ano for ano, _ in respostas))
+
+
+def _comando_coletar(args: argparse.Namespace) -> int:
+    if args.de > args.ate:
+        raise ChecagemError("--de não pode ser maior que --ate")
+    coletar(Path(args.parquet_dir), args.de, args.ate)
+    return 0
+
+
 def _comando_importar(args: argparse.Namespace) -> int:
     with httpx.Client() as cliente:
         metadados = sidra.buscar_metadados_resposta(cliente, pib.AGREGADO)
@@ -311,6 +369,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--parquet-dir", default=DIRETORIO_PADRAO)
     comandos = parser.add_subparsers(dest="comando", required=True)
+
+    coleta = comandos.add_parser("coletar", help="baixa um intervalo de anos do SIDRA 1846")
+    coleta.add_argument("--de", type=int, default=1996, metavar="AAAA", help="ano inicial")
+    coleta.add_argument(
+        "--ate", type=int, default=date.today().year, metavar="AAAA", help="ano final"
+    )
+    coleta.set_defaults(funcao=_comando_coletar)
 
     importar = comandos.add_parser("importar", help="leva data/raw/pib_raw/ para o Delta")
     importar.add_argument("--raw-dir", default="data/raw/pib_raw")
