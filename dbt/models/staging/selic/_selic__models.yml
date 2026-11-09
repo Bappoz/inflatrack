@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_selic__taxa_diaria
+    description: >
+      Uma linha por dia útil com a taxa Selic apurada pelo BACEN (SGS série 11).
+      Contém a taxa diária, anualizada e o fator multiplicador para capitalização composta.
+    columns:
+      - name: data_referencia
+        description: Data da apuração da taxa (dia útil).
+        data_tests:
+          - not_null
+          - unique
+      - name: ano
+        data_tests: [not_null]
+      - name: taxa_dia_pct
+        description: "Taxa de juros do dia útil em porcentagem (ex: 0.040183%)."
+        data_tests: [not_null]
+      - name: taxa_anualizada_pct
+        description: "Taxa anualizada base 252 dias úteis em porcentagem (ex: 10.65%)."
+        data_tests: [not_null]
+      - name: fator_diario
+        description: Fator de capitalização diária (1 + taxa_dia_pct / 100).
+        data_tests: [not_null]
+      - name: _ingerido_em
+        data_tests: [not_null]

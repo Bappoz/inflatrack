@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_pib__valor
+    description: >
+      Uma linha por setor x trimestre do SIDRA 1846 (valores correntes, milhões de R$),
+      na versão mais recente coletada. As revisões anteriores continuam na Bronze.
+    columns:
+      - name: trimestre_inicio
+        description: Primeiro dia do trimestre (1T = jan, 2T = abr, 3T = jul, 4T = out).
+        data_tests: [not_null]
+      - name: codigo_setor
+        data_tests: [not_null]
+      - name: valor_milhoes_brl
+        description: NULL quando o SIDRA mandou um marcador (texto original em valor_bruto).
+      - name: versoes_coletadas
+        description: Quantas versões desse setor x trimestre a Bronze tem (1 = nunca revisado).

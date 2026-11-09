@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_commodities__cotacao
+    description: >
+      Uma linha por symbol x data das 9 séries da Alpha Vantage, com o marcador "."
+      como preco NULL e observado = false. Três séries são diárias (WTI, BRENT,
+      NATURAL_GAS) e seis são mensais, sempre no dia 01.
+    columns:
+      - name: symbol
+        data_tests: [not_null]
+      - name: data_referencia
+        data_tests: [not_null]
+      - name: observado
+        description: false quando a origem mandou o marcador "." (preço ausente).
+        data_tests: [not_null]

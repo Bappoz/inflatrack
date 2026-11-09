@@ -1,0 +1,14 @@
+# Conexão do dbt com o DuckDB analítico único (ADR 0002). Fica na raiz do repositório:
+# o dbt procura o profiles.yml no diretório atual antes de ~/.dbt/, então basta rodar
+# `uv run dbt build` (ou `just dbt`) a partir da raiz.
+#
+# DBT_DUCKDB_PATH troca o arquivo (testes e snapshot do Metabase, por exemplo).
+
+inflatrack:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'data/duckdb/inflatrack.duckdb') }}"
+      schema: main
+      threads: 4

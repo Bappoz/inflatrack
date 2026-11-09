@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: int_clima__anomalia_mensal
+    description: >
+      Uma linha por estação x mês (mes_referencia = YYYY-MM-01), sem buracos entre o
+      primeiro e o último mês observado. Médias, desvios, acumulado de chuva e lags
+      t-1, t-2 e t-3; meses sem registros ficam com métricas nulas e contagem zero.
+    columns:
+      - name: estacao_id
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: dias_com_registro
+        data_tests: [not_null]
+      - name: dias_com_temperatura
+        data_tests: [not_null]

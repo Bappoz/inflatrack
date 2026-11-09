@@ -45,13 +45,13 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 | :--- | :--- |
 | **Conjunto de dados** | Séries Históricas de Dados Climáticos e Meteorológicos Diários (Raw / Silver) |
 | **Fonte de origem** *(nº da aba 1)* | INMET - Instituto Nacional de Meteorologia |
-| **Formato atual** | `.json.gz` na camada raw (`data/raw/inmet/`), `.parquet` na camada silver (`data/parquet/clima/`) e tabelas `estacao_meteorologica` e `clima_diario` no DuckDB analítico compartilhado (`data/duckdb/inflatrack.duckdb`). |
+| **Formato atual** | Respostas e tabelas tipadas em Delta (`data/parquet/clima/resposta/`, `estacao/` e `medicao/`), espelhadas no schema `bronze` do DuckDB; dbt consolida as leituras em `silver.int_clima__anomalia_mensal`. |
 | **Texto ou binário** | Binário (o raw é JSON comprimido em gzip; Parquet e DuckDB são formatos binários colunares de alto desempenho). |
 | **Orientação** *(linha / coluna / não se aplica)* | Coluna (no DuckDB e no Parquet, otimizado para agregações temporais e espaciais de chuva e temperatura). |
 | **Tamanho estimado** *(em 1 ano)* | Raw: ~120 MB / ano comprimido. Silver (DuckDB/Parquet colunar): ~30 a 50 MB / ano considerando as estações ativas agregadas por dia. |
 | **Como é lido** *(registro inteiro / poucas colunas / busca por chave)* | Poucas colunas (`data_referencia`, `estacao_id`, `precipitacao`, `temp_max`, `temp_min`) em agregações regionais e filtros temporais, além de buscas por chave no `JOIN` com cotações de commodities. |
 | **Frequência de leitura** | Alta (lido intensivamente no pipeline de features dos modelos preditivos de commodities e em notebooks de análise causal de preços de alimentos). |
-| **Formato proposto** | Manter o padrão Medallion do repositório: arquivos brutos `.json.gz` particionados por data na camada raw, transformação colunar em Parquet particionado e carregamento incremental idempotente na tabela `clima_diario` no DuckDB. |
+| **Formato proposto** | Delta Lake append-only para respostas e versões de leituras; DuckDB `bronze.*` como espelho recriável e dbt Silver mensal com métricas e lags por estação. |
 | **Justificativa da escolha** | Segue o [ADR 0002](../adr/0002-duckdb-unico.md). Manter o clima no mesmo DuckDB analítico compartilhado permite junções diretas entre cotações de commodities (`commodity_cotacao`), o IPCA de alimentos (`observacao`) e as anomalias de chuva/temperatura em uma única consulta SQL, sem latência de rede. |
 | **Ganho esperado** *(se houver troca)* | Alta compressão colunar, agregações temporais (médias móveis de 30 dias de chuva acumulada) calculadas em poucos milissegundos via SQL vetorial. |
 
@@ -61,10 +61,10 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 
 ### Taxa de escrita
 
-- **Carga histórica:** Coleta em lote por estação ou blocos de períodos via API / BDMEP do INMET, materializando o histórico recente no raw e inserindo no DuckDB via `UPSERT` idempotente.
-- **Regime:** 1 rodada diária consultando as medições consolidadas do dia anterior de ~600 estações operantes (~600 linhas diárias na tabela silver, ~18.000 linhas/mês).
-- **Escrita real vs. custo de coleta:** A rodada diária baixa ~300-400 KB de JSONs da API, arquiva o raw comprimido e faz `UPSERT` por `(estacao_id, data_referencia)` na base analítica.
-- **Escrita transacional:** Nenhuma. Carga em lote (batch diário), idempotente com resolução de conflito (`ON CONFLICT DO UPDATE`).
+- **Carga histórica:** Coleta por estação e intervalo explícitos via cliente INMET, gravando as respostas e medições no Delta.
+- **Regime:** O catálogo pode ser sincronizado pelo Dagster; medições são uma execução manual configurável até ser concluído o mapeamento e validado o endpoint.
+- **Escrita real vs. custo de coleta:** Cada payload JSON é arquivado em `resposta/` e cada medição tipada em `medicao/`; reexecuções não duplicam leituras idênticas e revisões ficam preservadas.
+- **Escrita transacional:** Nenhuma. O loader espelha a tabela Delta em `bronze.clima_medicao`; a Silver escolhe a revisão mais recente por estação e dia.
 
 ### Taxa de leitura e padrão de acesso
 
@@ -84,3 +84,15 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 - **Paginação e limites temporais por requisição:** Consultas históricas extensas na API exigem particionamento em blocos temporais menores (*chunks* de até 1 ano por estação), evitando requisições muito pesadas que provoquem *timeouts* no servidor do instituto.
 - **Heterogeneidade de estações:** A malha do INMET compreende estações **automáticas** (telemetria digital contínua) e **convencionais** (leituras analógicas manuais). O pipeline prioriza estações automáticas pela maior granularidade e menor latência de publicação.
 - **Necessidade de mapeamento espacial:** As medições climáticas precisam ser vinculadas geograficamente aos municípios e polos agrícolas produtores de commodities (via metadados cadastrais de estações: código, latitude, longitude e estado).
+
+## 5. Modelo mensal e vínculo com o IPCA
+
+`silver.int_clima__anomalia_mensal` apresenta uma linha por estação x mês, com médias,
+desvios-padrão, precipitação acumulada, contagem de dias e defasagens de um a três meses.
+O relacionamento manual com as localidades do IPCA fica em
+`dbt/seeds/seed_de_para_estacao_localidade.csv` e é conferido contra o catálogo fixado em
+`tests/fixtures/clima/estacoes.json`. O fixture não contém estação em Fortaleza; por isso, essa
+localidade permanece sem vínculo até que uma estação adequada seja confirmada.
+
+O parser converte sentinelas `-9999`, `9999` e `9999.9` em `NULL`, preservando zero como leitura
+válida. A disponibilidade e o formato do endpoint de medições ainda precisam de validação externa.

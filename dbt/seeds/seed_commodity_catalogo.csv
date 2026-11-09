@@ -1,0 +1,10 @@
+symbol,nome,categoria,unidade,intervalo
+WTI,Petróleo WTI,Energia,USD/barrel,daily
+BRENT,Petróleo Brent,Energia,USD/barrel,daily
+NATURAL_GAS,Gás Natural,Energia,USD/MMBtu,daily
+WHEAT,Trigo,Agrícola,USD/metric ton,monthly
+CORN,Milho,Agrícola,USD/metric ton,monthly
+COTTON,Algodão,Agrícola,cents/pound,monthly
+SUGAR,Açúcar,Agrícola,cents/pound,monthly
+COFFEE,Café,Agrícola,cents/pound,monthly
+ALL_COMMODITIES,Índice Global,Geral,index (2016=100),monthly

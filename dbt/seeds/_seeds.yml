@@ -1,0 +1,116 @@
+version: 2
+
+seeds:
+  - name: seed_pib_setor_catalogo
+    description: >
+      As 23 categorias da classificação c11255 da tabela 1846 do SIDRA (Contas Nacionais
+      Trimestrais). Uma linha por setor. Gerado de inflatrack.clients.pib (GRUPOS e
+      NUCLEO) com o nome mais recente que o SIDRA devolveu na Bronze.
+    config:
+      column_types:
+        codigo_setor: varchar
+        nome_setor: varchar
+        grupo: varchar
+        nucleo: boolean
+    columns:
+      - name: codigo_setor
+        description: Id interno da categoria no SIDRA (o mesmo devolvido em D4C).
+        data_tests: [unique, not_null]
+      - name: nome_setor
+        data_tests: [not_null]
+      - name: grupo
+        description: >
+          Família da categoria. As três não se somam entre si: atividade (valor
+          adicionado), demanda (ótica da despesa) e agregado (PIB, VA, impostos).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [atividade, demanda, agregado]
+      - name: nucleo
+        description: Entra no recorte de pressão direta sobre o preço ao consumidor.
+        data_tests: [not_null]
+
+  - name: seed_commodity_catalogo
+    description: >
+      As 9 séries da Alpha Vantage coletadas pelo InflaTrack. Uma linha por commodity.
+      A unidade segue a que a própria API devolve na Bronze.
+    config:
+      column_types:
+        symbol: varchar
+        nome: varchar
+        categoria: varchar
+        unidade: varchar
+        intervalo: varchar
+    columns:
+      - name: symbol
+        data_tests: [unique, not_null]
+      - name: intervalo
+        description: Frequência da série na origem.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [daily, monthly]
+
+  - name: seed_localidade_ibge
+    description: As 17 localidades medidas pelo IPCA (Brasil, regiões metropolitanas e capitais).
+    config:
+      column_types:
+        codigo_localidade: integer
+        nome_localidade: varchar
+        tipo_localidade: varchar
+        uf: varchar
+    columns:
+      - name: codigo_localidade
+        data_tests: [unique, not_null]
+
+  - name: seed_variavel_sidra
+    description: >
+      Traduz o código da variável do SIDRA para a medida. O IPCA e o INPC têm códigos diferentes
+      para a mesma medida (variação mensal: 63 no IPCA, 44 no INPC).
+    config:
+      column_types:
+        codigo_variavel: integer
+        indice: varchar
+        medida: varchar
+        nome_variavel: varchar
+    columns:
+      - name: codigo_variavel
+        data_tests: [unique, not_null]
+
+  - name: seed_agregado_sidra
+    description: >
+      Uma linha por agregado do SIDRA: o índice e a estrutura da cesta (POF) que ele usa. A troca
+      de agregado em jan/2012 e jan/2020 é quando o IBGE muda os pesos de referência da cesta.
+    config:
+      column_types:
+        agregado: smallint
+        indice: varchar
+        estrutura_cesta: varchar
+        nome_agregado: varchar
+    columns:
+      - name: agregado
+        data_tests: [unique, not_null]
+
+  - name: seed_de_para_estacao_localidade
+    description: >
+      Relação manual de estações do INMET a localidades do IPCA. Inclui apenas
+      vínculos conferidos pelo nome e pelas coordenadas do catálogo do INMET.
+    config:
+      column_types:
+        estacao_id: varchar
+        codigo_localidade: integer
+        justificativa: varchar
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_localidade_ibge')
+                field: codigo_localidade
+      - name: justificativa
+        data_tests: [not_null]

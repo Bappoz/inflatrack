@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: bronze_dolar
+    description: Bronze do Dólar Comercial (PTAX/Olinda), espelhada do Delta Lake por inflatrack.loaders.load_dolar.
+    schema: bronze
+    tables:
+      - name: dolar_boletim
+        config:
+          meta:
+            dagster:
+              asset_key: ["dolar_duckdb"]
+        description: >
+          Boletins intradiários publicados pela API Olinda do BACEN (Abertura, Intermediários
+          e Fechamento PTAX). Só acrescenta registros novos.
+        columns:
+          - name: data_hora_cotacao
+            description: Timestamp do boletim emitido pelo Banco Central.
+            data_tests: [not_null]
+          - name: data_referencia
+            description: Data da cotação (dia civil).
+            data_tests: [not_null]
+          - name: cotacao_compra
+            data_tests: [not_null]
+          - name: cotacao_venda
+            data_tests: [not_null]
+          - name: tipo_boletim
+            data_tests: [not_null]
+          - name: ano
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

@@ -12,7 +12,7 @@ FCTE/UnB. Squad Tio IPCA.
 > que este lojista vende — e qual o reajuste mínimo para preservar a margem?
 
 Cinco perguntas derivadas, com o modelo em que cada uma fica fácil, estão em
-`docs/carga.md`.
+[`docs/visaoGeral/consultas.md`](docs/visaoGeral/consultas.md).
 
 ## Subir do zero
 
@@ -21,7 +21,7 @@ Requisitos: Docker Compose v2, [`uv`](https://docs.astral.sh/uv/) e
 
 ```bash
 git clone https://github.com/Bappoz/inflatrack.git && cd inflatrack
-just reset          # sobe o Postgres e aplica migrations/0001..0003 em ordem
+just reset          # sobe o Postgres e aplica migrations/0001..0005 em ordem
 just seed-amostra   # 3 meses do IPCA — confere que a ingestão funciona
 just seed-pib-china # carrega o histórico do PIB da China (World Bank API)
 ```
@@ -39,7 +39,7 @@ comércio, transporte, energia, impostos, consumo, exportação e importação)
 vêm das Contas Nacionais Trimestrais e levam ~10 segundos:
 
 ```bash
-just pib            # SIDRA 1846: raw gzip -> Parquet -> DuckDB
+just pib            # SIDRA 1846: Bronze em Delta -> DuckDB
 ```
 
 ### Como reproduzir a E2
@@ -60,6 +60,35 @@ O que precisa de configuração:
 
 Hoje a receita cobre o PIB e as commodities; cada fonte acrescenta as suas receitas a ela. As evidências de cada fonte estão em [`docs/evidencias/e2/`](docs/evidencias/e2/).
 
+### Como reproduzir a E3
+
+Do zero, com o Dagster disparando tudo (Bronze de todas as fontes, Silver e Gold no dbt,
+cópia da Gold para o Postgres e o painel do Metabase):
+
+```bash
+cp .env.example .env   # ALPHAVANTAGE_API_KEY, METABASE_EMAIL/SENHA e METABASE_PG_PASSWORD
+uv sync
+just up                # Postgres com as migrations 0001..0005
+just orquestrador      # Dagster em http://localhost:3002 (DAGSTER_PORT)
+```
+
+Na interface do Dagster, lance `popular_banco_job` (enche a Bronze de todas as fontes; num
+clone limpo levou 33 min em 2026-11-08, quase tudo no IPCA). O banco do lojista nasce vazio
+(os dados dele são fictícios): rode `just simular-cdc` e o `transacional_job` para a P5 ter
+dado. Por fim, lance o `analitico_job` (cargas do IPCA no DuckDB, `dbt build`
+e cópia para o schema `serie`). Detalhes em
+[`docs/pipeline/orquestracao.md`](docs/pipeline/orquestracao.md).
+
+```bash
+docker compose --profile bi up -d --wait   # Metabase em http://localhost:3001
+just metabase-painel                       # recria o painel a partir de scripts/sql/metabase/
+just check                                 # ruff format + lint + pytest
+just dbt-test                              # testes analíticos do dbt
+```
+
+Evidências da entrega em [`docs/evidencias/e3/`](docs/evidencias/e3/) e o que entrou em
+[`docs/evidencias/e3/release_notes.md`](docs/evidencias/e3/release_notes.md).
+
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 
@@ -73,7 +102,7 @@ Para visualizar as tabelas do PostgreSQL e as linhas salvas direto pelo navegado
 just db-ui
 ```
 
-Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
+Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)** (`ADMINER_PORT` no `.env`)
 
 * **Sistema**: `PostgreSQL`
 * **Servidor**: `db`
@@ -118,14 +147,20 @@ Três armadilhas que a ingestão trata e que não são óbvias:
 | Caminho | Papel |
 |---|---|
 | `migrations/` | Esquema físico do PostgreSQL, aplicado em ordem na primeira subida do container |
-| `src/inflatrack/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
-| `src/inflatrack/ingest.py` | CLI de carga do IPCA/INPC: crua em `data/raw/ipca-inpc/`, depois `COPY` para o banco |
-| `src/inflatrack/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
-| `src/inflatrack/ingest_pib.py` | CLI do PIB: crua em `data/raw/pib_raw/`, depois Parquet em `data/parquet/pib/` |
-| `src/inflatrack/load_pib.py` | Sobe o Parquet do PIB para o DuckDB (`just pib-load`) |
-| `src/inflatrack/ingest_pib_china.py` | World Bank: resposta crua e Parquet anual do PIB da China |
-| `src/inflatrack/load_pib_china.py` | Sobe o PIB da China para o DuckDB analítico (`just pib-china-load`) |
-| `sql/` | Consultas de verificação de carga |
+| `src/inflatrack/clients/sidra.py` | Cliente da API do SIDRA (formato compacto `/f/c/h/n`) |
+| `src/inflatrack/bronze/ipca.py` | IPCA/INPC: coleta no SIDRA, Bronze em Delta e `COPY` para o banco |
+| `src/inflatrack/loaders/load_ipca.py` | Sobe o Delta do IPCA para o DuckDB (`just ipca-load`) |
+| `src/inflatrack/cdc/` | CDC do banco do lojista para a Bronze, sem CNPJ (`just bronze-transacional`, `just simular-cdc`) |
+| `src/inflatrack/loaders/load_transacional.py` | Sobe o Delta do CDC para o DuckDB (`just transacional-load`) |
+| `src/inflatrack/clients/pib.py` | Catálogo da tabela 1846: setores, grupos e o núcleo de indicadores de preço |
+| `src/inflatrack/bronze/pib.py` | PIB: coleta no SIDRA e Bronze em Delta (`just bronze-pib`) |
+| `src/inflatrack/loaders/load_pib.py` | Sobe o Delta do PIB para o DuckDB (`just pib-load`) |
+| `src/inflatrack/bronze/commodities.py` | Commodities: coleta na Alpha Vantage e Bronze em Delta (`just bronze-commodities`) |
+| `src/inflatrack/loaders/load_commodities.py` | Sobe o Delta das commodities para o DuckDB |
+| `src/inflatrack/bronze/pib_internacional.py` | World Bank: Bronze em Delta do PIB de China, EUA e Rússia |
+| `src/inflatrack/loaders/load_pib_internacional.py` | Sobe o PIB internacional para o DuckDB (`just pib-internacional-load`) |
+| `src/inflatrack/reverse_etl/exportar_serie.py` | Copia a Gold para o schema `serie` do Postgres (`just serie`) |
+| `scripts/sql/` | Consultas de verificação de carga, EXPLAIN e o painel do Metabase (`metabase/`) |
 | `docs/adr/` | Decisões de arquitetura, formato Nygard |
 | `docs/fontes/pib_china.md` | Caracterização completa da fonte do PIB da China |
 | `docs/fontes/salario_minimo.md` | Caracterização completa da fonte de Salário Mínimo (DIEESE) |

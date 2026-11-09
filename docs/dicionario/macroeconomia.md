@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Tabelas que recebem as duas séries diárias do Banco Central: a cotação do dólar comercial (PTAX, API Olinda) e a taxa Selic efetiva (série 11 do SGS). Esquema definido em `scripts/setup_duckdb_macro.sql`, aplicado pela própria carga; as linhas vêm de `src/inflatrack/ingest_dolar.py` e `src/inflatrack/ingest_selic.py` — ver [ADR 0003](../adr/0003-bcb-macro.md).
+Tabelas que recebem as duas séries diárias do Banco Central: a cotação do dólar comercial (PTAX, API Olinda) e a taxa Selic efetiva (série 11 do SGS). As cargas vêm de `src/inflatrack/bronze/dolar.py` e `src/inflatrack/bronze/selic.py`, refletidas no DuckDB via `src/inflatrack/loaders/load_dolar.py` e `src/inflatrack/loaders/load_selic.py` — ver [ADR 0003](../adr/0003-bcb-macro.md).
 
 Ficam no `data/duckdb/inflatrack.duckdb`, o mesmo arquivo das commodities e dos dois PIBs ([ADR 0002](../adr/0002-duckdb-unico.md)). Diferente da modelagem relacional transacional, que fragmenta o dado em tabelas normalizadas, a modelagem colunar aqui mantém tabelas largas e contínuas, otimizadas para ler milhares de dias de série temporal de uma vez.
 
@@ -66,9 +66,9 @@ Chave primária `data_referencia`, com UPSERT — mesma mecânica do dólar, e p
 
 Nenhuma. Ao contrário das commodities (`vw_features_daily`) e do PIB (`vw_features_pib_trimestral`), estas duas séries já estão em formato largo, com uma linha por dia e o calendário completo: não há o que pivotar nem lacuna a cobrir. O cruzamento entre elas e com as demais fontes é um `join` direto por `data_referencia`.
 
-## Camada Bronze em Delta Lake (E2)
+## Camada Bronze em Delta Lake
 
-A partir da Entrega 2, a frente de macroeconomia adota armazenamento aberto em **Delta Lake sobre Parquet**, eliminando a necessidade de arquivos `.json.gz` avulsos e preservando o histórico integral:
+A partir da Entrega 2 e consolidado na Entrega 3, a frente de macroeconomia adota armazenamento aberto em **Delta Lake sobre Parquet**, eliminando a necessidade de arquivos `.json.gz` avulsos e preservando o histórico integral:
 
 | Tabela | Caminho | Formato | Papel na Plataforma |
 |---|---|---|---|
@@ -76,8 +76,9 @@ A partir da Entrega 2, a frente de macroeconomia adota armazenamento aberto em *
 | `dolar_boletim` | `data/parquet/dolar/boletim/` | Parquet + Delta | Todos os boletins intradiários tipados, particionado por ano |
 | `selic_resposta` | `data/parquet/selic/resposta/` | Parquet + Delta | Resposta JSON da API SGS imutável, indexada por SHA-256 |
 | `selic_taxa_dia` | `data/parquet/selic/taxa_dia/` | Parquet + Delta | Taxas efetivas em dias úteis tipadas, particionado por ano |
-| `dolar_cotacao` | `data/duckdb/inflatrack.duckdb` | DuckDB (legado/transitório) | Vista diária com calendário civil preenchido por *forward fill* |
-| `selic_taxa` | `data/duckdb/inflatrack.duckdb` | DuckDB (legado/transitório) | Vista diária com calendário civil preenchido por *forward fill* |
+| `bronze.dolar_boletim` | `data/duckdb/inflatrack.duckdb` | DuckDB (Bronze) | Espelhamento direto do Delta Lake `dolar_boletim` |
+| `bronze.selic_taxa` | `data/duckdb/inflatrack.duckdb` | DuckDB (Bronze) | Espelhamento direto do Delta Lake `selic_taxa_dia` |
+| `silver.int_macroeconomia__mensal` | `data/duckdb/inflatrack.duckdb` | DuckDB (Silver dbt) | Agregação mensal, médias móveis (3m, 6m, 12m) e volatilidade |
 
 !!! note "Sem histórico anterior ao início da série"
     Se `--de` for anterior à primeira observação disponível na origem, não existe valor com que preencher o começo do período. As ingestões abortam com erro explícito em vez de gravar tabelas com lacunas inconsistentes.
@@ -136,6 +137,6 @@ limit 12;
 
 - [API Olinda/PTAX — cotações de moedas](https://dadosabertos.bcb.gov.br/dataset/taxas-de-cambio-todos-os-boletins-diarios)
 - [Sistema Gerenciador de Séries Temporais (SGS) — série 11](https://www3.bcb.gov.br/sgspub/localizarseries/localizarSeries.do?method=prepararTelaLocalizarSeries)
-- Esquema: `scripts/setup_duckdb_macro.sql`
+- Modelos dbt: `dbt/models/staging/dolar/`, `dbt/models/staging/selic/` e `dbt/models/intermediate/int_macroeconomia__mensal.sql`
 - Caracterização das origens: [Dólar Comercial (BCB/Olinda)](../fontes/dolar.md) e [Taxa SELIC (BCB/SGS)](../fontes/selic.md)
 - Decisões: [ADR 0002 — DuckDB único](../adr/0002-duckdb-unico.md) e [ADR 0003 — Séries macro diárias](../adr/0003-bcb-macro.md)

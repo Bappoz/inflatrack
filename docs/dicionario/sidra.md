@@ -78,6 +78,8 @@ Dimensão de variação lenta (tipo 2): o nome e a posição que um código teve
 | `codigo_pai` | text (FK `classificacao`) | Pai na árvore naquela fonte |
 | `vigencia_inicio` / `vigencia_fim` | date | Janela de validade; `vigencia_fim` nulo = vigente |
 
+Uma linha por vigência (migration `0004`): renomear um subitem fecha a versão aberta e abre outra, e um índice único parcial garante no máximo uma aberta por `(codigo, id_fonte)`.
+
 Único por `(codigo, id_fonte)`.
 
 ### observacao
@@ -102,15 +104,30 @@ Tabela de fato: o valor de uma variável, para uma categoria, numa localidade, n
 
 ## Bronze em Delta
 
-Desde a Entrega 2, cada resposta do SIDRA também é gravada em duas tabelas **Delta** em `data/parquet/ipca/`, pelo mesmo ingestor que escreve no PostgreSQL ([`bronze_ipca.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze_ipca.py)). As duas só acrescentam linhas: nada é atualizado nem apagado.
+Cada resposta do SIDRA é gravada em tabelas **Delta** em `data/parquet/ipca/`, pelo mesmo módulo que escreve no PostgreSQL ([`bronze/ipca.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze/ipca.py)). As duas só acrescentam linhas: nada é atualizado nem apagado.
 
 | Tabela | Uma linha por | Volume (medido em 2026-10-11) |
 |---|---|---|
 | `ipca_resposta` | Resposta **diferente** recebida da API | 886 respostas (uma por agregado e mês) |
 | `ipca_observacao` | Valor contido numa resposta, **inclusive os marcadores de ausência** | 9.116.436 linhas, das quais 3.123.539 sem valor |
+| `ipca_metadados` | Versão de uma categoria da cesta num agregado | 1.833 linhas (medido em 2026-10-31) |
 
 !!! warning "Diferença para a tabela `observacao` do PostgreSQL"
     `ipca_observacao` guarda **todas** as linhas da resposta; o PostgreSQL descarta as que trazem marcador (`...`, `..`, `-`, `X`). A categoria aparece como `id_categoria`, o id interno do SIDRA, e **não** como o código da cesta (`1101002`): descartar marcador e traduzir a categoria são regras de negócio, e ficam para o dbt (Silver).
+
+### ipca_metadados
+
+Traduz o `id_categoria` da observação para o código da cesta, e guarda o nome e o pai que a categoria tem em cada agregado. Só acrescenta: renomear um subitem entra como linha nova.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `agregado` | smallint | Agregado do SIDRA (partição). O 1737 não tem cesta |
+| `id_categoria` | integer | Id interno do SIDRA, o valor que chega em `D4C` |
+| `codigo` | string | Código natural da cesta (`1101002`) |
+| `nome` | string | Nome da categoria naquela versão |
+| `codigo_pai` | string, nulo | Código do pai na árvore; nulo no índice geral |
+| `nivel` | string | `geral`, `grupo`, `subgrupo`, `item` ou `subitem` |
+| `_id_resposta`, `_fonte`, `_requisicao`, `_ingerido_em` | | As colunas de rastreabilidade de toda tabela extraída |
 
 ### ipca_resposta
 
@@ -183,3 +200,22 @@ where ini.id_fonte = 1737
 - [API do SIDRA — ajuda](https://apisidra.ibge.gov.br/home/ajuda)
 - [Metadados de agregados do IBGE](https://servicodados.ibge.gov.br/api/docs/agregados?versao=3)
 - Caracterização da origem: [SIDRA/IBGE](../fontes/sidra.md)
+
+## Silver e Gold
+
+| Modelo | Camada | Uma linha representa |
+|---|---|---|
+| `silver.stg_ipca__observacao` | Staging | Agregado x localidade x variável x categoria x mês, na última versão publicada, com o código da cesta |
+| `silver.stg_ipca__metadados` | Staging | Versão de uma categoria num agregado |
+| `silver.int_ipca__mensal` | Intermediate | Índice x categoria x localidade x mês, com médias móveis, desvio-padrão e defasagens |
+| `gold.dim_localidade` | Gold | Uma das 17 localidades medidas pelo IPCA |
+| `gold.dim_cesta_ipca_scd2` | Gold (SCD2) | Versão de uma categoria em um índice: abre na troca de estrutura (POF) ou de nome ou pai |
+| `gold.fct_inflacao_mensal` | Gold | IPCA ou INPC de uma categoria, em uma localidade, em um mês |
+
+O significado de cada coluna está nos arquivos `_*__models.yml`, em `dbt/models/`. A conferência com o IBGE está na [Evidência E3](../evidencias/e3/ipca_lojista.md).
+
+!!! warning "Sempre filtre por `indice`"
+    `fct_inflacao_mensal` tem o IPCA e o INPC na mesma tabela. Somar ou comparar sem filtrar `indice` mistura os dois.
+
+!!! info "Acumulado em 12 meses de 2006 a 2011 (e parte de 2020)"
+    Onde o IBGE não publica a variável (agregado 2938 e os marcadores de 2020), `variacao_acum_12m_pct` é o produto das 12 variações mensais e `origem_acum_12m` vale `calculado`.

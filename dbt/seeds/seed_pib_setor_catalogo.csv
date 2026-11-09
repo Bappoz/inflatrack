@@ -1,0 +1,24 @@
+codigo_setor,nome_setor,grupo,nucleo
+90687,Agropecuária - total,atividade,true
+90691,Indústria - total,atividade,false
+90692,Indústrias extrativas,atividade,false
+90693,Indústrias de transformação,atividade,false
+90694,Construção,atividade,false
+90695,"Eletricidade e gás, água, esgoto, atividades de gestão de resíduos",atividade,true
+90696,Serviços - total,atividade,true
+90697,Comércio,atividade,true
+90698,"Transporte, armazenagem e correio",atividade,true
+90699,Informação e comunicação,atividade,false
+90700,"Atividades financeiras, de seguros e serviços relacionados",atividade,true
+90701,Outras atividades de serviços,atividade,false
+90702,Atividades imobiliárias,atividade,false
+90703,"Administração, saúde e educação públicas e seguridade social",atividade,false
+90705,Valor adicionado a preços básicos,agregado,false
+90706,Impostos líquidos sobre produtos,agregado,true
+90707,PIB a preços de mercado,agregado,true
+93404,Despesa de consumo das famílias,demanda,true
+93405,Despesa de consumo da administração pública,demanda,true
+93406,Formação bruta de capital fixo,demanda,false
+93407,Exportação de bens e serviços,demanda,true
+93408,Importação de bens e serviços (-),demanda,true
+102880,Variação de estoque,demanda,false

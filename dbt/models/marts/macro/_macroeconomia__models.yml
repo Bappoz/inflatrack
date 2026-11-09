@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: fct_macroeconomia_mensal
+    description: >
+      Uma linha por mês (mes_referencia = YYYY-MM-01) com câmbio, juros e inflação lado a lado:
+      Dólar PTAX, Selic (anualizada e acumulada em 12 meses), IPCA de 12 meses do Brasil e o juro
+      real de 12 meses. Mostra a pressão macroeconômica sobre a inflação. Vai do primeiro ao
+      último mês com Dólar ou Selic.
+    columns:
+      - name: mes_referencia
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: selic_acumulada_12m_pct
+        description: Produto das 12 Selic acumuladas no mês. Nulo enquanto não há 12 meses.
+      - name: ipca_12m_pct
+        description: IPCA acumulado em 12 meses, índice geral, Brasil (fct_inflacao_mensal).
+      - name: juro_real_12m_pct
+        description: (1 + Selic 12m) / (1 + IPCA 12m) - 1, em %.

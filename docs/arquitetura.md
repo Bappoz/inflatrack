@@ -116,10 +116,10 @@ O estado real do código é parcial:
 
 - `observacao` preserva valores distintos para a mesma chave e mês; uma
   reexecução do mesmo valor é idempotente.
-- `classificacao_versao` ainda **não é uma dimensão tipo 2**. A migration
-  restringe a tabela a uma linha por `(codigo, id_fonte)`, e
-  `sincronizar_cesta()` atualiza `nome` em conflito. Uma renomeação apaga o
-  nome anterior e sua vigência.
+- `classificacao_versao` é uma dimensão tipo 2 desde a E3 (migration `0004`):
+  uma linha por vigência e, no máximo, uma aberta por `(codigo, id_fonte)`.
+  `sincronizar_cesta()` fecha a versão aberta e abre outra quando o nome ou o
+  pai mudam. Até a E2, uma renomeação apagava o nome anterior e sua vigência.
 
 Assim, o histórico de valores é uma decisão já materializada; a modelagem de
 vigência permanece proposta até que o esquema permita múltiplas versões e a

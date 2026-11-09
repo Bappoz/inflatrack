@@ -1,6 +1,14 @@
 services:
   db:
     image: postgres:16.4-alpine
+    # wal_level=logical: o CDC lê as mudanças de `public` por decodificação lógica (slot +
+    # publicação inflatrack_cdc). O limite do slot impede que um CDC parado encha o disco.
+    command: >-
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=4
+      -c max_wal_senders=4
+      -c max_slot_wal_keep_size=2GB
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-inflatrack}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inflatrack}
@@ -10,8 +18,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d:ro
+    # `-h 127.0.0.1`: na primeira subida o entrypoint roda as migrations num servidor temporário
+    # que só escuta o socket. Sem o host, o pg_isready diz "pronto" no meio das migrations e o
+    # `just up` devolve antes da hora (quem roda logo depois toma "database system is shutting
+    # down"). Pelo TCP, só o servidor definitivo responde. Visto num clone limpo em 2026-11-08.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inflatrack} -d ${POSTGRES_DB:-inflatrack}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-inflatrack} -d ${POSTGRES_DB:-inflatrack}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -29,5 +41,49 @@ services:
     ports:
       - "${ADMINER_PORT:-8080}:8080"
 
+  # Banco interno do Metabase (usuários, dashboards, perguntas salvas).
+  # Separado do Postgres do projeto para não misturar metadados com dados.
+  metabase-db:
+    image: postgres:16.4-alpine
+    profiles: [bi]
+    environment:
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: ${METABASE_DB_PASSWORD:-metabase}
+      POSTGRES_DB: metabase
+    volumes:
+      - metabase_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Metabase: lê SÓ o Postgres (host `db`, schema `serie`). Não monta o arquivo do DuckDB de
+  # propósito: com uma conexão do Metabase aberta nele, o dbt e os loaders não conseguem
+  # escrever (testado em 2026-10-30). A Gold chega ao Postgres pelo ativo `serie_postgres`.
+  # O painel é recriado do Git com `just metabase-painel` (scripts/sql/metabase/).
+  metabase:
+    image: ghcr.io/motherduckdb/metabase-duckdb:latest
+    profiles: [bi]
+    depends_on:
+      metabase-db:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:-metabase}
+      MB_DB_HOST: metabase-db
+    ports:
+      - "${METABASE_PORT:-3001}:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
 volumes:
   pgdata:
+  metabase_pgdata:

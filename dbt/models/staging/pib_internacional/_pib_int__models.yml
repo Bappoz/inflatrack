@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_pib_internacional__indicador
+    description: >
+      Visão Silver Staging de indicadores do PIB internacional (China, EUA e Rússia),
+      filtrando a versão mais recente e padronizando tipos e códigos.
+    columns:
+      - name: pais_iso3
+        description: Código ISO3 do país (CHN, USA, RUS).
+        data_tests: [not_null]
+      - name: ano
+        description: Ano da observação (1960 em diante).
+        data_tests: [not_null]
+      - name: data_referencia
+        description: Primeiro dia do ano (YYYY-01-01).
+        data_tests: [not_null]
+      - name: indicador_codigo
+        description: Nome padronizado do indicador (crescimento_pib_pct ou pib_nominal_usd).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['crescimento_pib_pct', 'pib_nominal_usd']
+      - name: valor
+        description: Valor do indicador (em % de crescimento ou USD correntes).

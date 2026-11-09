@@ -9,6 +9,7 @@ export DAGSTER_HOME := justfile_directory() / ".dagster"
 
 PG_USER := env("POSTGRES_USER", "inflatrack")
 PG_DB := env("POSTGRES_DB", "inflatrack")
+DAGSTER_PORT := env("DAGSTER_PORT", "3002")
 
 _default:
     @just --list
@@ -20,7 +21,7 @@ up:
 down:
     docker compose down
 
-# Do zero, em máquina limpa: apaga o volume e reaplica migrations/0001..0003.
+# Do zero, em máquina limpa: apaga o volume e reaplica todas as migrations/.
 reset:
     docker compose down -v
     docker compose up -d --wait
@@ -28,21 +29,34 @@ reset:
 psql:
     docker compose exec db psql -U {{PG_USER}} -d {{PG_DB}}
 
+# Aplica uma migration nova a um volume já existente (as de migrations/ só rodam na 1ª subida).
+# Ex.: just migrar 0005_serie_historica.sql
+migrar arquivo:
+    docker compose exec -T db psql -v ON_ERROR_STOP=1 -U {{PG_USER}} -d {{PG_DB}} -f /docker-entrypoint-initdb.d/{{arquivo}}
+
 # Sobe a interface gráfica do banco (Adminer) no navegador em http://localhost:8080.
 db-ui:
     docker compose --profile tools up -d --wait adminer
 
+# Interface web do DuckDB (bronze/silver/gold) em http://localhost:4213, somente leitura. Ctrl+C encerra.
+duckdb-ui:
+    uv run python scripts/duckdb_ui.py
+
 # Amostra rápida: 3 meses do IPCA atual. Use para conferir que a carga funciona.
 seed-amostra:
-    uv run python -m inflatrack.ingest --agregado 7060 --de 2026-05 --ate 2026-07
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2026-05 --ate 2026-07
 
-# World Bank -> raw + Parquet anual.
+# World Bank -> Delta via pipeline unificado.
 pib-china-ingest:
-    uv run python -m inflatrack.ingest_pib_china
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN coletar
 
-# Sobe o Parquet do PIB da China para o mesmo DuckDB das commodities.
+# Sobe o PIB da China para o DuckDB compartilhado via loader unificado.
 pib-china-load:
-    uv run python -m inflatrack.load_pib_china
+    uv run python -m inflatrack.loaders.load_pib_internacional --pais CHN
+
+# Carga das tabelas Delta do PIB Internacional no DuckDB compartilhado.
+pib-internacional-load pais="todos":
+    uv run python -m inflatrack.loaders.load_pib_internacional --pais {{pais}}
 
 # Ingestão + carga do PIB da China, de ponta a ponta.
 pib-china: pib-china-ingest pib-china-load
@@ -52,77 +66,96 @@ seed-pib-china: pib-china
 
 # Bronze do PIB da China em Delta (data/parquet/pib_china/): coleta direta da API do Banco Mundial.
 bronze-pib-china:
-    uv run python -m inflatrack.bronze_pib_china coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN coletar
 
 # Leva os .json.gz antigos de data/raw/pib_china/ para as tabelas Delta. Reexecutável.
 bronze-pib-china-importar:
-    uv run python -m inflatrack.bronze_pib_china importar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN importar
 
 # Checagens de integridade e volume das tabelas Delta do PIB da China.
 bronze-pib-china-checar:
-    uv run python -m inflatrack.bronze_pib_china checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais CHN checar
 
 # Bronze do PIB dos EUA em Delta (data/parquet/pib_usa/): coleta da API do Banco Mundial.
 bronze-pib-usa:
-    uv run python -m inflatrack.bronze_pib_usa coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais USA coletar
 
 # Checagens das tabelas Delta do PIB dos EUA.
 bronze-pib-usa-checar:
-    uv run python -m inflatrack.bronze_pib_usa checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais USA checar
 
 # Bronze do PIB da Rússia em Delta (data/parquet/pib_russia/): coleta da API do Banco Mundial.
 bronze-pib-russia:
-    uv run python -m inflatrack.bronze_pib_russia coletar
+    uv run python -m inflatrack.bronze.pib_internacional --pais RUS coletar
 
 # Checagens das tabelas Delta do PIB da Rússia.
 bronze-pib-russia-checar:
-    uv run python -m inflatrack.bronze_pib_russia checar
+    uv run python -m inflatrack.bronze.pib_internacional --pais RUS checar
+
+# Bronze do PIB Internacional (China, EUA e Rússia) unificada em Delta.
+bronze-pib-internacional pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} coletar
+
+# Checagens de integridade das tabelas Delta do PIB Internacional.
+bronze-pib-internacional-checar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} checar
+
+# Importação dos .json.gz antigos de raw/ para as tabelas Delta do PIB Internacional.
+bronze-pib-internacional-importar pais="todos":
+    uv run python -m inflatrack.bronze.pib_internacional --pais {{pais}} importar
 
 # Carga histórica completa jul/2006 -> set/2026: 886 requisições, ~21 min medidos em 2026-10-11
-# (ver docs/evidencias/e2/ipca.md). Grava o Postgres e a Bronze em Delta; reexecutar não duplica.
+# (ver docs/evidencias/e2/ipca.md). Grava a Bronze em Delta e o Postgres; reexecutar não duplica.
 seed:
-    uv run python -m inflatrack.ingest --agregado 2938 --de 2006-07 --ate 2011-12
-    uv run python -m inflatrack.ingest --agregado 1419 --de 2012-01 --ate 2019-12
-    uv run python -m inflatrack.ingest --agregado 7060 --de 2020-01 --ate 2026-09
-    uv run python -m inflatrack.ingest --agregado 7063 --de 2020-01 --ate 2026-09
-    uv run python -m inflatrack.ingest --agregado 1737 --de 1979-12 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 2938 --de 2006-07 --ate 2011-12
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 1419 --de 2012-01 --ate 2019-12
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7060 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 7063 --de 2020-01 --ate 2026-09
+    uv run python -m inflatrack.bronze.ipca coletar --agregado 1737 --de 1979-12 --ate 2026-09
 
 # Bronze do IPCA em Delta (data/parquet/ipca/): um intervalo de meses de um agregado.
 bronze-ipca de ate agregado="7060":
-    uv run python -m inflatrack.ingest --agregado {{agregado}} --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.ipca coletar --agregado {{agregado}} --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/ipca-inpc/ para as tabelas Delta. Reexecutável.
 bronze-ipca-importar:
-    uv run python -m inflatrack.bronze_ipca importar
+    uv run python -m inflatrack.bronze.ipca importar
 
 # Volume, meses faltando e revisões de ipca_observacao. Sai com erro se houver buraco.
 bronze-ipca-checar:
-    uv run python -m inflatrack.bronze_ipca checar
+    uv run python -m inflatrack.bronze.ipca checar
+
+# Só a cesta de cada agregado (ipca_metadados): 4 requisições, sem Postgres.
+bronze-ipca-metadados:
+    uv run python -m inflatrack.bronze.ipca metadados
+
+# Espelha o Delta do IPCA em bronze.ipca_observacao e bronze.ipca_metadados no DuckDB.
+ipca-load:
+    uv run python -m inflatrack.loaders.load_ipca
 
 # Confere se a carga bate com o volume esperado por fonte.
 verificar-carga:
-    docker compose cp sql/verificar_carga.sql db:/tmp/verificar_carga.sql
+    docker compose cp scripts/sql/verificar_carga.sql db:/tmp/verificar_carga.sql
     docker compose exec -T db psql -U {{PG_USER}} -d {{PG_DB}} -f /tmp/verificar_carga.sql
 
-# Baixa SIDRA 1846 (contas nacionais trimestrais) -> raw + parquet. ~10 s, ~400 KB.
-pib-ingest de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
-
-# Bronze do PIB em Delta (data/parquet/pib/): o mesmo ingestor grava pib_resposta e pib_valor.
+# Bronze do PIB em Delta (data/parquet/pib/): SIDRA 1846 -> pib_resposta e pib_valor. ~10 s.
 bronze-pib de="1996" ate=datetime("%Y"):
-    uv run python -m inflatrack.ingest_pib --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.pib coletar --de {{de}} --ate {{ate}}
+
+# Alias antigo de bronze-pib (desde a E3 não há mais raw nem Parquet por ano).
+pib-ingest de="1996" ate=datetime("%Y"): (bronze-pib de ate)
 
 # Leva os .json.gz antigos de data/raw/pib_raw/ para as tabelas Delta. Reexecutável.
 bronze-pib-importar:
-    uv run python -m inflatrack.bronze_pib importar
+    uv run python -m inflatrack.bronze.pib importar
 
 # Trimestres, setores por trimestre e revisões de pib_valor. Sai com erro se houver buraco.
 bronze-pib-checar:
-    uv run python -m inflatrack.bronze_pib checar
+    uv run python -m inflatrack.bronze.pib checar
 
-# Sobe o parquet do PIB para o DuckDB (mesmo arquivo das commodities).
+# Espelha o Delta do PIB em bronze.pib_valor no DuckDB.
 pib-load:
-    uv run python -m inflatrack.load_pib
+    uv run python -m inflatrack.loaders.load_pib
 
 # Ingestão + carga do PIB, de ponta a ponta.
 pib: pib-ingest pib-load
@@ -133,11 +166,35 @@ fmt:
 lint:
     uv run ruff check src/ orchestration/
 
+# O `dbt parse` refaz o target/manifest.json que os testes do Dagster leem: com ele velho (um .yml
+# do dbt mudou num pull), os testes caem com ativo faltando ou repetido (PLAN_E3_E4, Seção 6.3).
 test:
+    uv run dbt parse --quiet
     uv run pytest
 
 # O gate antes de dizer "pronto".
 check: fmt lint test
+
+# Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
+# Os loaders precisam ter rodado antes: o dbt só lê bronze.*.
+dbt:
+    uv run dbt build
+
+# Só os testes analíticos (Nível 3 da pirâmide).
+dbt-test:
+    uv run dbt test
+
+# Copia as tabelas da Gold para o schema serie do Postgres, a vitrine que o Metabase lê.
+serie:
+    uv run python -m inflatrack.reverse_etl.exportar_serie
+
+# Mede a consulta da vitrine sem e com o índice e grava os planos em docs/evidencias/e3/.
+explain-serie:
+    uv run python scripts/explain_serie.py
+
+# Recria o painel do Metabase a partir de scripts/sql/metabase/ (Metabase no ar: profile bi).
+metabase-painel:
+    uv run python scripts/metabase_painel.py
 
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
@@ -149,59 +206,77 @@ docs-build:
 
 # Carga isolada do Dólar (o fim padrão é a data atual).
 seed-dolar de="2020-01-01":
-    uv run python -m inflatrack.ingest_dolar --de {{de}}
+    uv run python -m inflatrack.bronze.dolar coletar --de {{de}}
+    uv run python -m inflatrack.loaders.load_dolar
 
 # Bronze do Dólar Comercial em Delta (data/parquet/dolar/): coleta direta da API Olinda.
 bronze-dolar de="2020-01-01" ate=datetime("%Y-%m-%d"):
-    uv run python -m inflatrack.bronze_dolar coletar --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.dolar coletar --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta do Dólar. Reexecutável.
 bronze-dolar-importar:
-    uv run python -m inflatrack.bronze_dolar importar
+    uv run python -m inflatrack.bronze.dolar importar
 
 # Checagens de integridade e volume das tabelas Delta do Dólar.
 bronze-dolar-checar:
-    uv run python -m inflatrack.bronze_dolar checar
+    uv run python -m inflatrack.bronze.dolar checar
 
 # Carga isolada da Selic (o fim padrão é a data atual).
 seed-selic de="2020-01-01":
-    uv run python -m inflatrack.ingest_selic --de {{de}}
+    uv run python -m inflatrack.bronze.selic coletar --de {{de}}
+    uv run python -m inflatrack.loaders.load_selic
 
 # Bronze da Selic em Delta (data/parquet/selic/): coleta direta da API SGS Série 11.
 bronze-selic de="2020-01-01" ate=datetime("%Y-%m-%d"):
-    uv run python -m inflatrack.bronze_selic coletar --de {{de}} --ate {{ate}}
+    uv run python -m inflatrack.bronze.selic coletar --de {{de}} --ate {{ate}}
 
 # Leva os .json.gz antigos de data/raw/bcb/ para as tabelas Delta da Selic. Reexecutável.
 bronze-selic-importar:
-    uv run python -m inflatrack.bronze_selic importar
+    uv run python -m inflatrack.bronze.selic importar
 
 # Checagens de integridade e volume das tabelas Delta da Selic.
 bronze-selic-checar:
-    uv run python -m inflatrack.bronze_selic checar
+    uv run python -m inflatrack.bronze.selic checar
 
 # Bronze de Macroeconomia em Delta (Dólar + Selic).
 bronze-macro: bronze-dolar bronze-selic
 
-# Carga isolada das Commodities (AlphaVantage -> DuckDB)
+# Carga isolada das Commodities (AlphaVantage -> Delta -> DuckDB). Gasta 9 das 25 req./dia.
 seed-commodities:
-    uv run python -m inflatrack.ingest_commodities --commodity ALL --modo historico
-    uv run python -m inflatrack.load_commodities
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
+    uv run python -m inflatrack.loaders.load_commodities
 
 # Bronze das commodities em Delta (data/parquet/commodities/). Gasta 9 das 25 req./dia.
 bronze-commodities:
-    uv run python -m inflatrack.ingest_commodities --commodity ALL
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
 
 # Leva os .json.gz antigos de data/raw/commodities_raw/ para as tabelas Delta. Sem requisição.
 bronze-commodities-importar:
-    uv run python -m inflatrack.ingest_commodities importar
+    uv run python -m inflatrack.bronze.commodities importar
 
 # Símbolos, volume e datas repetidas de commodities_cotacao.
 bronze-commodities-checar:
-    uv run python -m inflatrack.ingest_commodities checar
+    uv run python -m inflatrack.bronze.commodities checar
+
+# CDC do banco do lojista: lê o slot lógico e acrescenta as mudanças (sem CNPJ) no Delta.
+bronze-transacional:
+    uv run python -m inflatrack.cdc.transacional
+
+# Espelha o Delta do CDC em bronze.transacional_mudanca no DuckDB.
+transacional-load:
+    uv run python -m inflatrack.loaders.load_transacional
+
+# Demonstra o CDC: insere, altera e apaga no Postgres, reprocessa e registra um evento atrasado.
+simular-cdc:
+    uv run python -m inflatrack.cdc.simular_mudancas
+
+# E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
+e3-lojista: ipca-load simular-cdc transacional-load
+    uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario
+    just serie
 
 # E2 de ponta a ponta: a Bronze de cada fonte e a sua checagem. Cada fonte acrescenta as suas.
 # O IPCA fica de fora (carga completa: 886 requisições, ~21 min, exige o Postgres no ar): use `just e2-ipca`.
-# O CDC do transacional entra aqui quando existir.
 e2: bronze-pib bronze-pib-checar bronze-commodities bronze-commodities-checar bronze-pib-china bronze-pib-china-checar bronze-pib-usa bronze-pib-usa-checar bronze-pib-russia bronze-pib-russia-checar bronze-dolar bronze-dolar-checar bronze-selic bronze-selic-checar bronze-salario-minimo bronze-salario-minimo-checar bronze-clima bronze-clima-checar
 
 # IPCA/INPC da E2: a carga completa e a checagem. Exige `just up`; ~21 min.
@@ -212,51 +287,51 @@ seed-macro: seed-dolar seed-selic seed-commodities
 
 # DIEESE: Salário Mínimo Nominal e Necessário
 salario-minimo-ingest:
-    uv run python -m inflatrack.ingest_salario_minimo
+    uv run python -m inflatrack.bronze.ingest_salario_minimo
 
 salario-minimo-load:
-    uv run python -m inflatrack.load_salario_minimo
+    uv run python -m inflatrack.loaders.load_salario_minimo
 
 salario-minimo: salario-minimo-ingest salario-minimo-load
 
 # Bronze do Salário Mínimo em Delta (data/parquet/salario_minimo/).
 bronze-salario-minimo:
-    uv run python -m inflatrack.ingest_salario_minimo
+    uv run python -m inflatrack.bronze.ingest_salario_minimo
 
 bronze-salario-minimo-importar:
-    uv run python -m inflatrack.bronze_salario_minimo importar
+    uv run python -m inflatrack.bronze.bronze_salario_minimo importar
 
 bronze-salario-minimo-checar:
-    uv run python -m inflatrack.bronze_salario_minimo checar
+    uv run python -m inflatrack.bronze.bronze_salario_minimo checar
 
 bronze-salario-minimo-load modo="substitui":
-    uv run python -m inflatrack.load_salario_minimo --modo {{modo}}
+    uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
 # INMET: Dados de Clima e Estações
 clima-ingest:
-    uv run python -m inflatrack.ingest_clima --apenas-estacoes
+    uv run python -m inflatrack.bronze.ingest_clima --apenas-estacoes
 
 clima-load:
-    uv run python -m inflatrack.load_clima
+    uv run python -m inflatrack.loaders.load_clima
 
 clima: clima-ingest clima-load
 
 # Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
 bronze-clima:
-    uv run python -m inflatrack.ingest_clima --apenas-estacoes
+    uv run python -m inflatrack.bronze.ingest_clima --apenas-estacoes
 
 bronze-clima-importar:
-    uv run python -m inflatrack.bronze_clima importar
+    uv run python -m inflatrack.bronze.bronze_clima importar
 
 bronze-clima-checar:
-    uv run python -m inflatrack.bronze_clima checar
+    uv run python -m inflatrack.bronze.bronze_clima checar
 
 bronze-clima-load modo="substitui":
-    uv run python -m inflatrack.load_clima --modo {{modo}}
+    uv run python -m inflatrack.loaders.load_clima --modo {{modo}}
 
-# Dagster: interface em http://localhost:3000, com histórico persistido em .dagster/.
+# Dagster: interface em http://localhost:3002 (DAGSTER_PORT no .env), histórico em .dagster/.
 orquestrador:
-    uv run dagster dev
+    uv run dagster dev --port {{DAGSTER_PORT}}
 
 # Materializa um job sem subir a interface. Ex.: just materializar macro_job
 materializar job:

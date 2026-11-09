@@ -12,11 +12,12 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
-| Lucas Zanetti | 5 | 2026-09-08 a 2026-10-18 | Claude Code (Opus 5.5) (2), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 21 | 2026-09-14 a 2026-10-14 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (9), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (2), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (2) |
-| Pedro Américo | 3 | 2026-09-25 a 2026-10-13 | Antigravity (Gemini 3.1 Pro) (2), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 3 | 2026-09-28 a 2026-10-13 | Antigravity (Gemini 3.8 Flash) (3) |
+| Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
+| João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
+| Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
+| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
+
 
 ## Todas as sessões
 
@@ -57,6 +58,17 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Correção do build do MkDocs e retirada do plano de tarefas do site |
 | 2026-10-14 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Consultas de diagnóstico: dbt Semantic Layer e aceite da E2 |
 | 2026-10-18 | Lucas Zanetti | Codex (GPT-6) | Revisão dos ADRs e da stack tecnológica; guia detalhado em PDF para apresentação |
+| 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5) | Metabase para visualizar o DuckDB e o Postgres |
+| 2026-10-29 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Diagnóstico e desenho da Silver do PIB e das commodities |
+| 2026-10-30 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PLAN_E3_E4, conflito de merge, loaders Delta → DuckDB, base do dbt e Silver do PIB e das commodities |
+| 2026-10-31 | Johnnatan Salles | GitHub Copilot | Bronze de medições INMET, Silver mensal de clima e salário, mapeamento de localidades e validação de limites da fonte |
+| 2026-10-31 | Lucas Zanetti | Claude Code (Opus 5.5) | E3: IPCA e lojista até a Gold, CDC, SCD2, vitrine `serie` e EXPLAIN |
+| 2026-11-01 | Pedro Américo | Antigravity (Gemini 3.1 Pro) | Camada Silver dbt de Macroeconomia, Dagster SLA/Freshness e Otimização EXPLAIN ANALYZE no PostgreSQL |
+| 2026-11-02 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3) |
+| 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
+| 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
+| 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
+| 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
 
 ---
 
@@ -213,6 +225,64 @@ separados e um PR.
 
 **Decisões que continuam sendo da Squad**
 - Concluir o ADR 0004 sobre Delta/Iceberg e mecanismo de CDC, e planejar Silver/Gold, histórico de classificação, clima diário e integração limpa da E2 conforme o plano.
+
+### 2026-10-31 — Claude Code (Opus 5.5) — E3: IPCA e lojista até a Gold, CDC, SCD2, vitrine `serie` e EXPLAIN
+
+**O que a ferramenta fez**
+- Fundiu `ingest.py` e `bronze_ipca.py` em `bronze/ipca.py`, tirou a gravação em `data/raw/`, criou `ipca_metadados` no Delta e `common/db.py`, e separou os testes em `tests/unit/` e `tests/integration/`.
+- Criou `load_ipca.py`, `load_transacional.py`, `orchestration/assets/ipca.py` e `orchestration/assets/transacional.py`, tirando o IPCA de `ingestao.py`.
+- Escreveu as migrations `0004` (precisão do 1737, vigência da cesta, `reajuste_custo`, `venda_mensal`, gatilho insert-only, `REPLICA IDENTITY FULL` e publicação) e `0005` (schema `serie`, índice e papéis).
+- Implementou o CDC (`cdc/transacional.py`, com decodificador do `pgoutput`) e a demonstração (`cdc/simular_mudancas.py`), e redigiu o ADR.
+- Escreveu a Silver e a Gold do IPCA e do lojista, as duas SCD2, os testes singulares, a medição com `EXPLAIN` e a documentação.
+
+**O que foi verificado e como**
+- Pipeline refeito do zero num Postgres descartável, com os dados reais do IPCA e o lojista fictício: 114 de 114 itens do dbt nesta trilha; 127 de 127 no projeto, sem as trilhas de PIB e commodities, cuja Bronze não existe nesta máquina.
+- `uv run pytest`: 205 testes passando, com Postgres no ar.
+- Números conferidos contra o IBGE: 4,58% no índice geral em set/2026; -10,8650% contra -10,86% publicados para Arroz em Brasília; diferença máxima de 0,0326 p.p. entre o acumulado calculado e o publicado.
+- Coleta real no SIDRA (`coletar`, agregados 7060 e 1737, um mês cada) e materialização no Dagster de `ipca_duckdb` e `transacional_delta`.
+- Migrations `0004` e `0005` aplicadas a uma cópia do volume de desenvolvimento (5.992.897 linhas em `observacao`).
+
+**Erros da ferramenta encontrados durante a verificação**
+- Regra errada de 12/17 localidades no teste: corrigida depois de olhar o dado (elas entraram em 2014 e 2018).
+- Janela de 12 meses da fato do lojista errada no mês ainda não publicado (mostrava -5,65% em vez de -10,87%): corrigida.
+- Duas fontes do dbt com a mesma chave de ativo quebrando o Dagster, e sintaxe errada de `alter default privileges` na `0005`: corrigidas.
+
+**O que NÃO foi verificado**
+- As trilhas de PIB e commodities do `dbt build` nesta máquina, por falta da Bronze delas.
+- As migrations no volume real de desenvolvimento, que continua intocado: só na cópia.
+- O painel do Metabase e `just migrar` no compose padrão. A pergunta 1 continua lendo `public.observacao`; só o `JOIN` dela foi ajustado à nova vigência.
+- A vazão do CDC. A causa do aborto ao terminar (`deltalake` + `pyarrow`, registrado no plano, Seção 6.3) não foi investigada; o código foi desviado dele.
+- A carga completa do SIDRA não foi refeita (886 requisições): a Bronze é a de 2026-10-11, até set/2026.
+
+**Decisões que continuam sendo da Squad**
+- Numeração do ADR do CDC.
+- Revisar as divergências do plano registradas na Seção 5.1.
+
+---
+
+### 2026-11-08 — Claude Code (Opus 5.5) — revisão e integração da E3 em clone limpo
+
+**O que a ferramenta fez**
+- Constatou que `feat/ajusteClima-entrega3` não tinha commits além da `E3`. A pedido, revisou a E3 contra a Seção 5 do `PLAN_E3_E4.md` e mergeou a `E3-pipeline` (João Pedro, 9 commits sem PR) na integração.
+- Rodou a E3 do zero num clone limpo, com Postgres e Dagster próprios: `popular_banco_job`, `simular-cdc`, `analitico_job`, Metabase e `just metabase-painel`.
+- Corrigiu três defeitos achados nessa execução: `pib_duckdb` pulado pelo Dagster no `pib_job` (a carga foi para o `analitico_job`), slot do CDC invalidado por WAL da carga do IPCA (o CDC passou a esperar o SIDRA no `popular_banco_job`) e o healthcheck do Postgres que liberava o `just up` durante as migrations. Escreveu primeiro os testes que falhavam nos dois primeiros.
+- `just test` passou a rodar `dbt parse`; atualizou README (como reproduzir a E3), `docs/pipeline/orquestracao.md`, nav do MkDocs e escreveu `docs/evidencias/e3/release_notes.md`.
+
+**O que foi verificado e como**
+- No clone limpo: os 10 jobs de fonte em SUCCESS (32,8 min); 243 partições do IPCA com out/2026 pendente; `analitico_job` em SUCCESS depois da correção; `serie.fct_inflacao_mensal` com 1.662.314 linhas; as 6 perguntas do painel executadas pela API do Metabase com o usuário só-leitura, todas com linhas.
+- `just check` (306 testes, nenhum pulado), `just dbt-test` (224/224) e `just docs-build`.
+
+**Erros da ferramenta encontrados durante a verificação**
+- O primeiro teste da invariante pegava os modelos do dbt (multi-asset de saída opcional) e o job implícito do Dagster: restringido a ativos particionados e jobs declarados.
+
+**O que NÃO foi verificado**
+- Medições do INMET: o endpoint diário respondeu 404 e depois derrubou a conexão; não deu para saber se exige token.
+- O `popular_banco_job` inteiro de novo com a nova ordem do CDC: a ordem foi coberta por teste e o CDC rodou depois da carga, num slot recriado à mão.
+- O volume de desenvolvimento local não foi tocado.
+
+**Decisões que continuam sendo da Squad**
+- Recriar o slot do CDC automaticamente quando ele se perde, ou manter a falha explícita de hoje.
+- Levar o salário mínimo e o clima até a Gold, e fundir `ingest_*`/`bronze_*` dessas fontes.
 
 ---
 
@@ -1036,6 +1106,111 @@ de tarefas nessa linha.
 **Decisões que continuam sendo da Squad**
 - Por onde começar: ADR 0004, CDC ou as evidências restantes.
 
+### 2026-10-29 — Claude Code (Sonnet 5.5) — Metabase para visualizar o DuckDB e o Postgres
+
+**O que a ferramenta fez**
+- Acrescentou ao `docker-compose.yml` os serviços `metabase` (imagem `ghcr.io/motherduckdb/metabase-duckdb`, Debian, com o driver comunitário de DuckDB) e `metabase-db` (Postgres só para os metadados do Metabase), ambos no profile `bi`. A pasta `data/duckdb` é montada somente leitura por causa do escritor único do DuckDB.
+- Acrescentou `METABASE_PORT` e `METABASE_DB_PASSWORD` ao `.env.example`. O arquivo estava deletado na árvore de trabalho; a ferramenta o recriou por engano só com as linhas novas, percebeu e restaurou o conteúdo de `HEAD`.
+- Orientou o preenchimento do formulário de conexão do Metabase (host `db` para o Postgres, `/duckdb/inflatrack.duckdb` para o DuckDB).
+
+**O que foi verificado e como**
+- `docker compose --profile bi config -q` valida a sintaxe do compose.
+- O uso da imagem Debian e o caminho do `.jar` vieram de uma leitura do README do driver via `WebFetch` (resumo gerado, não transcrição).
+
+**O que NÃO foi verificado**
+- Os contêineres não foram subidos: não se sabe se o driver abre o arquivo DuckDB em modo somente leitura, nem se o Metabase enxerga as tabelas.
+- A tag `:latest` não está fixada; compatibilidade entre versões do Metabase e do driver não foi conferida.
+
+**Decisões que continuam sendo da Squad**
+- Fixar a versão da imagem e decidir se o Metabase entra na documentação de arquitetura e na E3 (camada de consumo).
+
+### 2026-10-29 — Claude Code (Opus 5.5) — diagnóstico e desenho da Silver do PIB e das commodities
+
+**O que a ferramenta fez**
+- Leu o `PLANO.md` inteiro e levantou o que existe de Silver no repositório: nada (sem dbt, sem schema `silver`). Achou também que o PIB está no Delta mas não em `bronze.pib_valor` no DuckDB, o que é pré-requisito da Silver.
+- Criou `CHECKLIST_IMPLEMENTACAO_E3.md` com as tarefas da Seção 5.3 do plano.
+- Pesquisou na web como economistas alinham dado trimestral a modelo mensal: *ragged edge*, defasagem de divulgação, MIDAS e *bridge equations*, desagregação temporal, e viés de revisão (Croushore e Stark; Garcia, Medeiros e Vasconcelos, 2017). Apresentou as opções ao integrante.
+- Explicou o papel de Silver (views por fonte) e Gold (`JOIN` por mês e localidade, defasagens para o modelo).
+
+**Decisões tomadas pelo integrante**
+- PIB mensal: valor do trimestre de referência para o painel e opção B (último trimestre divulgado e dois anteriores) para o modelo.
+- Revisões do IBGE: usar a versão mais recente por `_ingerido_em`, **sem ADR**.
+- A base do dbt fica com o Pedro; commodities na Silver em formato longo, em view.
+
+**O que foi verificado e como**
+- Consultas ao DuckDB e ao Delta: contagens, esquemas e o fato de as 2.806 linhas do PIB virem de uma única coleta (28/10/2026), o que torna o *vintage* inviável hoje.
+
+**O que NÃO foi verificado**
+- As fontes da pesquisa foram lidas por resumo do `WebSearch`, não na íntegra. A regra "PIB disponível 3 meses após o fim do trimestre" é uma aproximação, não o calendário oficial do IBGE.
+- Nenhum código de Silver foi escrito ainda.
+
+### 2026-10-30 — Claude Code (Opus 5.5) — revisão do PLAN_E3_E4, conflito de merge, base do dbt e Silver do PIB e das commodities
+
+**O que a ferramenta fez**
+- Comparou o `PLAN_E3_E4.md` (versão do Pedro) com o `CHECKLIST_IMPLEMENTACAO_E3.md` e corrigiu o plano onde o código contradizia: os loaders de PIB e commodities não tinham `DROP TABLE`, o problema era lerem Parquets legados.
+- Auditou a entrega do Pedro rodando os testes numa cópia limpa do commit `4b6d0ef` (128 passam). Faltavam os arquivos de projeto do dbt, que o integrante assumiu.
+- Resolveu o conflito do `git stash pop` em `load_commodities.py` e no teste, removendo a carga legada por decisão do integrante.
+- Reescreveu `load_commodities.py` e `load_pib.py` para ler só do Delta e espelhar em `bronze.*` com `common.bronze.carregar_duckdb`. Aposentou `setup_duckdb.sql`, `setup_duckdb_commodities.sql` e `setup_duckdb_pib.sql`, e criou `tests/integration/test_load_pib.py`.
+- Criou a base do dbt (`dbt_project.yml`, `profiles.yml`, macro de schema, `.gitignore`, `just dbt`), os seeds de setores do PIB e de commodities, `gold.dim_calendario`, `stg_pib__valor`, `int_pib__mensal`, `stg_commodities__cotacao`, `int_commodities__mensal` e 7 testes singulares.
+
+**Decisões tomadas pelo integrante**
+- A branch parte da do Pedro; a carga legada de commodities sai.
+- O integrante assume só a parte do dbt que bloqueia os colegas, não as fontes de Dólar e Selic.
+- Nenhum arquivo apagado pode fazer a Bronze se perder.
+
+**O que foi verificado e como**
+- `pytest` (138 passam), `ruff check` e `ruff format --check` limpos, e `dbt build` com 54/54 OK.
+- Cargas reais nos dois loaders, rodadas duas vezes cada, sem duplicar. Antes, foi feito backup do `.duckdb`.
+- A Silver foi comparada com as views legadas (nenhuma divergência no PIB; a média mensal do WTI bate 100%) e com fatos conhecidos (WTI negativo em abr/2020, divulgação do 2T/2026 em setembro).
+
+**Erros encontrados e corrigidos na sessão**
+- O `xfail` do teste do stash ("Delta falha no Windows") estava errado e foi removido.
+- A unidade do COTTON no código (`USD/metric ton`) divergia da API (`cents per pound`) e foi corrigida.
+- A própria ferramenta rodou sem querer um `git stash` no meio de um comando; ele foi recusado pelo Git por causa do conflito, e nada mudou.
+
+**O que NÃO foi verificado**
+- Dagster com dbt, retry, backfill e Metabase: ainda não implementados.
+
+**Continuação na mesma data (2026-10-30)**
+- Commits locais, sem push, separados por assunto: Metabase, loaders, base do dbt, Silver e este registro.
+- Metabase movido para a porta 3001, porque a 3000 é do Dagster.
+- Criou `orchestration/assets/dbt_assets.py` (modelos e testes do dbt como ativos e asset checks, no pool do DuckDB, com disparo `eager`) e ligou as sources do dbt aos ativos dos loaders por `meta.dagster.asset_key`, recurso conferido no código do dagster-dbt instalado.
+- Criou `tests/orchestration/test_dbt_e_retry.py` (grafo, pool, grupos, checks, política de retry e uma falha HTTP 503 seguida de sucesso na nova tentativa) e o `dbt/README.md` para os colegas.
+- Verificado: 146 testes passam, `ruff` limpo, `dbt build` 54/54, e `dagster asset materialize --select kind:dbt` com `RUN_SUCCESS`.
+- Ainda NÃO feito: o backfill (aguarda a escolha entre IPCA e PIB por ano) e a demonstração de queda de dependência.
+
+**Continuação (2026-10-30, tarde)**
+- A pedido do integrante, retirou a linha de coautoria do Claude dos commits locais (reescrita de mensagens antes do push, conteúdo inalterado) e descartou o stash antigo.
+- Backfill do PIB por ano no Dagster (`PIB_ANUAL`, `BackfillPolicy.single_run`, agendamento que relê o ano corrente e o anterior), com testes de nível 4 e retry testado pelo caminho real do ingestor (SIDRA falso com HTTP 503).
+- Backfill real de 2025 a 2026: 138 linhas lidas do SIDRA e 0 novas na Bronze.
+- Demonstração de queda de dependência: a pasta do Delta do PIB foi movida, o loader falhou, o dbt não executou e os dados ficaram intactos; a pasta foi restaurada com os hashes dos 97 arquivos idênticos, e a retomada terminou em `RUN_SUCCESS`. Registrado em `docs/evidencias/e3/dagster_recuperacao.md`.
+- Pergunta 1 do Metabase ("inflação acumulada do meu setor em 12 meses"): consulta SQL sobre o IPCA oficial que já está no Postgres (`scripts/sql/metabase/p1_inflacao_12m_por_setor.sql`), **provisória** até existir a `gold.fct_inflacao_mensal`. Conferida contra o produto das 12 variações mensais: Índice geral 4,58% = 4,58% e Vestuário 3,34% = 3,34%; Alimentação 4,66% contra 4,64%, pelo arredondamento das mensais.
+- Revisou o `PLAN_E3_E4.md` para a Squad: quadro "Atualização de 30/10", a regra de não apagar `setup_duckdb_*.sql` em uso, a correção do passo 7 da Seção 5.0 (Metabase lê a Gold na E3) e as tarefas já feitas riscadas.
+
+**O que NÃO foi feito**
+- A pergunta não foi criada dentro do Metabase: a configuração inicial já tinha sido feita pelo integrante, e a ferramenta não tem o login. A consulta e os passos foram entregues para ele criar.
+- O lock entre o Metabase e o DuckDB continua sem teste.
+
+**Continuação (2026-10-30, noite)**
+- Painel do Metabase versionado no Git, a pedido do integrante, porque a exportação nativa do Metabase é paga (conferido na documentação): `scripts/sql/metabase/` (um `.sql` por pergunta e o `painel.toml`) e `scripts/metabase_painel.py`, que faz a configuração inicial, cria as conexões, a coleção, as perguntas e o dashboard pela API, sem duplicar. Testes unitários em `tests/unit/test_metabase_painel.py`.
+- Verificado num Metabase descartável (porta 3091, removido depois): duas execuções sem duplicar e a pergunta 1 devolvendo os 10 setores com os valores conferidos. O campo de conexão do driver de DuckDB (`database_file`, `read_only`) foi lido do `metabase-plugin.yaml` do próprio driver.
+- Achado: com o Metabase conectado ao `inflatrack.duckdb`, mesmo somente leitura, o dbt não consegue escrever ("arquivo já está sendo usado por outro processo"). O driver (DuckDB 1.4.1) lê o arquivo gravado pelo 1.5.5 sem problema. A forma de o painel ler a Gold ficou para o integrante decidir (cópia da Gold em arquivo separado, cópia no Postgres, ou parar o Metabase nas cargas).
+- Explicou ao integrante a divisão entre o dbt (que define e calcula a Gold) e o DuckDB (onde os dados ficam e de onde vem a trava).
+
+**O que NÃO foi feito**
+- `just metabase-painel` não rodou no Metabase do integrante (falta o login no `.env`).
+
+**Continuação (2026-10-30, fim do dia)**
+- Por decisão do integrante, o Metabase passou a ler só o Postgres. A ferramenta criou `src/inflatrack/reverse_etl/exportar_serie.py` e o ativo `serie_postgres`, que copiam as tabelas da Gold listadas em `TABELAS` para o schema `serie`. A cópia apaga e insere numa transação, sem recriar a tabela.
+- Antes de escrever, provou com a extensão `postgres` do DuckDB que a recarga mantém o índice criado no Postgres. Também tirou o mount do DuckDB do contêiner do Metabase.
+- Verificado: 4 testes de integração com Postgres real (schema temporário), suíte com 161 testes, e o Dagster rodando `dbt` e depois `serie_postgres` com `RUN_SUCCESS` (588 linhas em `serie.dim_calendario`).
+- Reestruturou o `PLAN_E3_E4.md` a pedido do integrante: sem o quadro de atualização no topo, a Seção 5 só com o que cada um ainda precisa fazer e o contexto técnico numa Seção 6.3 nova.
+- Renomeou a branch para `E3` e commitou sem coautor.
+
+**O que NÃO foi verificado**
+- O asset `serie_postgres` com `AutomationCondition.eager` não foi visto disparando sozinho (o sensor de automação nasce desligado); só a execução manual.
+- A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
+
 ---
 
 ## Artur Fernandes Galdino
@@ -1101,6 +1276,83 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Modelos dbt na camada Silver (`stg_pib_usa`, `stg_pib_russia`) e carga para DuckDB (escopo da E3).
 
+### 2026-11-02 — Antigravity (Gemini 3.8 Flash) — Refatoração do PIB Internacional: Cliente WorldBank e Fusão da Camada Bronze (E3)
+
+**O que a ferramenta fez**
+- Consultou as diretrizes da Entrega 3 em `PLAN_E3_E4.md` e a regra de conformidade em `CLAUDE.md`.
+- Extraiu o cliente compartilhado da API do Banco Mundial em `src/inflatrack/clients/worldbank.py` (`WorldBankClient`), com parametrização de endpoints, constantes dos indicadores (`NY.GDP.MKTP.KD.ZG` e `NY.GDP.MKTP.CD`), mapeamento dos países parceiros (`CHN`, `USA`, `RUS`) e integração com o objeto `Resposta` da camada Bronze.
+- Desenvolveu testes unitários em `tests/unit/test_worldbank_client.py` com mocks de requisição HTTP e validação de esquemas e exceções (`WorldBankError`).
+- Fundiu os 6 arquivos legados de ingestão e bronze da China, EUA e Rússia em um único módulo unificado e parametrizado: `src/inflatrack/bronze/pib_internacional.py`.
+- Manteve compatibilidade retroativa total em `bronze_pib_china.py`, `bronze_pib_usa.py`, `bronze_pib_russia.py`, `ingest_pib_china.py`, `ingest_pib_usa.py` e `ingest_pib_russia.py` delegando para o módulo unificado.
+- Adicionou as receitas unificadas `bronze-pib-internacional`, `bronze-pib-internacional-checar` e `bronze-pib-internacional-importar` no `justfile`.
+
+**O que foi verificado e como**
+- Bateria de testes unitários do novo cliente `test_worldbank_client.py` aprovada com 7/7 testes.
+- Execução completa da suíte de testes de PIB (`tests/unit/test_worldbank_client.py`, `tests/integration/test_pib_china.py`, `test_pib_usa.py`, `test_pib_russia.py`) com 19 testes passando.
+- Execução de toda a suíte de testes do repositório (`uv run pytest tests/unit/ tests/integration/`) resultando em 143 testes aprovados.
+- Análise estática com `uv run ruff check` em todos os módulos criados e modificados com 0 erros.
+- Verificação do build da documentação com `uv run mkdocs build --strict` aprovado com código 0.
+
+**O que NÃO foi verificado**
+- Modelagem analítica dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e consolidação final dos carregadores DuckDB e Dagster (escopo das próximas etapas da E3).
+
+### 2026-11-02 (Fase 2) — Antigravity (Gemini 3.8 Flash) — Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3)
+
+**O que a ferramenta fez**
+- Consolidou as baterias de testes em `tests/unit/test_pib_internacional.py` (12 testes cobrindo transformações longo e largo, validação de payload, regras temporais de corte e continuidade da Rússia) e `tests/integration/test_pib_internacional.py` (6 testes cobrindo idempotência em Delta Lake, validação de integridade e importação de raw).
+- Criou o módulo de carga DuckDB unificado `src/inflatrack/loaders/load_pib_internacional.py` utilizando `common.bronze.carregar_duckdb` nos modos de espelhamento individual (`bronze.pib_<pais>_indicador`) e agregado (`bronze.pib_internacional_indicador`), sem dependência de DDLs manuais.
+- Atualizou `src/inflatrack/loaders/load_pib_china.py` para compatibilidade com a tabela legada e delegação para o novo loader.
+- Adicionou suíte de testes de integração do carregador em `tests/integration/test_load_pib_internacional.py`.
+- Registrou o loader no `inflatrack/__init__.py` e adicionou a receita `pib-internacional-load` no `justfile`.
+
+**O que foi verificado e como**
+- Execução dos testes unitários e de integração de PIB: 25 testes aprovados.
+- Teste de carga real no banco DuckDB analítico local (`data/duckdb/inflatrack.duckdb`): 132 linhas inseridas por país e 396 na tabela unificada na 1ª execução; 0 linhas na 2ª execução consecutiva, comprovando idempotência estrita.
+- Execução completa da suíte do repositório (`uv run pytest tests/`): 182 testes aprovados.
+- `uv run ruff check .` aprovado com 0 erros de estilo e conformidade.
+
+**O que NÃO foi verificado**
+- Modelos dbt na camada Silver/Gold (`dbt/models/staging/pib_internacional/`) e orquestração no Dagster (Etapas 5 e 6).
+
+### 2026-11-02 (Fase 3) — Antigravity (Gemini 3.8 Flash) — Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3)
+
+**O que a ferramenta fez**
+- Implementou os ativos Dagster do PIB Internacional em `orchestration/assets/pib_internacional.py` cobrindo extração Bronze e carga DuckDB (`bronze_pib_chn`, `bronze_pib_usa`, `bronze_pib_rus`, `bronze_pib_internacional_indicador`), com políticas de retry de rede (`RETRY_REDE`), agrupamento `pib_internacional` e concorrência controlada no pool `duckdb_writer` (`POOL_DUCKDB`).
+- Limpou ativos legados específicos da China em `orchestration/assets/ingestao.py`, mantendo a suíte de orquestração limpa.
+- Modelou a camada Silver e Gold no dbt:
+  - `dbt/models/staging/pib_internacional/_pib_int__sources.yml`: declaração da fonte DuckDB (`bronze.pib_internacional_indicador`).
+  - `dbt/models/staging/pib_internacional/stg_pib_internacional__indicador.sql`: deduplicação pela versão mais recente e padronização de datas com `make_date`.
+  - `dbt/models/staging/pib_internacional/_pib_int__models.yml`: documentação e testes de `stg_pib_internacional__indicador` (not null e valores aceitos).
+  - `dbt/models/marts/macro/fct_pib_internacional_anual.sql`: modelo dimensional Gold em formato largo unindo `crescimento_pib_pct` e `pib_nominal_usd` por país e ano.
+  - `dbt/models/marts/macro/_macro__models.yml`: documentação e testes de integridade da tabela fato analítica `fct_pib_internacional_anual`.
+
+**O que foi verificado e como**
+- Suíte do Dagster executada com `uv run pytest tests/orchestration/` (21 testes passando).
+- `dbt build --select +fct_pib_internacional_anual` executado com sucesso: 15 testes e modelos aprovados (100% OK).
+- Consulta direta ao DuckDB comprovando presença dos dados analíticos de China, EUA e Rússia de 1960 a 2025 (66 anos cada país, 198 registros no total) com valores de crescimento e PIB em dólares consistentes.
+- `uv run ruff check .` executado com 0 erros.
+
+**O que NÃO foi verificado**
+- Execução de backfill histórico em lote via Dagster UI ao vivo pelo navegador com orquestração completa em tempo real.
+
+### 2026-11-02 (Fase 4) — Antigravity (Gemini 3.8 Flash) — Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3)
+
+**O que a ferramenta fez**
+- Executou a limpeza e remoção definitiva via `git rm` dos 11 arquivos legados do PIB da China, EUA e Rússia (`bronze_pib_*.py`, `ingest_pib_*.py`, `load_pib_china.py`, `setup_duckdb_pib_china.sql`, `test_pib_*.py`).
+- Ajustou o `justfile` e `src/inflatrack/__init__.py` para apontar diretamente para os módulos unificados de PIB Internacional com parâmetro `--pais`.
+- Unificou visualmente os ativos no Dagster, atribuindo `group_name="pib_internacional"` para todos os nós de PIB Internacional e atualizando o teste de integridade em `tests/orchestration/test_orchestration.py`.
+- Escreveu o Diário de Bordo completo da Squad em `docs/diario/` (`index.md`, `e1.md`, `e2.md`, `e3.md`), reconstruindo todas as Semanas 1 a 13 do semestre letivo com base nos commits, evidências e medições reais.
+- Configurou a navegação do Diário de Bordo no menu do `mkdocs.yml`.
+
+**O que foi verificado e como**
+- Suíte completa de 177 testes em `tests/` (`unit/`, `integration/`, `orchestration/`) executada com 100% de aprovação.
+- `uv run ruff check .` aprovado com 0 erros.
+- `uv run dbt build --select +fct_pib_internacional_anual` aprovado (15/15 OK).
+- `uv run mkdocs build --strict` aprovado com código 0 em 2.57 segundos, sem links órfãos ou avisos.
+
+**O que NÃO foi verificado**
+- Execução em produção do Dagster em servidor externo (apenas ambiente local de desenvolvimento).
+
 ---
 
 ## Pedro Américo
@@ -1154,9 +1406,30 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Modelos dbt na camada Silver (`stg_dolar_*`, `stg_selic_*`) e migração final do DuckDB para o dbt-duckdb (escopo delimitado para a E3).
 
+### 2026-11-01 — Antigravity (Gemini 3.1 Pro) — Camada Silver dbt de Macroeconomia, Dagster SLA/Freshness e Otimização EXPLAIN ANALYZE no PostgreSQL
+
+**O que a ferramenta fez**
+- Ajudou a implementar a camada Silver Staging no dbt para Dólar (`stg_dolar__cotacao_diaria.sql`) com deduplicação pelo último boletim diário de fechamento e Selic (`stg_selic__taxa_diaria.sql`) com cálculo de fator diário e taxa anualizada contínua, configurando sources conectadas aos assets Dagster via `meta.dagster.asset_key`.
+- Ajudou a implementar o modelo Silver Intermediate consolidado (`int_macroeconomia__mensal.sql`) unificando Câmbio e Juros no grão canônico mensal (`mes_referencia = YYYY-MM-01`), com médias móveis (3m, 6m, 12m), volatilidade móvel (`stddev_samp`), variações percentuais e Selic composta acumulada mensal via `product(fator_diario)`.
+- Criou testes de qualidade analítica dbt singulares em `dbt/tests/`: unicidade de grão (`assert_int_macroeconomia__mensal_chave_unica.sql`), continuidade temporal sem lacunas silenciosas (`assert_macroeconomia_sem_mes_faltando.sql`) e consistência estatística de limites físicos e econômicos (`assert_macroeconomia_valores_plausiveis.sql`).
+- Ajudou a implementar Asset Checks de SLA, Freshness e integridade de volume no Dagster (`orchestration/assets/checks.py`) com severidade WARN/ERROR e metadados diagnósticos para Dólar (D-1 útil), Selic (D+1 útil) e tabela de consumo intermediária (Mensal até 45 dias), registrando a suíte em `tests/orchestration/test_checks.py`.
+- Auxiliou a Elaborar o script de otimização SQL (`scripts/sql/explain_serie.sql`), a migration `migrations/0005_serie_historica.sql` e a evidência formal comparativa `docs/evidencias/e3/explain_serie_historica.md` demonstrando a aceleração de 161,5x e redução de 99,7% de buffers lidos no PostgreSQL através de um Covering Index (`INCLUDE (valor)`).
+
+**O que foi verificado e como**
+- Compilação do dbt: 8 modelos, 82 testes e 4 sources compilando sem erros via `dbt compile`.
+- Execução dos testes dbt: 35 testes analíticos e de esquema aprovados com 100% de sucesso (`dbt test --select +int_macroeconomia__mensal`).
+- Suíte completa do pytest: 206 testes aprovados, 4 pulados (Docker sem rede direta no sandbox) e 0 falhas em 7,62s.
+- Cobertura de testes: 100% de cobertura nos clientes de API, 98,5% dos branches cobertos e mais de 90% das linhas operacionais nos módulos da trilha.
+- Linting estrito: `ruff check .` com 0 erros.
+- Execução real no PostgreSQL 16.4 via Docker dos planos de execução antes e depois com `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, SETTINGS)`.
+
+**O que NÃO foi verificado**
+- Execução dos testes dbt de fontes de outros colegas que ainda não tiveram suas tabelas materializadas na máquina local (ex.: `commodities_cotacao`).
+- Treinamento do modelo preditivo de Machine Learning na camada Gold (escopo da E4).
+
 **Decisões que continuam sendo da Squad**
-- Definir o cronograma exato de migração do DuckDB transitório para os modelos dbt-duckdb na Entrega 3.
----
+- Na unificação da branch E3, estender os asset checks de SLA/freshness e testes de qualidade analítica para as demais fontes (PIB, Commodities, Clima, Salário Mínimo e IPCA).
+- Conciliar a migração 0005 de Pedro e Lucas para manter ambas as tabelas da vitrine no schema `serie` do PostgreSQL.
 
 ---
 
@@ -1226,6 +1499,21 @@ de tarefas nessa linha.
 
 **Decisões que continuam sendo da Squad**
 - Migração dos assets das outras fontes restantes (`ipca`, `dolar`, `selic`, `commodities`, `pib`, `pib_china`) de `ingestao.py` para seus próprios arquivos em `orchestration/assets/`.
+
+### 2026-10-31 — GitHub Copilot — Ingestão e Silver de clima e salário mínimo (E3)
+
+**O que a ferramenta fez**
+- Corrigiu a conversão de zeros e sentinelas do INMET; implementou Delta de medições, loader DuckDB, coleta controlada por estação/período, asset Dagster manual, mapeamento explícito de estações e localidades e modelos dbt mensais para clima e salário mínimo.
+- Atualizou a documentação das duas fontes e manteve os DDLs `setup_duckdb_clima.sql` e `setup_duckdb_salario_minimo.sql`, ainda usados pelos loaders.
+
+**O que foi verificado e como**
+- `uv run pytest tests/unit/test_inmet.py -q` e `uv run pytest tests/integration/test_clima.py -q` passaram; a integração cobre zero válido, sentinela como `NULL`, revisão histórica, idempotência e promoção ao DuckDB.
+- `uv run dbt compile` dos modelos de clima, salário mínimo e dimensão de localidade passou; após regenerar o manifesto, `uv run pytest tests/orchestration/test_orchestration.py -q` passou.
+- Mapeamento de estações conferido contra o fixture INMET e códigos de localidade contra `migrations/0003_seed_referencia.sql`.
+
+**O que NÃO foi verificado**
+- Nenhuma requisição real de medições foi feita; a disponibilidade atual do endpoint do INMET precisa ser confirmada. Fortaleza não possui estação correspondente no fixture, e o projeto não possui uma fonte independente para custo da cesta básica.
+- O `dbt build` com tabelas Bronze reais, a coleta ponta a ponta e o clone limpo não foram executados.
 
 ---
 

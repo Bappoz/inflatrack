@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_clima__estacao
+    description: Uma linha pela versão mais recente do cadastro de cada estação INMET.
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: estado
+        data_tests: [not_null]
+  - name: stg_clima__medicao_diaria
+    description: Uma linha por estação x dia, considerando a última revisão disponível.
+    columns:
+      - name: estacao_id
+        data_tests: [not_null]
+      - name: data_referencia
+        data_tests: [not_null]
