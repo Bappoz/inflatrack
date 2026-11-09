@@ -73,9 +73,9 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 | Formato | Tabelas Delta Lake, cujos dados são arquivos Parquet |
 | Caminho | `data/parquet/<fonte>/` |
 | Transformação | Só parsing e tipagem — nenhuma regra de negócio |
-| Interface | Lida pelas APIs Delta/Arrow nos ingestores; dbt como *source* é planejado |
+| Interface | Lida pelas APIs Delta/Arrow nos ingestores; espelhada em `bronze.*` no DuckDB pelos loaders, de onde o dbt a lê como *source* |
 | Volumetria | A carga E2 medida contém 9,1 mi de linhas Delta do SIDRA; os arquivos Parquet compactados ocupam dezenas de MB |
-| Status | Em uso em fontes migradas para E2; ainda há fluxos legados em Parquet direto |
+| Status | Em uso em todas as fontes; o Parquet simples só sobra na coleta legada do salário mínimo |
 
 **Responsabilidades**:
 
@@ -92,11 +92,11 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 |---|---|
 | Versão | dbt-core |
 | Adapter | `dbt-duckdb` |
-| Models | `models/staging/` (Silver), `models/marts/` (Gold) |
-| Sources | Tabelas Delta/Parquet da Bronze |
-| Tests | Esquema, unicidade, integridade referencial, volume e distribuição |
+| Models | `models/staging/` e `models/intermediate/` (Silver), `models/marts/` (Gold) |
+| Sources | Tabelas `bronze.*` no DuckDB (espelho do Delta) |
+| Tests | Esquema, unicidade, integridade referencial, volume e distribuição (230 testes em 2026-11-09) |
 | Docs | `dbt docs generate` (grafo de linhagem) |
-| Status | Planejado; `dbt-core`, `dbt-duckdb` e `models/` ainda não existem no projeto |
+| Status | Em uso desde a E3; executado pelo Dagster (`dagster-dbt`) e por `just dbt` |
 
 **Responsabilidades**:
 
@@ -107,14 +107,14 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 ## DuckDB
 
-**Papel**: Banco analítico embarcado para as cargas e consultas analíticas atuais; Silver e Gold conformadas são o alvo futuro.
+**Papel**: Banco analítico embarcado: Bronze espelhada, Silver e Gold conformadas.
 
 | Aspecto | Detalhe |
 |---|---|
 | Deploy | Embarcado, arquivo único |
 | Caminho | `data/duckdb/inflatrack.duckdb` |
-| Estruturas | Tabelas e views por fonte criadas por `scripts/setup_duckdb*.sql` e módulos `load_*` |
-| Conexão | Ingestores e Dagster; dbt, notebooks e Streamlit são planejados |
+| Estruturas | Schemas `bronze` (módulos `load_*`), `silver` e `gold` (dbt); tabelas legadas por fonte em `main` (`scripts/setup_duckdb*.sql`) |
+| Conexão | Ingestores, dbt e Dagster; o Metabase não se conecta (lê a cópia em `serie`, no PostgreSQL); notebooks são planejados |
 | Concorrência | **Um escritor por arquivo, por vez** |
 | Status | Em uso |
 
@@ -122,7 +122,7 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 * Armazenar tabelas e views analíticas de fontes no mesmo arquivo
 * Permitir cruzamentos entre fontes com SQL
-* Servir como destino planejado para modelos dbt e matriz de treino
+* Servir como destino dos modelos dbt e, na E4, da matriz de treino
 
 ## PostgreSQL
 
@@ -163,18 +163,18 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 |---|---|
 | Deploy | Local (`just orquestrador`, que roda `dagster dev`) |
 | Código | `orchestration/` — um asset por etapa, chamando `src/inflatrack/` |
-| Integração | `dagster-dbt` planejado; dbt ainda não está instalado |
+| Integração | `dagster-dbt`: cada modelo e teste do dbt é um ativo ou *asset check* do grafo |
 | Partições | Mensais no IPCA/INPC, acompanhando a divulgação do IBGE |
 | Confiabilidade | Retry por asset e backfill por partição |
 | Concorrência | Pool `duckdb_writer` com limite 1 |
-| Status | Em uso nos ingestores · Planejado na integração com dbt |
+| Status | Em uso: ingestores, dbt, cópia para `serie` e checks de frescura |
 
 **Responsabilidades**:
 
 * Executar os assets de ingestão implementados num grafo de dependência
 * Repetir o que falhou sem reprocessar o que já passou
 * Rodar backfill de janela histórica, por partição
-* Expor o estado de execução dos assets; freshness checks ainda estão planejados
+* Expor o estado de execução dos assets e os checks de frescura e volume de cada fonte
 
 ## Jupyter Notebooks
 
@@ -214,24 +214,24 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 * Versionar o modelo escolhido
 * Ligar o resultado à janela de dado que o gerou
 
-## Streamlit + Plotly
+## Metabase
 
 **Papel**: Painel analítico — a resposta ao lojista.
 
 | Aspecto | Detalhe |
 |---|---|
-| Framework | Streamlit |
-| Gráficos | Plotly |
-| Entrada | Cópia publicada da Gold, em leitura |
-| Escopo | As 5 perguntas de gestão declaradas na E1 |
-| Status | Planejado |
+| Deploy | Docker Compose, perfil `bi` (`metabase` + `metabase-db`) |
+| Entrada | Schema `serie` do PostgreSQL (cópia da Gold, ativo `serie_postgres`), em leitura, com o usuário `metabase_painel` |
+| Escopo | As 5 perguntas de gestão declaradas na E1 (7 perguntas no painel) |
+| Versionamento | Perguntas em `scripts/sql/metabase/*.sql` e `painel.toml`; `just metabase-painel` recria o painel |
+| Status | Em uso (E3); isolamento por lojista (RLS) é da E4 |
 
 **Responsabilidades**:
 
 * Responder às perguntas declaradas, e não exibir os gráficos disponíveis
-* Ler uma cópia publicada, para não disputar o escritor do DuckDB
-* Mostrar o reajuste sugerido e o dado que o sustenta
-* Declarar em tela a data do último dado carregado
+* Ler a cópia em `serie`, para não disputar o escritor do DuckDB
+* Manter o painel no Git, porque o Metabase gratuito não exporta perguntas
+* Mostrar o reajuste sugerido e o dado que o sustenta (a recomendação é da E4)
 
 ## MkDocs Material
 

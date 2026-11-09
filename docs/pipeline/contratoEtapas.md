@@ -7,11 +7,11 @@ São sete etapas. Elas estão desenhadas em [Fluxo de Dados](../arquitetura/flux
 | # | Etapa | Status |
 |---|---|---|
 | **E1** | Extração e aterrissagem (Raw) | Em uso (Dagster) |
-| **E2** | Materialização Bronze (Parquet) | Em uso (Dagster) |
-| **E3** | Silver (dbt) | Planejado |
-| **E4** | Gold (dbt marts) | Planejado |
+| **E2** | Materialização Bronze (Delta) | Em uso (Dagster) |
+| **E3** | Silver (dbt) | Em uso (Dagster) |
+| **E4** | Gold (dbt marts) | Em uso (Dagster) |
 | **E5** | Matriz de treino e modelos | Planejado |
-| **E6** | Publicação para o painel | Planejado |
+| **E6** | Publicação para o painel | Em uso (`serie_postgres` e Metabase) |
 | **E7** | Referência e transacional (Postgres) | Em uso |
 
 ---
@@ -21,11 +21,11 @@ São sete etapas. Elas estão desenhadas em [Fluxo de Dados](../arquitetura/flux
 | # | Origem | Destino | Ferramenta prevista |
 |---|---|---|---|
 | E1 | 6 APIs externas: SIDRA/IBGE, BCB (Olinda e SGS), Alpha Vantage, Banco Mundial, DIEESE (HTML), INMET | `data/raw/<fonte>/*.json.gz` \| `*.html.gz` | Python (`httpx`, `requests`) + Dagster |
-| E2 | Camada Raw | `data/parquet/<fonte>/*.parquet` | `pandas`, `pyarrow` + Dagster |
-| E3 | Camada Bronze (Parquet, via `read_parquet()`) | Schema `silver` no DuckDB | dbt-duckdb (`models/staging/`) |
+| E2 | Resposta original (Raw) | `data/parquet/<fonte>/` (tabelas Delta) | `pandas`, `pyarrow`, `deltalake` + Dagster |
+| E3 | Tabelas `bronze.*` no DuckDB (espelho do Delta) | Schema `silver` no DuckDB | dbt-duckdb (`models/staging/` e `models/intermediate/`) |
 | E4 | Schema `silver` | Schema `gold` no DuckDB | dbt-duckdb (`models/marts/`) |
-| E5 | Schema `gold` | Modelo treinado + métricas | Jupyter, `scikit-learn`, MLflow |
-| E6 | Schema `gold` | Cópia publicada do DuckDB (leitura) | Dagster (asset de publicação) → Streamlit + Plotly |
+| E5 | Schema `gold` | Modelo treinado + métricas | XGBoost / LightGBM (plano da E4) |
+| E6 | Schema `gold` | Schema `serie` no PostgreSQL | Dagster (`serie_postgres`) → Metabase |
 | E7 | SIDRA/IBGE + escrita do lojista na aplicação | PostgreSQL 16 (referência do IPCA + transacional) | Python + `psycopg`, migrations SQL |
 
 ## Transformações e modo de execução
@@ -34,7 +34,7 @@ São sete etapas. Elas estão desenhadas em [Fluxo de Dados](../arquitetura/flux
 |---|---|---|---|---|
 | E1 | **Nenhuma.** Grava o payload exatamente como veio, só comprimido | — (só Extract + Load) | Lote | Diária (BCB, Alpha Vantage, INMET) · Mensal (IPCA, DIEESE) · Trimestral (PIB) · Anual (PIB da China) |
 | E2 | Parsing, tipagem, acréscimo de `data_ingestao` e procedência | **ELT** — carrega cru e transforma depois | Lote | Igual à E1 (mesmo asset dispara) |
-| E3 | Limpar, validar, deduplicar, normalizar unidade, completar calendário civil (*forward fill*), resolver chaves | **ELT** | Lote | Disparada pelo *upstream* (E2) |
+| E3 | Limpar, validar, deduplicar, normalizar unidade, agregar ao grão mensal (as séries diárias entram só com os dias publicados), resolver chaves | **ELT** | Lote | Disparada pelo *upstream* (E2) |
 | E4 | Juntar as 8 fontes, agregar por período e cesta, calcular métricas derivadas e dimensão de variação lenta | **ELT** | Lote | Disparada pelo *upstream* (E3) |
 | E5 | Montar janelas temporais, *lags*, normalização de features, divisão treino/teste | **ELT** | Lote | Sob demanda (reexperimentação) |
 | E6 | Nenhuma transformação — cópia consistente, para não disputar o escritor único do DuckDB | — | Lote | Após cada materialização da Gold |
