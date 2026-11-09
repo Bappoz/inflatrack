@@ -1,9 +1,10 @@
-"""Bronze do Clima (INMET): cadastro de estações meteorológicas em Delta.
+"""Bronze do Clima (INMET): coleta, validação e gravação em Delta, num único arquivo.
 
 Cada sincronização do cadastro de estações vira duas coisas, gravadas no mesmo passo::
 
     data/parquet/clima/resposta/   clima_resposta  uma linha por resposta DIFERENTE
     data/parquet/clima/estacao/    clima_estacao   uma linha por estação meteorológica
+    data/parquet/clima/medicao/    clima_medicao   uma linha por leitura diária (coleta manual)
 
 ``clima_resposta`` guarda o JSON bruto da requisição e substitui os ``.json.gz`` de
 ``data/raw/inmet/``.
@@ -13,11 +14,17 @@ SEM valores padrão inventados (campos ausentes ficam nulos).
 As duas tabelas só acrescentam. Reexecutar a mesma consulta não grava nada; se o INMET atualizar
 o cadastro ou a situação de uma estação, a revisão entra como linha nova e a anterior permanece.
 
+As medições diárias exigem estações e intervalo explícitos e ficam fora da coleta diária do
+catálogo (``--medicoes``).
+
 Uso::
 
-    uv run python -m inflatrack.bronze_clima ingest
-    uv run python -m inflatrack.bronze_clima checar
-    uv run python -m inflatrack.bronze_clima importar --raw-dir data/raw/inmet
+    uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --medicoes --estacao A001 \\
+        --de 2026-01-01 --ate 2026-01-31
+    uv run python -m inflatrack.bronze.clima checar
+    uv run python -m inflatrack.bronze.clima importar --raw-dir data/raw/inmet
+    uv run python -m inflatrack.bronze.clima load --modo so_acrescenta
 """
 
 from __future__ import annotations
@@ -33,13 +40,20 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
-from inflatrack.inmet import BASE_URL, InmetClient, transformar_clima_diario
+from inflatrack.clients.inmet import (
+    BASE_URL,
+    InmetClient,
+    InmetError,
+    transformar_clima_diario,
+    transformar_estacoes,
+)
 
-logger = logging.getLogger("inflatrack.bronze_clima")
+logger = logging.getLogger("inflatrack.clima")
 
 FONTE = "clima"
 DIRETORIO_PADRAO = "data/parquet/clima"
@@ -419,6 +433,61 @@ def gravar_medicoes(
     return GravacaoMedicoes(id_resposta, nova, len(linhas), novas)
 
 
+def processar_estacoes(
+    cliente: InmetClient, destino: Path = Path(DIRETORIO_PADRAO)
+) -> pd.DataFrame:
+    """Coleta o catálogo de estações ativas e grava na Bronze Delta."""
+    logger.info("Consultando catálogo de estações ativas do INMET...")
+    payload = cliente.listar_estacoes(tipo="T")
+    grav = gravar(destino, payload)
+    logger.info(
+        "Bronze Delta: resposta %s, %d de %d estações novas em %s",
+        "nova" if grav.resposta_nova else "já guardada",
+        grav.linhas_novas,
+        grav.linhas_lidas,
+        destino,
+    )
+    return transformar_estacoes(payload)
+
+
+def processar_medicoes(
+    cliente: InmetClient,
+    estacoes: list[str],
+    data_inicio: str,
+    data_fim: str,
+    destino: Path = Path(DIRETORIO_PADRAO),
+) -> tuple[int, int]:
+    """Busca cada estação indicada e grava as respostas e leituras em Delta."""
+    inicio = pd.Timestamp(data_inicio).date()
+    fim = pd.Timestamp(data_fim).date()
+    if inicio > fim:
+        raise ValueError("A data inicial deve ser anterior ou igual à data final.")
+    if not estacoes:
+        raise ValueError("Informe ao menos uma estação para coletar medições.")
+
+    respostas_novas = medicoes_novas = 0
+    for estacao_id in estacoes:
+        endpoint = f"{data_inicio}/{data_fim}/{estacao_id}"
+        payload = cliente.buscar_dados_estacao(estacao_id, data_inicio, data_fim)
+        if not payload:
+            logger.info("Nenhuma medição retornada para a estação %s", estacao_id)
+            continue
+        grav = gravar_medicoes(
+            destino,
+            payload,
+            requisicao=f"{BASE_URL}/estacao/diaria/{endpoint}",
+        )
+        respostas_novas += int(grav.resposta_nova)
+        medicoes_novas += grav.linhas_novas
+        logger.info(
+            "Estação %s: %d leituras novas de %d recebidas",
+            estacao_id,
+            grav.linhas_novas,
+            grav.linhas_lidas,
+        )
+    return respostas_novas, medicoes_novas
+
+
 def importar_raw(
     raw_dir: Path,
     destino: Path,
@@ -477,7 +546,7 @@ def carregar_duckdb(
     """Carrega a tabela Delta clima_estacao no DuckDB nos dois modos do contrato."""
     import duckdb
 
-    from inflatrack import load_clima
+    from inflatrack.loaders import load_clima
 
     db = Path(db_caminho)
     db.parent.mkdir(parents=True, exist_ok=True)
@@ -489,8 +558,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="comando", required=True)
 
-    p_ingest = subparsers.add_parser("ingest", help="Baixa da API e grava em Delta")
-    p_ingest.add_argument("--destino", default=DIRETORIO_PADRAO)
+    p_coletar = subparsers.add_parser("coletar", help="Baixa da API do INMET e grava em Delta")
+    p_coletar.add_argument("--destino", default=DIRETORIO_PADRAO)
+    p_coletar.add_argument(
+        "--apenas-estacoes",
+        action="store_true",
+        help="Só o cadastro de estações (é o que a coleta faz sem --medicoes)",
+    )
+    p_coletar.add_argument(
+        "--medicoes", action="store_true", help="Também busca medições diárias das estações"
+    )
+    p_coletar.add_argument("--estacao", action="append", default=[], help="ID INMET; pode repetir")
+    p_coletar.add_argument("--de", dest="data_inicio", help="Data inicial AAAA-MM-DD")
+    p_coletar.add_argument("--ate", dest="data_fim", help="Data final AAAA-MM-DD")
 
     p_checar = subparsers.add_parser("checar", help="Verifica a tabela Delta gravada")
     p_checar.add_argument("--destino", default=DIRETORIO_PADRAO)
@@ -513,18 +593,26 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     destino = Path(args.destino)
-    if args.comando == "ingest":
-        logger.info("Consultando catálogo de estações do INMET...")
+    if args.comando == "coletar":
+        if args.medicoes and not (args.data_inicio and args.data_fim):
+            parser.error("--medicoes exige --de e --ate")
         cliente = InmetClient()
-        payload = cliente.listar_estacoes(tipo="T")
-        grav = gravar(destino, payload)
-        logger.info(
-            "Gravado com sucesso: resposta %s, %d de %d estações novas",
-            "nova" if grav.resposta_nova else "já guardada",
-            grav.linhas_novas,
-            grav.linhas_lidas,
-        )
-        return 0
+        try:
+            processar_estacoes(cliente, destino)
+            if args.medicoes:
+                respostas, leituras = processar_medicoes(
+                    cliente, args.estacao, args.data_inicio, args.data_fim, destino
+                )
+                logger.info(
+                    "Bronze diária: %d respostas novas, %d medições novas", respostas, leituras
+                )
+            return 0
+        except (InmetError, ChecagemError) as erro:
+            logger.error("Erro na API do INMET: %s", erro)
+            return 1
+        except Exception:
+            logger.exception("Falha inesperada na coleta do clima")
+            return 1
     if args.comando == "checar":
         try:
             info = checar_tabela(destino)

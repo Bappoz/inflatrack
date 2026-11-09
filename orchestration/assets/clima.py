@@ -12,7 +12,7 @@ from dagster import (
     asset,
 )
 
-from inflatrack import ingest_clima, load_clima
+from inflatrack import clima, load_clima
 
 POOL_DUCKDB = "duckdb_writer"
 RETRY_REDE = RetryPolicy(max_retries=2, delay=30, backoff=Backoff.EXPONENTIAL)
@@ -32,7 +32,7 @@ def _executar(context: AssetExecutionContext, main: Callable[..., int], *argv: s
     description="Cadastro das estações meteorológicas do INMET em Raw, Parquet e Bronze Delta.",
 )
 def clima_parquet(context: AssetExecutionContext) -> None:
-    _executar(context, ingest_clima.main, "--apenas-estacoes")
+    _executar(context, clima.main, "coletar", "--apenas-estacoes")
 
 
 @asset(
@@ -66,6 +66,7 @@ def clima_duckdb(context: AssetExecutionContext) -> None:
 def clima_medicoes(context: AssetExecutionContext) -> None:
     config = context.op_config
     argumentos = [
+        "coletar",
         "--medicoes",
         "--de",
         config["data_inicio"],
@@ -74,7 +75,7 @@ def clima_medicoes(context: AssetExecutionContext) -> None:
     ]
     for estacao in config["estacoes"]:
         argumentos.extend(("--estacao", estacao))
-    _executar(context, ingest_clima.main, *argumentos)
+    _executar(context, clima.main, *argumentos)
 
 
 @asset(
