@@ -166,7 +166,10 @@ fmt:
 lint:
     uv run ruff check src/ orchestration/
 
+# O `dbt parse` refaz o target/manifest.json que os testes do Dagster leem: com ele velho (um .yml
+# do dbt mudou num pull), os testes caem com ativo faltando ou repetido (PLAN_E3_E4, Seção 6.3).
 test:
+    uv run dbt parse --quiet
     uv run pytest
 
 # O gate antes de dizer "pronto".

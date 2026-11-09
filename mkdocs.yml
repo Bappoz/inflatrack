@@ -86,6 +86,7 @@ nav:
   - Pipeline de Dados:
     - Orquestração (Dagster): pipeline/orquestracao.md
     - Contrato das Etapas: pipeline/contratoEtapas.md
+    - Como rodar (Commodities): como_rodar/cr_commodities.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
@@ -99,6 +100,8 @@ nav:
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
   - Evidências:
+    - E1 — IPCA/INPC (SIDRA): evidencias/evidencias.md
+    - E1 — Macroeconomia: evidencias/evidencias_macro.md
     - E2 — Situação por fonte: evidencias/e2/index.md
     - E2 — IPCA/INPC (SIDRA): evidencias/e2/ipca.md
     - E2 — Commodities: evidencias/e2/commodities.md
@@ -113,6 +116,7 @@ nav:
     - E3 — IPCA, lojista e Gold: evidencias/e3/ipca_lojista.md
     - E3 — Consulta na vitrine (EXPLAIN): evidencias/e3/explain_serie.md
     - E3 — SLA e frescura (câmbio x juros): evidencias/e3/sla_e_freshness.md
+    - E3 — Release Notes: evidencias/e3/release_notes.md
     - Diário de bordo (Lucas): diario/lucas.md
     - Diário de bordo (Artur): diario/artur.md
     - Uso de IA: evidencias/uso_ia.md

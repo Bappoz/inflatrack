@@ -12,7 +12,7 @@ FCTE/UnB. Squad Tio IPCA.
 > que este lojista vende — e qual o reajuste mínimo para preservar a margem?
 
 Cinco perguntas derivadas, com o modelo em que cada uma fica fácil, estão em
-`docs/carga.md`.
+[`docs/visaoGeral/consultas.md`](docs/visaoGeral/consultas.md).
 
 ## Subir do zero
 
@@ -21,7 +21,7 @@ Requisitos: Docker Compose v2, [`uv`](https://docs.astral.sh/uv/) e
 
 ```bash
 git clone https://github.com/Bappoz/inflatrack.git && cd inflatrack
-just reset          # sobe o Postgres e aplica migrations/0001..0003 em ordem
+just reset          # sobe o Postgres e aplica migrations/0001..0005 em ordem
 just seed-amostra   # 3 meses do IPCA — confere que a ingestão funciona
 just seed-pib-china # carrega o histórico do PIB da China (World Bank API)
 ```
@@ -39,7 +39,7 @@ comércio, transporte, energia, impostos, consumo, exportação e importação)
 vêm das Contas Nacionais Trimestrais e levam ~10 segundos:
 
 ```bash
-just pib            # SIDRA 1846: raw gzip -> Parquet -> DuckDB
+just pib            # SIDRA 1846: Bronze em Delta -> DuckDB
 ```
 
 ### Como reproduzir a E2
@@ -60,6 +60,35 @@ O que precisa de configuração:
 
 Hoje a receita cobre o PIB e as commodities; cada fonte acrescenta as suas receitas a ela. As evidências de cada fonte estão em [`docs/evidencias/e2/`](docs/evidencias/e2/).
 
+### Como reproduzir a E3
+
+Do zero, com o Dagster disparando tudo (Bronze de todas as fontes, Silver e Gold no dbt,
+cópia da Gold para o Postgres e o painel do Metabase):
+
+```bash
+cp .env.example .env   # ALPHAVANTAGE_API_KEY, METABASE_EMAIL/SENHA e METABASE_PG_PASSWORD
+uv sync
+just up                # Postgres com as migrations 0001..0005
+just orquestrador      # Dagster em http://localhost:3002 (DAGSTER_PORT)
+```
+
+Na interface do Dagster, lance `popular_banco_job` (enche a Bronze de todas as fontes; num
+clone limpo levou 33 min em 2026-11-08, quase tudo no IPCA). O banco do lojista nasce vazio
+(os dados dele são fictícios): rode `just simular-cdc` e o `transacional_job` para a P5 ter
+dado. Por fim, lance o `analitico_job` (cargas do IPCA no DuckDB, `dbt build`
+e cópia para o schema `serie`). Detalhes em
+[`docs/pipeline/orquestracao.md`](docs/pipeline/orquestracao.md).
+
+```bash
+docker compose --profile bi up -d --wait   # Metabase em http://localhost:3001
+just metabase-painel                       # recria o painel a partir de scripts/sql/metabase/
+just check                                 # ruff format + lint + pytest
+just dbt-test                              # testes analíticos do dbt
+```
+
+Evidências da entrega em [`docs/evidencias/e3/`](docs/evidencias/e3/) e o que entrou em
+[`docs/evidencias/e3/release_notes.md`](docs/evidencias/e3/release_notes.md).
+
 `just --list` mostra todas as receitas. **O `justfile` é a fonte canônica dos
 comandos** — não rode o comando cru.
 
@@ -73,7 +102,7 @@ Para visualizar as tabelas do PostgreSQL e as linhas salvas direto pelo navegado
 just db-ui
 ```
 
-Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)**
+Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)** (`ADMINER_PORT` no `.env`)
 
 * **Sistema**: `PostgreSQL`
 * **Servidor**: `db`
