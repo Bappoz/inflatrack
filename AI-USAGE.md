@@ -16,7 +16,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 7 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (4) |
+| Johnnatan Salles | 10 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (7) |
 
 
 ## Todas as sessões
@@ -72,6 +72,9 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Integração do cadastro de usuário com Supabase Auth via backend Python |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Tabela pública de perfis sincronizada com Supabase Auth |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Home simples e navegação de teste entre cadastro, login e home |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Dashboard Dagster protegido por sessão Supabase e diagnóstico de login |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Diagnóstico, carga inicial Gold e schedule focado do dashboard |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Remoção do limite máximo de caracteres da senha |
 
 ---
 
@@ -1557,6 +1560,50 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - O login continua sendo apenas uma navegação de teste; autenticação real não foi implementada nem validada.
+
+### 2026-11-09 — GitHub Copilot — Dashboard protegido e diagnóstico de login
+
+**O que a ferramenta fez**
+- Ligou o login FastAPI ao Supabase Auth com cookies `HttpOnly`, renovação de sessão e logout; a home redireciona visitantes sem sessão e mostra o nome do perfil autenticado.
+- Ajustou as respostas do login para distinguir e-mail não confirmado de credenciais inválidas.
+
+**O que foi verificado e como**
+- Doze testes automatizados passaram, cobrindo login simulado, cookies, perfil, acesso anônimo, dashboard e respostas de erro.
+- Build e lint do frontend passaram; Ruff passou no backend.
+- No navegador, requests simuladas verificaram bloqueio anônimo, saudação e saída sem criar usuário.
+
+**O que NÃO foi verificado**
+- Não foi feito login real no Supabase, pois isso exige as credenciais do usuário. A conta e o estado de confirmação devem ser conferidos no Supabase Auth.
+- O Postgres local estava indisponível, então os dados reais do dashboard não foram carregados.
+
+### 2026-11-09 — GitHub Copilot — Remoção do limite máximo da senha
+
+**O que a ferramenta fez**
+- Removeu do backend o limite máximo local de 128 caracteres, mantendo a exigência mínima de 8 caracteres.
+
+**O que foi verificado e como**
+- Os 12 testes do backend passaram; o teste de signup envia e confere integralmente uma senha de 256 caracteres.
+- `ruff check` passou.
+
+**O que NÃO foi verificado**
+- Nenhuma senha longa foi enviada ao Supabase real; a chamada ficou simulada nos testes.
+
+### 2026-11-09 — GitHub Copilot — Carga inicial do dashboard a partir da Gold
+
+**O que a ferramenta fez**
+- Diagnosticou que o Postgres do projeto estava vazio e a API apontava para a porta ocupada 5432; subiu o Postgres do Inflatrack em 5433 e atualizou o `.env` local ignorado pelo Git.
+- Executou os backfills SIDRA de IPCA, INPC e número-índice, carregou a Bronze IPCA no DuckDB, aplicou seeds, gerou Gold de inflação e publicou as quatro tabelas usadas pelo dashboard em `serie`.
+- Criou o `dashboard_job` e seu schedule diário às 20h30, com seleção restrita às Gold de inflação consumidas pela home; os schedules de outras fontes permanecem opt-in para proteger cotas. Atualizou a paleta da home para roxo, preto e branco.
+
+**O que foi verificado e como**
+- IPCA, INPC e número-índice terminaram com `RUN_SUCCESS`; 9.114.558 observações e 1.833 metadados entraram na Bronze do DuckDB.
+- Build dbt direcionado concluiu com 71 testes aprovados; a execução Dagster focada passou 65 checks e publicou 1.662.001 linhas em `serie.fct_inflacao_mensal`.
+- A consulta real do endpoint retornou dados até 09/2026, com IPCA 4,58%, INPC 4,29%, 10 setores, 17 praças e as séries históricas esperadas.
+- Build/lint frontend, testes do schedule, Ruff e MkDocs strict passaram; o layout roxo/branco foi conferido no navegador em viewport mobile.
+
+**O que NÃO foi verificado**
+- A sessão autenticada real do usuário não foi reutilizada no navegador; o payload foi verificado diretamente na função de consulta e em testes simulados de UI.
+- Outras fontes econômicas que não são necessárias aos gráficos atuais não foram coletadas.
 
 ---
 

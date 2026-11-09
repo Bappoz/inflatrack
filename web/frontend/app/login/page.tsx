@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "react-toastify";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -18,10 +19,43 @@ export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [imageUnavailable, setImageUnavailable] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.replace("/");
+    const formData = new FormData(event.currentTarget);
+    setIsSubmitting(true);
+    setMessage("");
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/auth/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password"),
+        }),
+      });
+      const result: { detail?: string; nome?: string } = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = result.detail ?? "Não foi possível entrar. Verifique suas credenciais.";
+        setMessage(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+
+      toast.success(`Bem-vindo, ${result.nome ?? "de volta"}!`);
+      router.replace("/");
+    } catch {
+      const errorMessage = "Não foi possível conectar ao serviço de autenticação.";
+      setMessage(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -81,8 +115,8 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <button className="submit-button" type="submit">
-              Entrar na minha conta
+            <button className="submit-button" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Entrando..." : "Entrar na minha conta"}
               <ArrowRight aria-hidden="true" size={18} />
             </button>
             <p className="form-message" role="status" aria-live="polite">

@@ -60,4 +60,6 @@ class TradutorInflatrack(DagsterDbtTranslator):
 )
 def dbt_inflatrack(context: AssetExecutionContext):
     """`dbt build` dos modelos selecionados: cria as views e tabelas e roda os testes."""
-    yield from DbtCliResource(project_dir=PROJETO_DBT).cli(["build"], context=context).stream()
+    yield from DbtCliResource(project_dir=PROJETO_DBT).cli(
+        ["build", "--indirect-selection", "cautious"], context=context
+    ).stream()

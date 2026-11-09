@@ -1,7 +1,7 @@
-"""Jobs e agendamentos, um por grupo de ativos (cadências de docs/pipeline/orquestracao.md).
+"""Jobs e schedules de fontes e publicação do dashboard.
 
-Os agendamentos nascem desligados: ligue na interface (Automation) para não gastar a
-cota da Alpha Vantage nem bater nas APIs só por abrir o `dagster dev`.
+Só IPCA/INPC e número-índice são ativados por padrão: são as séries públicas consumidas pelo
+dashboard. As demais fontes externas continuam opt-in para proteger suas cotas.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 from dagster import (
     AssetKey,
     AssetSelection,
+    DefaultScheduleStatus,
     JobDefinition,
     RunRequest,
     ScheduleDefinition,
@@ -48,6 +49,25 @@ analitico_job = define_asset_job(
     AssetSelection.groups("silver", "gold", "vitrine") | CARGAS_SEM_JOB_PROPRIO,
 )
 
+dashboard_job = define_asset_job(
+    "dashboard_job",
+    AssetSelection.assets(
+        AssetKey("ipca_duckdb"),
+        AssetKey("ipca_metadados_duckdb"),
+        AssetKey(["silver", "seed_agregado_sidra"]),
+        AssetKey(["silver", "seed_localidade_ibge"]),
+        AssetKey(["silver", "seed_variavel_sidra"]),
+        AssetKey(["silver", "stg_ipca__metadados"]),
+        AssetKey(["silver", "stg_ipca__observacao"]),
+        AssetKey(["silver", "int_ipca__mensal"]),
+        AssetKey(["gold", "dim_calendario"]),
+        AssetKey(["gold", "dim_localidade"]),
+        AssetKey(["gold", "dim_cesta_ipca_scd2"]),
+        AssetKey(["gold", "fct_inflacao_mensal"]),
+        AssetKey("dashboard_serie_postgres"),
+    ),
+)
+
 JOBS = [
     ipca_job,
     inpc_job,
@@ -60,6 +80,7 @@ JOBS = [
     clima_job,
     transacional_job,
     analitico_job,
+    dashboard_job,
 ]
 
 
@@ -77,6 +98,7 @@ def _agendamento_sidra(job: JobDefinition, ativo: str):
         job=job,
         cron_schedule="0 10 9-13 * *",
         execution_timezone=FUSO,
+        default_status=DefaultScheduleStatus.RUNNING,
     )
     def _agendamento(context: ScheduleEvaluationContext):
         execucao = context.scheduled_execution_time
@@ -124,5 +146,10 @@ SCHEDULES = [
         job=pib_internacional_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO
     ),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),
-    ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
+    ScheduleDefinition(
+        job=dashboard_job,
+        cron_schedule="30 20 * * *",
+        execution_timezone=FUSO,
+        default_status=DefaultScheduleStatus.RUNNING,
+    ),
 ]

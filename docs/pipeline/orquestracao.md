@@ -86,7 +86,8 @@ Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados. As demais fonte
 | Clima (INMET) | — | Catálogo 1×/dia; medições só manuais (`clima_medicoes`) | Estações automáticas |
 | Salário mínimo (DIEESE) | Mensal | 1×/mês | Publicação do DIEESE |
 | PIB internacional (Banco Mundial) | — | 1×/mês, dia 1 (detecta revisão) | Revisões fora de calendário |
-| Silver, Gold e vitrine (`analitico_job`) | — | 1×/dia às 20h30, depois das fontes | Dependência do grafo |
+| Gold de inflação e vitrine (`dashboard_job`) | — | 1×/dia às 20h30, depois do SIDRA | Dependência do dashboard |
+| Silver, Gold e vitrine de todas as fontes (`analitico_job`) | — | Manual | Consolidação analítica completa |
 
 Fontes com calendário irregular (o IBGE às vezes antecipa, o DIEESE não tem dia fixo) usam agendamento **tolerante**: roda todo dia da janela e o asset só materializa quando o dado novo aparece — mais barato que acertar a data exata.
 
@@ -106,8 +107,8 @@ just materializar macro_job # roda um job sem abrir a interface
 
 A partir da interface: materializar um ativo, selecionar um intervalo de partições para backfill (um intervalo do IPCA vira uma única execução, quebrada por agregado), ou inspecionar a última execução de cada ativo.
 
-!!! warning "Agendamentos nascem desligados"
-    Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
+!!! info "Atualização do dashboard"
+    Os schedules de IPCA, INPC e número-índice SIDRA, mais o `dashboard_job`, iniciam ativos. O job do dashboard atualiza apenas as quatro tabelas de inflação usadas pela home. Os schedules de commodities, macroeconomia e demais fontes continuam desligados para proteger cotas externas. Mantenha o Postgres no ar (`just up`) e o daemon Dagster ativo (`just orquestrador`).
 
 ### Primeira execução numa máquina nova
 
@@ -119,7 +120,7 @@ Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op 
 
 Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos; as medições de clima não entram (o ativo `clima_medicoes` é manual).
 
-Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
+O `dashboard_job` fica ativo diariamente às 20h30; os schedules SIDRA rodam nos dias 9 a 13 e releem os três meses anteriores para captar revisões do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)). O `analitico_job` completo continua manual. Numa máquina nova, faça o backfill SIDRA antes da primeira execução do dashboard.
 
 Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia. O mês é pulado sem gravar nada e a partição dele fica *pendente* (não materializada), então o agendamento pede de novo no dia seguinte; os outros meses do intervalo são materializados normalmente. A execução só fica vermelha quando **nenhum** mês do intervalo saiu (`nada de ... foi divulgado pela fonte ainda`), e sem retry, porque esperar 30 s não faz o IBGE publicar. Se o mês fosse marcado como carregado sem dado, os dias seguintes seriam pulados e o mês nunca entraria.
 

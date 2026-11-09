@@ -7,7 +7,7 @@ from datetime import date, timedelta
 
 import duckdb
 import pytest
-from dagster import AssetCheckSeverity, build_asset_check_context
+from dagster import AssetCheckSeverity, DefaultScheduleStatus, build_asset_check_context
 
 from orchestration.assets import checks
 from orchestration.assets.checks import (
@@ -115,11 +115,10 @@ def test_check_falha_quando_duckdb_nao_existe(tmp_path, monkeypatch):
 
 
 def test_analitico_job_roda_silver_gold_e_vitrine_depois_das_fontes():
-    """Rotina diária: depois do último agendamento de fonte (Dólar/Selic às 19h)."""
+    """Job completo continua disponível para a rotina analítica de todas as fontes."""
     repo = defs.get_repository_def()
     job = repo.get_job("analitico_job")
     chaves = {chave.to_user_string() for chave in job.asset_layer.selected_asset_keys}
-    agendamento = next(s for s in repo.schedule_defs if s.job_name == "analitico_job")
 
     assert {"gold/fct_macroeconomia_mensal", "silver/int_macroeconomia__mensal"} <= chaves
     assert "serie_postgres" in chaves
@@ -127,4 +126,35 @@ def test_analitico_job_roda_silver_gold_e_vitrine_depois_das_fontes():
     # dependem de coletas particionadas de saída opcional, então vêm aqui, antes do dbt.
     cargas = {chave for chave in chaves if chave.endswith("_duckdb")}
     assert cargas == {"ipca_duckdb", "ipca_metadados_duckdb", "pib_duckdb"}
-    assert agendamento.cron_schedule == "30 20 * * *"
+
+
+def test_dashboard_job_is_focused_and_scheduled() -> None:
+    repo = defs.get_repository_def()
+    job = repo.get_job("dashboard_job")
+    selected = {key.to_user_string() for key in job.asset_layer.selected_asset_keys}
+
+    assert selected == {
+        "ipca_duckdb",
+        "ipca_metadados_duckdb",
+        "silver/seed_agregado_sidra",
+        "silver/seed_localidade_ibge",
+        "silver/seed_variavel_sidra",
+        "silver/stg_ipca__metadados",
+        "silver/stg_ipca__observacao",
+        "silver/int_ipca__mensal",
+        "gold/dim_calendario",
+        "gold/dim_localidade",
+        "gold/dim_cesta_ipca_scd2",
+        "gold/fct_inflacao_mensal",
+        "dashboard_serie_postgres",
+    }
+    schedule = next(item for item in repo.schedule_defs if item.job_name == "dashboard_job")
+    sidra_schedules = [
+        item
+        for item in repo.schedule_defs
+        if item.job_name in {"ipca_job", "inpc_job", "ipca_indice_job"}
+    ]
+    assert schedule.cron_schedule == "30 20 * * *"
+    assert schedule.default_status == DefaultScheduleStatus.RUNNING
+    assert len(sidra_schedules) == 3
+    assert all(item.default_status == DefaultScheduleStatus.RUNNING for item in sidra_schedules)
