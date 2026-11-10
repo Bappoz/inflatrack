@@ -37,28 +37,17 @@ for _name in _LOADER_NAMES:
     sys.modules[f"inflatrack.{_name}"] = _mod
     setattr(sys.modules[__name__], _name, _mod)
 
-# 4. Módulos bronze_* primeiro (pois ingest_* dependem de bronze_*)
+# 4. Módulos bronze, um arquivo por fonte. O PIB e as commodities não têm atalho:
+# `inflatrack.pib` já é o cliente HTTP; use `inflatrack.bronze.pib` e
+# `inflatrack.bronze.commodities`.
 _BRONZE_NAMES = [
-    "bronze_clima",
-    "bronze_pib",
-    "bronze_salario_minimo",
+    "clima",
+    "salario_minimo",
     "dolar",
     "pib_internacional",
     "selic",
 ]
 for _name in _BRONZE_NAMES:
-    _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
-    sys.modules[f"inflatrack.{_name}"] = _mod
-    setattr(sys.modules[__name__], _name, _mod)
-
-# 5. Módulos ingest_*
-_INGEST_NAMES = [
-    "ingest_clima",
-    "ingest_commodities",
-    "ingest_pib",
-    "ingest_salario_minimo",
-]
-for _name in _INGEST_NAMES:
     _mod = importlib.import_module(f"inflatrack.bronze.{_name}")
     sys.modules[f"inflatrack.{_name}"] = _mod
     setattr(sys.modules[__name__], _name, _mod)
@@ -73,5 +62,4 @@ __all__ = [
     *_CLIENT_NAMES,
     *_LOADER_NAMES,
     *_BRONZE_NAMES,
-    *_INGEST_NAMES,
 ]

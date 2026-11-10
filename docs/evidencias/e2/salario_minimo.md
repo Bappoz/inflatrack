@@ -3,7 +3,7 @@
 O que a fonte `salario_minimo` entrega na Entrega 2, com o comando que produziu cada número. Tudo nesta página foi executado em **2026-10-12**, contra a página pública da Pesquisa Nacional da Cesta Básica de Alimentos do DIEESE (`deltalake` 1.6.6, `duckdb` 1.5.5, `pyarrow` 25.0.1).
 
 !!! info "Onde está o código"
-    [`src/inflatrack/bronze_salario_minimo.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze_salario_minimo.py) (transformação, checagens, gravação em Delta e importação), integrado a [`ingest_salario_minimo.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/ingest_salario_minimo.py). Testes unitários completos em `tests/test_salario_minimo.py`, com fixture real da página em `tests/fixtures/salario_minimo/salario_minimo.html`. Esquema das tabelas Delta no [Dicionário de Dados](../../dicionario/salario_minimo.md#bronze-em-delta).
+    [`src/inflatrack/bronze/salario_minimo.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze/salario_minimo.py) (transformação, checagens, gravação em Delta e importação), que desde a E3 também inclui a coleta (antes em `ingest_salario_minimo.py`). Testes unitários completos em `tests/test_salario_minimo.py`, com fixture real da página em `tests/fixtures/salario_minimo/salario_minimo.html`. Esquema das tabelas Delta no [Dicionário de Dados](../../dicionario/salario_minimo.md#bronze-em-delta).
 
 ## Situação das tarefas da E2
 

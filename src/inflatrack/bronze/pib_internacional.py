@@ -501,13 +501,9 @@ def checar_tabelas_pais(pais: str, destino: Path | None = None) -> None:
     caminho_ind = _caminho(destino, "indicador")
 
     if not DeltaTable.is_deltatable(caminho_resp):
-        raise ChecagemError(
-            f"tabela pib_{sufixo}_resposta não existe ou não é Delta válida"
-        )
+        raise ChecagemError(f"tabela pib_{sufixo}_resposta não existe ou não é Delta válida")
     if not DeltaTable.is_deltatable(caminho_ind):
-        raise ChecagemError(
-            f"tabela pib_{sufixo}_indicador não existe ou não é Delta válida"
-        )
+        raise ChecagemError(f"tabela pib_{sufixo}_indicador não existe ou não é Delta válida")
 
     dt_resp = DeltaTable(caminho_resp)
     dt_ind = DeltaTable(caminho_ind)

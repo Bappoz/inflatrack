@@ -297,3 +297,35 @@ def test_cesta_recusa_duas_versoes_abertas_para_o_mesmo_codigo(pg) -> None:
             " values (%s, 7060, 'Outro', '2026-01-01')",
             (codigo,),
         )
+
+
+class _ConexaoFalsa:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def commit(self) -> None:
+        pass
+
+
+def test_backfill_pula_o_mes_nao_divulgado_e_grava_os_outros(tmp_path, monkeypatch) -> None:
+    """Backfill que termina num mês que o IBGE ainda não divulgou: os meses publicados entram,
+    o vazio é pulado sem gravar nada, e a função diz quais vieram (o Dagster usa isso)."""
+    monkeypatch.setattr(psycopg, "connect", lambda *a, **k: _ConexaoFalsa())
+    monkeypatch.setattr(ipca, "carregar_periodo", lambda *a, **k: 6)
+    sem_cesta = sidra.Resposta("https://sidra.invalid/m", 200, "application/json", "{}")
+    monkeypatch.setattr(sidra, "buscar_metadados_resposta", lambda cliente, agregado: sem_cesta)
+
+    def buscar_resposta(cliente, agregado, periodo, **_):
+        return resposta_1737("202609") if periodo == "202609" else resposta_1737(periodo, "[]")
+
+    monkeypatch.setattr(sidra, "buscar_resposta", buscar_resposta)
+
+    coletados = ipca.coletar_intervalo(1737, date(2026, 9, 1), date(2026, 10, 1), tmp_path)
+
+    assert coletados == ["202609"]
+    requisicoes = [linha["_requisicao"] for linha in tabela(tmp_path, "resposta")]
+    assert not any("202610" in url for url in requisicoes)  # outubro não entra
+    assert len(tabela(tmp_path, "observacao")) == 6

@@ -570,60 +570,74 @@ def carregar_periodo(
 # --- Coleta ------------------------------------------------------------------------
 
 
-def coletar(args: argparse.Namespace) -> int:
-    """Baixa um intervalo de meses de um agregado: Delta primeiro, depois Postgres."""
-    inicio, fim = mes_para_data(args.de.replace("-", "")), mes_para_data(args.ate.replace("-", ""))
-    destino = Path(args.parquet_dir)
+def coletar_intervalo(
+    agregado: int, inicio: date, fim: date, destino: Path, dsn: str | None = None
+) -> list[str]:
+    """Baixa os meses de `inicio` a `fim` de um agregado: Delta primeiro, depois Postgres.
+
+    Mês ainda não divulgado (a API responde 200 com lista vazia) é pulado com aviso, sem
+    gravar nada: um backfill que termina no mês corrente traz os meses que já saíram. Devolve
+    os períodos (``AAAAMM``) gravados; o Dagster materializa só as partições deles.
+    """
+    niveis, classificacao = sidra.consulta_do_agregado(agregado)
+    coletados: list[str] = []
     total = 0
 
     with (
         httpx.Client() as cliente,
-        psycopg.connect(
-            args.dsn or dsn_do_ambiente(), connect_timeout=TIMEOUT_CONEXAO_S
-        ) as conexao,
+        psycopg.connect(dsn or dsn_do_ambiente(), connect_timeout=TIMEOUT_CONEXAO_S) as conexao,
     ):
-        resposta_metadados = sidra.buscar_metadados_resposta(cliente, args.agregado)
-        gravar_metadados(destino, args.agregado, resposta_metadados)
+        resposta_metadados = sidra.buscar_metadados_resposta(cliente, agregado)
+        gravar_metadados(destino, agregado, resposta_metadados)
         mapa_classificacao: dict[str, str] | None = None
-        if args.agregado != AGREGADO_SEM_CESTA:
-            mapa_classificacao = sincronizar_cesta(
-                conexao, args.agregado, resposta_metadados.json()
-            )
+        if agregado != AGREGADO_SEM_CESTA:
+            mapa_classificacao = sincronizar_cesta(conexao, agregado, resposta_metadados.json())
             conexao.commit()
             logger.info(
                 "cesta sincronizada: %d categorias do agregado %d",
                 len(mapa_classificacao),
-                args.agregado,
+                agregado,
             )
 
-        niveis, classificacao = sidra.consulta_do_agregado(args.agregado)
         for periodo in sidra.meses(inicio, fim):
             resposta = sidra.buscar_resposta(
-                cliente, args.agregado, periodo, niveis=niveis, classificacao=classificacao
+                cliente, agregado, periodo, niveis=niveis, classificacao=classificacao
             )
             payload = resposta.json()
             if not payload:
-                # Mês ainda não divulgado vem como 200 + lista vazia. Falhar (sem gravar nada)
-                # mantém a partição pendente no Dagster, e o agendamento tenta no dia seguinte.
-                raise sidra.SidraError(f"{args.agregado}/{periodo}: sem dados publicados")
-            gravacao = gravar(destino, args.agregado, periodo, resposta)
+                logger.warning(
+                    "%s/%s: o IBGE ainda não divulgou este mês, pulado", agregado, periodo
+                )
+                continue
+            gravacao = gravar(destino, agregado, periodo, resposta)
             logger.info(
                 "%s/%s: bronze com %d de %d linhas novas (resposta %s)",
-                args.agregado,
+                agregado,
                 periodo,
                 gravacao.linhas_novas,
                 gravacao.linhas_lidas,
                 "nova" if gravacao.resposta_nova else "já guardada",
             )
-            inseridas = carregar_periodo(
-                conexao, args.agregado, periodo, payload, mapa_classificacao
-            )
+            inseridas = carregar_periodo(conexao, agregado, periodo, payload, mapa_classificacao)
             conexao.commit()
             total += inseridas
-            logger.info("%s/%s: %d linhas novas", args.agregado, periodo, inseridas)
+            coletados.append(periodo)
+            logger.info("%s/%s: %d linhas novas", agregado, periodo, inseridas)
 
-    logger.info("total inserido: %d linhas", total)
-    return total
+    logger.info("total inserido: %d linhas em %d meses", total, len(coletados))
+    return coletados
+
+
+def coletar(args: argparse.Namespace) -> list[str]:
+    """`coletar` da linha de comando: falha só se nenhum mês do intervalo saiu ainda."""
+    inicio = mes_para_data(args.de.replace("-", ""))
+    fim = mes_para_data(args.ate.replace("-", ""))
+    coletados = coletar_intervalo(args.agregado, inicio, fim, Path(args.parquet_dir), args.dsn)
+    if not coletados:
+        raise sidra.MesNaoDivulgado(
+            f"{args.agregado}: nenhum mês de {args.de} a {args.ate} foi divulgado ainda"
+        )
+    return coletados
 
 
 def coletar_metadados(destino: Path, agregados: Iterable[int] = AGREGADOS_COM_CESTA) -> int:
@@ -845,6 +859,9 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         return args.funcao(args)
+    except sidra.MesNaoDivulgado as erro:
+        logger.error("carga abortada: %s", erro)
+        return bronze.SAIDA_NAO_DIVULGADO
     except (sidra.SidraError, ChecagemError, psycopg.Error, httpx.HTTPError) as erro:
         logger.error("carga abortada: %s", erro)
         return 1

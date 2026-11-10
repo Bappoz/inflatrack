@@ -10,7 +10,8 @@ descricao = "Gerado por scripts/metabase_painel.py a partir de scripts/sql/metab
 
 # O Metabase lê só o Postgres: a Gold chega em serie.* pelo ativo serie_postgres. Ele nunca
 # se conecta ao DuckDB, porque uma conexão aberta no arquivo trava o dbt e os loaders.
-# Usuário, senha e banco vêm do .env.
+# Banco vem do .env. O usuário é o leitor METABASE_PG_USER (papel metabase_leitor: só `serie`),
+# criado pelo próprio script; nunca o dono do banco.
 [bancos.postgres]
 nome = "InflaTrack — Postgres"
 engine = "postgres"
@@ -19,9 +20,67 @@ engine = "postgres"
 [[perguntas]]
 arquivo = "p1_inflacao_12m_por_setor.sql"
 titulo = "Inflação acumulada em 12 meses por setor"
-descricao = "Pergunta 1. Provisória: lê o IPCA do Postgres até a gold.fct_inflacao_mensal existir."
+descricao = "Pergunta 1. IPCA, Brasil, último mês divulgado. Lê serie.fct_inflacao_mensal (cópia da Gold)."
 banco = "postgres"
 grafico = "bar"
 eixo_x = "setor"
 eixo_y = ["inflacao_12m_pct"]
-posicao = { linha = 0, coluna = 0, largura = 16, altura = 9 }
+posicao = { linha = 0, coluna = 0, largura = 12, altura = 9 }
+
+[[perguntas]]
+arquivo = "p4_brasil_x_regiao.sql"
+titulo = "IPCA e INPC em 12 meses: Brasil x praças"
+descricao = "Pergunta 4. Índice geral, último mês divulgado, Brasil primeiro. Lê serie.fct_inflacao_mensal."
+banco = "postgres"
+grafico = "bar"
+eixo_x = "localidade"
+eixo_y = ["ipca_12m_pct", "inpc_12m_pct"]
+posicao = { linha = 0, coluna = 12, largura = 12, altura = 9 }
+
+[[perguntas]]
+arquivo = "p4_brasil_ipca_x_inpc_5_anos.sql"
+titulo = "IPCA x INPC em 12 meses, Brasil, últimos 5 anos"
+descricao = "Pergunta 4 (evolução). Índice geral, Brasil, 60 meses. Lê serie.fct_inflacao_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["ipca_12m_pct", "inpc_12m_pct"]
+posicao = { linha = 9, coluna = 0, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "p2_sazonalidade_por_mes.sql"
+titulo = "Sazonalidade: variação média do IPCA por mês do ano"
+descricao = "Pergunta 2. Média de jul/2006 em diante, Brasil. Sem o efeito do clima, que ainda não chega à Gold."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes"
+eixo_y = ["indice_geral_pct", "alimentacao_e_bebidas_pct", "habitacao_pct", "vestuario_pct", "transportes_pct"]
+posicao = { linha = 9, coluna = 12, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "p3_poder_de_compra_desde_2006.sql"
+titulo = "Poder de compra de R$ 100 de jan/2006"
+descricao = "Pergunta 3. IPCA geral, Brasil, pelo número-índice. Lê serie.fct_inflacao_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["poder_de_compra_de_100_reais"]
+posicao = { linha = 17, coluna = 0, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "p3_salario_minimo_real.sql"
+titulo = "Salário mínimo: nominal x corrigido pelo IPCA"
+descricao = "Pergunta 3. DIEESE desde jan/2006, corrigido pelo IPCA geral para reais do último mês. Lê serie.fct_salario_minimo_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["salario_nominal", "salario_corrigido_pelo_ipca"]
+posicao = { linha = 17, coluna = 12, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "p5_reajuste_minimo_por_produto.sql"
+titulo = "Reajuste mínimo por produto do lojista"
+descricao = "Pergunta 5. Último mês de cada produto: preço x IPCA do subitem em 12 meses. Lê serie.fct_reajuste_lojista."
+banco = "postgres"
+grafico = "table"
+posicao = { linha = 25, coluna = 0, largura = 24, altura = 9 }

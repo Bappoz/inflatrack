@@ -5,8 +5,12 @@
 -- índice e as permissões continuam valendo depois de cada cópia. As colunas precisam estar na
 -- mesma ordem dos modelos do dbt; se divergirem, a cópia falha sem alterar nada.
 --
--- `serie` não tem chave primária: o grão é garantido e testado na Gold (dbt), e uma chave aqui
--- seria mais um índice para manter a cada recarga. O CDC não lê este schema (0004).
+-- As fatos de `serie` não têm chave primária: o grão é garantido e testado na Gold (dbt), e uma
+-- chave aqui seria mais um índice para manter a cada recarga. As dimensões têm (são pequenas).
+-- O CDC não lê este schema (0004).
+--
+-- Reexecutável: tudo é `if not exists`. Num volume que já tinha a 0005, rode
+-- `just migrar 0005_serie_historica.sql` para criar as tabelas acrescentadas depois.
 
 begin;
 
@@ -23,14 +27,14 @@ create table if not exists serie.dim_calendario (
     ultimo_dia        date     not null
 );
 
-create table serie.dim_localidade (
+create table if not exists serie.dim_localidade (
     codigo_localidade  integer primary key,
     nome_localidade    text not null,
     tipo_localidade    text not null,
     uf                 text
 );
 
-create table serie.dim_cesta_ipca_scd2 (
+create table if not exists serie.dim_cesta_ipca_scd2 (
     id_versao_cesta         text primary key,
     indice                  text     not null,
     codigo_categoria        text     not null,
@@ -47,7 +51,7 @@ create table serie.dim_cesta_ipca_scd2 (
     peso_brasil_fim_pct     numeric(12, 4)
 );
 
-create table serie.fct_inflacao_mensal (
+create table if not exists serie.fct_inflacao_mensal (
     indice                      text     not null,
     codigo_categoria            text     not null,
     codigo_localidade           integer  not null,
@@ -74,11 +78,11 @@ comment on table serie.fct_inflacao_mensal is
 
 -- O índice medido no EXPLAIN (docs/evidencias/e3/explain_serie.md). Serve à pergunta mais
 -- frequente do lojista: a série de uma categoria na praça dele, do mês mais recente para trás.
-create index fct_inflacao_mensal_consulta_idx on serie.fct_inflacao_mensal (
+create index if not exists fct_inflacao_mensal_consulta_idx on serie.fct_inflacao_mensal (
     codigo_categoria, codigo_localidade, indice, mes_referencia desc
 );
 
-create table serie.dim_produto_preco_scd2 (
+create table if not exists serie.dim_produto_preco_scd2 (
     id_versao_preco      text primary key,
     id_produto           bigint        not null,
     versao               smallint      not null,
@@ -93,7 +97,7 @@ create table serie.dim_produto_preco_scd2 (
     versao_atual         boolean       not null
 );
 
-create table serie.fct_reajuste_lojista (
+create table if not exists serie.fct_reajuste_lojista (
     id_produto                    bigint   not null,
     mes_referencia                date     not null,
     id_versao_preco               text     not null,
@@ -119,8 +123,45 @@ create table serie.fct_reajuste_lojista (
 );
 comment on table serie.fct_reajuste_lojista is
     'Uma linha por produto do lojista x mês. Cópia de gold.fct_reajuste_lojista.';
-create index fct_reajuste_lojista_lojista_idx
+create index if not exists fct_reajuste_lojista_lojista_idx
     on serie.fct_reajuste_lojista (id_lojista, mes_referencia desc);
+
+-- Câmbio x juros x inflação (Pedro, Seção 5.2). Dado público: o lojista também lê.
+create table if not exists serie.fct_macroeconomia_mensal (
+    mes_referencia                date primary key,
+    mes_fechado                   boolean,
+    dolar_media                   numeric(10, 4),
+    dolar_fechamento              numeric(10, 4),
+    dolar_var_mensal_pct          numeric(12, 4),
+    dolar_var_12m_pct             numeric(12, 4),
+    dolar_volatilidade_12m_pct    numeric(12, 4),
+    selic_anualizada_fim_mes_pct  numeric(10, 4),
+    selic_acumulada_mes_pct       numeric(10, 4),
+    selic_acumulada_12m_pct       numeric(12, 4),
+    ipca_12m_pct                  numeric(12, 4),
+    juro_real_12m_pct             numeric(12, 4)
+);
+comment on table serie.fct_macroeconomia_mensal is
+    'Uma linha por mês. Cópia de gold.fct_macroeconomia_mensal.';
+
+-- Salário mínimo do DIEESE frente ao IPCA (pergunta 3). Dado público: o lojista também lê.
+create table if not exists serie.fct_salario_minimo_mensal (
+    mes_referencia                date primary key,
+    salario_nominal               numeric(14, 2),
+    salario_necessario            numeric(14, 2),
+    multiplos_salario_necessario  numeric(12, 4),
+    variacao_nominal_pct          numeric(12, 4),
+    variacao_necessario_pct       numeric(12, 4),
+    media_movel_nominal_3m        numeric(14, 2),
+    variacao_nominal_12m_pct      numeric(12, 4),
+    ipca_12m_pct                  numeric(12, 4),
+    ganho_real_12m_pct            numeric(12, 4),
+    mes_base_real                 date,
+    salario_nominal_real          numeric(14, 2),
+    salario_necessario_real       numeric(14, 2)
+);
+comment on table serie.fct_salario_minimo_mensal is
+    'Uma linha por mês. Cópia de gold.fct_salario_minimo_mensal.';
 
 -- Papéis sem login: quem conecta recebe o papel. Criar papel não aceita IF NOT EXISTS, e papel é
 -- objeto do servidor, não do banco.
@@ -152,6 +193,7 @@ alter default privileges in schema serie grant select, insert, delete on tables 
 -- O lojista lê só o que é público. As duas tabelas do lojista ficam de fora até a E4 ter RLS por
 -- estabelecimento: com um GRANT aqui, cada loja leria os preços de todas as outras.
 grant select on serie.dim_calendario, serie.dim_localidade, serie.dim_cesta_ipca_scd2,
-    serie.fct_inflacao_mensal to lojista_app;
+    serie.fct_inflacao_mensal, serie.fct_macroeconomia_mensal, serie.fct_salario_minimo_mensal
+    to lojista_app;
 
 commit;

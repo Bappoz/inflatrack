@@ -26,23 +26,23 @@ Dez conjuntos de dados vindos de seis provedores, todos públicos. Só a Alpha V
 | [Salário Mínimo](../fontes/salario_minimo.md) | DIEESE (HTML) | Mensal | Feature |
 | [Dados do Clima](../fontes/clima.md) | INMET | Diária | Feature |
 
-O destino previsto para as séries públicas é uma Gold analítica no DuckDB, onde alvo e features poderão ser cruzados. Hoje os ingestores já carregam fontes no PostgreSQL e no DuckDB; o projeto dbt que produzirá a Silver e a Gold comuns ainda está planejado.
+As séries públicas seguem até uma Gold analítica no DuckDB, onde alvo e features se cruzam por `mes_referencia`. Desde a Entrega 3, o dbt produz a Silver e a Gold, uma cópia da Gold vai para o schema `serie` do PostgreSQL e o Metabase lê dali. A camada semântica das métricas e o modelo preditivo são da Entrega 4.
 
-O fluxo alvo tem quatro camadas, detalhadas em [Arquitetura Medallion](arquiteturaMedallion.md): **Raw** em arquivos gzip, **Bronze** em tabelas Delta Lake sobre Parquet, **Silver** com dbt-duckdb e **Gold** no DuckDB. Raw e partes da Bronze estão em uso; dbt, Silver e Gold conformada ainda estão planejados. Algumas fontes seguem também por carregadores legados diretamente ao DuckDB.
+O fluxo tem quatro camadas, detalhadas em [Arquitetura Medallion](arquiteturaMedallion.md): **Raw** (a resposta original de cada coleta, guardada no Delta), **Bronze** em tabelas Delta Lake sobre Parquet, **Silver** com dbt-duckdb e **Gold** no DuckDB. Todas estão em uso; nem toda fonte tem fato na Gold (PIB do Brasil, commodities e clima só chegam à Silver).
 
 ## Stack
 
 | Peça | Tecnologia | Por que foi escolhida | Estado |
 |---|---|---|---|
-| Camada Raw | JSON/HTML gzip em `data/raw/<fonte>/` | Preserva respostas para auditoria e reprocessamento sem nova chamada às origens. | Em uso |
-| Camada Bronze | Delta Lake sobre arquivos Parquet em `data/parquet/<fonte>/` | Mantém formato colunar e interoperável com histórico transacional para cargas idempotentes e revisões. | Em uso em partes da E2; alguns carregadores legados ainda usam Parquet diretamente |
-| Transformação | `dbt-core` + `dbt-duckdb` | SQL versionado para modelos, testes e linhagem entre Bronze, Silver e Gold. | Planejado; não está nas dependências |
+| Camada Raw | Resposta original na tabela `<fonte>_resposta` do Delta (SHA-256 do corpo); `.json.gz`/`.html.gz` em `data/raw/<fonte>/` no formato antigo | Preserva respostas para auditoria e reprocessamento sem nova chamada às origens. | Em uso |
+| Camada Bronze | Delta Lake sobre arquivos Parquet em `data/parquet/<fonte>/` | Mantém formato colunar e interoperável com histórico transacional para cargas idempotentes e revisões. | Em uso em todas as fontes; o Parquet simples só sobra na coleta legada do salário mínimo |
+| Transformação | `dbt-core` + `dbt-duckdb` | SQL versionado para modelos, testes e linhagem entre Bronze, Silver e Gold. | Em uso (E3): Silver, Gold e 230 testes |
 | Banco analítico | DuckDB em `data/duckdb/inflatrack.duckdb` | SQL analítico multifonte sem operar um servidor separado para a carga atual. Ver [ADR 0002](../adr/0002-duckdb-unico.md). | Em uso |
 | Banco transacional | PostgreSQL 16.4 em Docker Compose | Transações, FKs e restrições para cadastro de lojista, produto e reajuste. | Em uso |
-| Orquestração | Dagster | Assets, partições, retries e backfills representam as saídas de dados do pipeline. | Em uso nas ingestões; integração com dbt planejada |
+| Orquestração | Dagster | Assets, partições, retries e backfills representam as saídas de dados do pipeline. | Em uso: coletas, cargas, dbt (`dagster-dbt`), cópia para `serie` e *asset checks* de frescura |
 | Ingestão | Python 3.12, `httpx`/`requests`, `pandas`, `pyarrow`, `deltalake`, `psycopg` | Um runtime integra clientes HTTP, conversão tabular, tabelas Bronze e os dois bancos. | Em uso; os clientes `requests` são legado a consolidar |
-| Painel | Streamlit + Plotly | Interface Python para as perguntas do lojista e visualizações interativas. | Planejado; não está nas dependências |
-| Aprendizado de máquina | Jupyter, `scikit-learn`, MLflow | Exploração e comparação de modelos com rastreamento reproduzível de experimentos. | Planejado; não está nas dependências |
+| Painel | Metabase | Painel das perguntas do lojista; lê só o schema `serie` do PostgreSQL, nunca o arquivo do DuckDB, e é recriado do Git (`just metabase-painel`). | Em uso (E3), com 7 perguntas; RLS por lojista é da E4 |
+| Aprendizado de máquina | XGBoost / LightGBM (plano da E4); Jupyter, `scikit-learn` e MLflow na arquitetura inicial | Recomendação de reajuste com validação *walk-forward* e, se adotado, rastreamento de experimentos. | Planejado; não está nas dependências |
 | Documentação | MkDocs Material | Site estático versionado com validação de links no build. | Em uso |
 | Automação | `just` + `uv` | Comandos canônicos e ambiente reproduzível a partir do `uv.lock`. | Em uso |
 
@@ -57,7 +57,7 @@ O racional da stack e das alternativas está no [registro de decisões tecnológ
 | Durabilidade | Obrigatória na carga: reingerir ~2,2 GB do SIDRA não é aceitável |
 | Disponibilidade | Média: ferramenta de planejamento, não caixa de loja |
 | Idempotência | As cargas implementadas são reexecutáveis por janela e usam chaves/hash para evitar duplicatas; a estratégia varia entre cada tabela Bronze e os carregadores legados |
-| Concorrência no DuckDB | Os processos de carga são serializados por limitação de escritor. Publicação da Gold e leitura do painel ainda estão planejadas |
+| Concorrência no DuckDB | Um escritor por vez: o Dagster serializa as escritas no pool `duckdb_writer`, e o painel lê a cópia em `serie` no PostgreSQL, não o arquivo |
 | Resiliência das origens | Falha de origem não corrompe o histórico já carregado; a carga termina com código diferente de zero e o modelo segue com o último dado conhecido |
 | Acoplamento à origem | Fontes sem API (DIEESE) dependem do layout HTML: mudança de estrutura derruba a carga em vez de gravar dado errado, e a raw permite reprocessar offline |
 | LGPD | Nenhuma fonte pública contém dado pessoal; CNPJ de lojista MEI é tratado como dado pessoal |

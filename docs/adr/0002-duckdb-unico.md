@@ -1,8 +1,8 @@
 # 0002 — Um único arquivo DuckDB para todas as fontes analíticas
 
-- **Status:** adotado; loaders existentes usam o arquivo único
+- **Status:** adotado; loaders, dbt e checks do Dagster usam o arquivo único
 - **Data:** 2026-09-25
-- **Revisado em:** 2026-10-18
+- **Revisado em:** 2026-11-09
 - **Decisores:** Squad InflaTrack
 
 ## Contexto
@@ -73,3 +73,18 @@ Regras que tornam B sustentável:
   risco de corrupção e exige serializar escritores. Se houver necessidade de
   alta disponibilidade, isolamento de falhas ou escritas concorrentes, este
   ADR deve ser revisto; volume de linhas sozinho não é o único gatilho.
+
+## Atualização após a Entrega 3 (2026-11-09)
+
+A decisão se manteve e a prática a confirmou:
+
+- **Cargas em sequência (regra 3)** deixou de depender de disciplina: o Dagster tem um pool
+  `duckdb_writer` com limite 1 (`.dagster/dagster.yaml`), e todo ativo que abre o arquivo,
+  inclusive os *asset checks* em só leitura, entra nele.
+- **Leitores externos.** Uma conexão do Metabase aberta no arquivo impede o dbt e os loaders de
+  escrever (testado em 2026-10-30). Por isso o painel nunca abre o DuckDB: o ativo
+  `serie_postgres` copia as tabelas da Gold para o schema `serie` do PostgreSQL, e o Metabase
+  lê de lá.
+- **As regras 1 e 2 foram superadas.** O arquivo único hoje tem os schemas `bronze`, `silver`
+  e `gold` (a Bronze espelha o Delta, e Silver e Gold são modelos dbt), e o glob legado de
+  commodities não existe mais: toda fonte tem a sua pasta Delta em `data/parquet/<fonte>/`.

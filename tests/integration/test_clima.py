@@ -13,7 +13,7 @@ import pytest
 from deltalake import DeltaTable
 from inflatrack.load_clima import carregar_bronze_medicoes
 
-from inflatrack import bronze_clima, ingest_clima
+from inflatrack.bronze import clima as bronze_clima
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "clima"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
@@ -229,7 +229,7 @@ def test_processar_medicoes_busca_estacao_e_persiste_delta(tmp_path: Path) -> No
                 }
             ]
 
-    respostas, medicoes = ingest_clima.processar_medicoes(
+    respostas, medicoes = bronze_clima.processar_medicoes(
         ClienteFake(), ["A001"], "2026-10-01", "2026-10-02", tmp_path / "clima"
     )
 

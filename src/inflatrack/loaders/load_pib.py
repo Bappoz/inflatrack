@@ -23,7 +23,7 @@ from pathlib import Path
 import duckdb
 from deltalake import DeltaTable
 
-from inflatrack.bronze import bronze_pib
+from inflatrack.bronze import pib as bronze_pib
 from inflatrack.common import bronze
 
 logger = logging.getLogger("inflatrack.load_pib")

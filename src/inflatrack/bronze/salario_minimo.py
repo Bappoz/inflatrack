@@ -1,4 +1,4 @@
-"""Bronze do Salário Mínimo (DIEESE): tabela de respostas e tabela extraída, em Delta.
+"""Bronze do Salário Mínimo (DIEESE): coleta, validação e gravação em Delta, num único arquivo.
 
 Cada requisição da página do DIEESE vira duas coisas, gravadas no mesmo passo::
 
@@ -15,11 +15,16 @@ As duas tabelas só acrescentam. Reexecutar com a mesma página não grava nada;
 revisar um valor histórico, a revisão entra como linha nova e a anterior permanece (semântica
 *insert-only*).
 
+Além do Delta, a coleta ainda guarda o HTML em ``data/raw/dieese/`` e o Parquet legado em
+``data/parquet/dieese/``, que o loader do DuckDB usa para as tabelas da E1
+(``main.salario_minimo``).
+
 Uso::
 
-    uv run python -m inflatrack.bronze_salario_minimo ingest
-    uv run python -m inflatrack.bronze_salario_minimo checar
-    uv run python -m inflatrack.bronze_salario_minimo importar --raw-dir data/raw/dieese
+    uv run python -m inflatrack.bronze.salario_minimo coletar
+    uv run python -m inflatrack.bronze.salario_minimo checar
+    uv run python -m inflatrack.bronze.salario_minimo importar --raw-dir data/raw/dieese
+    uv run python -m inflatrack.bronze.salario_minimo load --modo so_acrescenta
 """
 
 from __future__ import annotations
@@ -36,16 +41,19 @@ from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
-from inflatrack import dieese
+from inflatrack.clients import dieese
 
-logger = logging.getLogger("inflatrack.bronze_salario_minimo")
+logger = logging.getLogger("inflatrack.salario_minimo")
 
 FONTE = "salario_minimo"
 DIRETORIO_PADRAO = "data/parquet/salario_minimo"
+RAW_DIR_PADRAO = Path("data/raw/dieese")
+PARQUET_DIR_PADRAO = Path("data/parquet/dieese")
 
 TIPO_VALOR = pa.decimal128(12, 2)
 
@@ -362,6 +370,46 @@ def importar_raw(
     return respostas, meses_novos, falhas
 
 
+def gravar_bruto(destino_dir: Path, html_conteudo: str) -> Path:
+    """Grava o HTML integral em gzip na camada raw (cópia legada, fora do Delta)."""
+    destino_dir.mkdir(parents=True, exist_ok=True)
+    caminho = destino_dir / "salario_minimo.html.gz"
+    with gzip.open(caminho, "wt", encoding="utf-8") as arquivo:
+        arquivo.write(html_conteudo)
+    return caminho
+
+
+def coletar(
+    destino: Path = Path(DIRETORIO_PADRAO),
+    raw_dir: Path = RAW_DIR_PADRAO,
+    parquet_dir: Path = PARQUET_DIR_PADRAO,
+    html_conteudo: str | None = None,
+) -> pd.DataFrame:
+    """Baixa a página do DIEESE e grava o raw, o Delta da Bronze e o Parquet legado."""
+    if html_conteudo is None:
+        logger.info("Baixando página de salário mínimo do DIEESE...")
+        html_conteudo = dieese.baixar_html()
+
+    caminho_raw = gravar_bruto(raw_dir, html_conteudo)
+    logger.info("HTML bruto salvo em %s (%d bytes)", caminho_raw, len(html_conteudo))
+
+    grav = gravar(destino, html_conteudo)
+    logger.info(
+        "Bronze Delta: resposta %s, %d de %d meses novos em %s",
+        "nova" if grav.resposta_nova else "já guardada",
+        grav.linhas_novas,
+        grav.linhas_lidas,
+        destino,
+    )
+
+    df = dieese.extrair_tabela(html_conteudo)
+    parquet_dir.mkdir(parents=True, exist_ok=True)
+    caminho_parquet = parquet_dir / "salario_minimo.parquet"
+    df.to_parquet(caminho_parquet, index=False)
+    logger.info("Parquet legado: %d meses em %s", len(df), caminho_parquet)
+    return df
+
+
 def checar_tabela(destino: Path) -> dict:
     """Inspeciona a tabela salario_minimo_mes gravada em Delta."""
     caminho = _caminho(destino, "mes")
@@ -391,7 +439,7 @@ def carregar_duckdb(
     """Carrega a tabela Delta salario_minimo_mes no DuckDB nos dois modos do contrato."""
     import duckdb
 
-    from inflatrack import load_salario_minimo
+    from inflatrack.loaders import load_salario_minimo
 
     db = Path(db_caminho)
     db.parent.mkdir(parents=True, exist_ok=True)
@@ -403,8 +451,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="comando", required=True)
 
-    p_ingest = subparsers.add_parser("ingest", help="Baixa da API e grava em Delta")
-    p_ingest.add_argument("--destino", default=DIRETORIO_PADRAO)
+    p_coletar = subparsers.add_parser("coletar", help="Baixa a página e grava raw, Delta e Parquet")
+    p_coletar.add_argument("--destino", default=DIRETORIO_PADRAO)
+    p_coletar.add_argument("--raw-dir", default=str(RAW_DIR_PADRAO))
+    p_coletar.add_argument("--parquet-dir", default=str(PARQUET_DIR_PADRAO))
 
     p_checar = subparsers.add_parser("checar", help="Verifica a tabela Delta gravada")
     p_checar.add_argument("--destino", default=DIRETORIO_PADRAO)
@@ -427,17 +477,16 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     destino = Path(args.destino)
-    if args.comando == "ingest":
-        logger.info("Baixando página de salário mínimo do DIEESE...")
-        conteudo = dieese.baixar_html()
-        grav = gravar(destino, conteudo)
-        logger.info(
-            "Gravado com sucesso: resposta %s, %d de %d meses novos",
-            "nova" if grav.resposta_nova else "já guardada",
-            grav.linhas_novas,
-            grav.linhas_lidas,
-        )
-        return 0
+    if args.comando == "coletar":
+        try:
+            coletar(destino, Path(args.raw_dir), Path(args.parquet_dir))
+            return 0
+        except (dieese.DieeseError, ChecagemError) as erro:
+            logger.error("Erro no processamento do DIEESE: %s", erro)
+            return 1
+        except Exception:
+            logger.exception("Falha inesperada na coleta do DIEESE")
+            return 1
     if args.comando == "checar":
         try:
             info = checar_tabela(destino)

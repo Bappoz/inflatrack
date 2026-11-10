@@ -9,37 +9,36 @@ A série chega inteira a cada chamada, então a partição do símbolo é **subs
 quando a resposta muda, e fica como está quando a resposta é igual à já guardada. As
 versões anteriores ficam na tabela de respostas.
 
-Até a E3 continuam também o Raw em ``data/raw/commodities_raw/`` e o Parquet por
-commodity na raiz de ``data/parquet/``, que ``load_commodities`` lê.
+O cliente HTTP fica em :mod:`inflatrack.clients.alphavantage`; este módulo só valida,
+checa e grava no Delta, que ``loaders/load_commodities.py`` espelha no DuckDB. Desde a E3
+não há mais Raw em ``data/raw/commodities_raw/`` nem Parquet por commodity na raiz de
+``data/parquet/``: a resposta original fica em ``commodities_resposta``.
 
 Uso::
 
-    uv run python -m inflatrack.ingest_commodities --commodity ALL
-    uv run python -m inflatrack.ingest_commodities importar   # Raw antigo -> Delta
-    uv run python -m inflatrack.ingest_commodities checar
+    uv run python -m inflatrack.bronze.commodities --commodity ALL
+    uv run python -m inflatrack.bronze.commodities importar   # Raw antigo -> Delta
+    uv run python -m inflatrack.bronze.commodities checar
 """
 
 from __future__ import annotations
 
 import argparse
-import gzip
 import json
 import logging
-import os
 import sys
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-import pandas as pd
 import pyarrow as pa
 import requests
 from deltalake import DeltaTable
 
-from inflatrack import bronze
-from inflatrack.alphavantage import AlphaVantageClient
-from inflatrack.bronze import ChecagemError
+from inflatrack.clients.alphavantage import AlphaVantageClient
+from inflatrack.common import bronze
+from inflatrack.common.bronze import ChecagemError
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +210,7 @@ def _id_da_particao(destino: Path, symbol: str) -> str | None:
     if not DeltaTable.is_deltatable(alvo):
         return None
     tabela = DeltaTable(alvo).to_pyarrow_table(
-        columns=["_id_resposta"], partitions=[("symbol", "=", symbol)]
+        columns=["_id_resposta"], filters=[("symbol", "=", symbol)]
     )
     ids = set(tabela.column("_id_resposta").to_pylist())
     return ids.pop() if len(ids) == 1 else None
@@ -309,49 +308,13 @@ def resumo_da_bronze(destino: Path) -> list[dict]:
     return [dict(zip(colunas, linha, strict=True)) for linha in linhas]
 
 
-# --- Caminho antigo (Raw + Parquet na raiz), mantido até a E3 ----------------------
-
-
-def get_raw_dir():
-    """Camada crua: resposta da API exatamente como veio (JSON gzip)."""
-    raw_dir = Path(os.getcwd()) / "data" / "raw" / "commodities_raw"
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    return raw_dir
-
-
-def get_parquet_dir():
-    """Parquet pronto para carga no DuckDB por ``load_commodities``."""
-    parquet_dir = Path(os.getcwd()) / "data" / "parquet"
-    parquet_dir.mkdir(parents=True, exist_ok=True)
-    return parquet_dir
-
-
-def gravar_bruto(symbol: str, modo: str, data: dict) -> Path:
-    """Congela a resposta da API em gzip, antes de qualquer transformação."""
-    caminho = get_raw_dir() / f"{symbol.lower()}_{modo}.json.gz"
-    with gzip.open(caminho, "wt", encoding="utf-8") as arquivo:
-        json.dump(data, arquivo, ensure_ascii=False)
-    return caminho
-
-
-def process_response(symbol: str, data: dict) -> pd.DataFrame:
-    """Formato antigo do Parquet: só ``(symbol, data_referencia, preco)``, sem ``"."``."""
-    validar(symbol, data)
-    df = pd.DataFrame([r for r in data["data"] if r["value"] != MARCADOR_AUSENTE])
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-    df["value"] = df["value"].astype(float)
-    df["symbol"] = symbol
-    df = df.rename(columns={"date": "data_referencia", "value": "preco"})
-    return df[["symbol", "data_referencia", "preco"]]
-
-
 # --- Execução ------------------------------------------------------------------------
 
 
 def ingest_commodity(
-    client: AlphaVantageClient, symbol: str, modo: str, destino: Path | None = None
+    client: AlphaVantageClient, symbol: str, destino: Path | None = None
 ) -> Gravacao:
-    """Busca uma commodity e grava a Bronze, o Raw e o Parquet antigo.
+    """Busca uma commodity e grava as duas tabelas da Bronze.
 
     Qualquer problema (HTTP, cota esgotada, série vazia, checagem) levanta exceção e
     nada é gravado para o símbolo.
@@ -360,23 +323,15 @@ def ingest_commodity(
     if not config:
         raise ValueError(f"Commodity {symbol} não configurada.")
 
-    logger.info(f"Iniciando ingestão de {symbol} no modo {modo}")
+    logger.info("Iniciando ingestão de %s", symbol)
     resposta = client.buscar_resposta(function=symbol, interval=config["interval"])
     gravacao = gravar(Path(destino or DIRETORIO_BRONZE), symbol, resposta)
-
-    dados = json.loads(resposta.corpo)
-    logger.info(f"Resposta crua salva em {gravar_bruto(symbol, modo, dados)}")
-    df = process_response(symbol, dados)
-    output_file = get_parquet_dir() / f"{symbol.lower()}_{modo}.parquet"
-    df.to_parquet(output_file, index=False)
     logger.info(
-        "%s: %d linhas; resposta %s; partição %s; %d registros em %s",
+        "%s: %d linhas; resposta %s; partição %s",
         symbol,
         gravacao.linhas,
         "nova" if gravacao.resposta_nova else "já guardada",
         "substituída" if gravacao.particao_substituida else "mantida",
-        len(df),
-        output_file,
     )
     return gravacao
 
@@ -390,7 +345,7 @@ def _comando_ingerir(args: argparse.Namespace) -> int:
     falhas = []
     for symbol in symbols:
         try:
-            ingest_commodity(client, symbol, args.modo, Path(args.parquet_dir))
+            ingest_commodity(client, symbol, Path(args.parquet_dir))
         except (ChecagemError, requests.RequestException) as erro:
             logger.error("%s", erro)
             falhas.append(symbol)
@@ -432,7 +387,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ingestão de Commodities da Alpha Vantage")
     parser.add_argument("--parquet-dir", default=DIRETORIO_BRONZE, help="pasta da Bronze")
     parser.add_argument("--commodity", type=str, help="Symbol da commodity ou 'ALL' para todas")
-    parser.add_argument("--modo", choices=["historico", "incremental"], default="historico")
     comandos = parser.add_subparsers(dest="comando")
 
     importar = comandos.add_parser("importar", help="leva data/raw/commodities_raw/ ao Delta")
