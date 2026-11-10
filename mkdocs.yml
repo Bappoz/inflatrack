@@ -79,6 +79,7 @@ nav:
       - PIB da Rússia (World Bank): fontes/pib_russia.md
       - Salário Mínimo (DIEESE): fontes/salario_minimo.md
       - Dados do Clima (INMET): fontes/clima.md
+      - Cesta Básica (PROCON): fontes/procon.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
@@ -98,6 +99,7 @@ nav:
     - PIB da Rússia (World Bank): dicionario/pib_russia.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
+    - Cesta Básica (PROCON): dicionario/procon.md
   - Evidências:
     - E2 — Situação por fonte: evidencias/e2/index.md
     - E2 — IPCA/INPC (SIDRA): evidencias/e2/ipca.md

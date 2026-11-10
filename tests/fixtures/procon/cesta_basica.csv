@@ -1,0 +1,21 @@
+data_pesquisa;produto;unidade;preco_medio;preco_minimo;preco_maximo;praca;codigo_subitem_ipca
+2026-07-01;Arroz Agulhinha;5 kg;28.90;24.50;32.90;Brasília;1101002
+2026-07-01;Feijão Carioca;1 kg;7.95;6.49;9.20;Brasília;1101012
+2026-07-01;Óleo de Soja;900 ml;6.85;5.99;7.90;Brasília;1101032
+2026-07-01;Café Moído;500 g;18.50;15.90;21.00;Brasília;1101047
+2026-07-01;Açúcar Refinado;1 kg;4.50;3.89;5.20;Brasília;1101026
+2026-07-01;Leite Longa Vida;1 l;5.30;4.69;6.10;Brasília;1104001
+2026-07-01;Carne Bovina (Alcatra);1 kg;42.90;36.90;48.90;Brasília;1103001
+2026-07-01;Sabão em Pó;800 g;11.20;9.49;13.50;Brasília;2201001
+2026-07-01;Detergente Líquido;500 ml;2.85;2.29;3.50;Brasília;2201002
+2026-07-01;Creme Dental;90 g;4.10;3.29;5.50;Brasília;6102001
+2026-08-01;Arroz Agulhinha;5 kg;29.40;25.00;33.50;Brasília;1101002
+2026-08-01;Feijão Carioca;1 kg;8.10;6.80;9.50;Brasília;1101012
+2026-08-01;Óleo de Soja;900 ml;7.10;6.20;8.15;Brasília;1101032
+2026-08-01;Café Moído;500 g;19.20;16.50;22.00;Brasília;1101047
+2026-08-01;Açúcar Refinado;1 kg;4.65;3.99;5.40;Brasília;1101026
+2026-08-01;Leite Longa Vida;1 l;5.45;4.89;6.30;Brasília;1104001
+2026-08-01;Carne Bovina (Alcatra);1 kg;43.50;37.50;49.90;Brasília;1103001
+2026-08-01;Sabão em Pó;800 g;11.50;9.80;13.90;Brasília;2201001
+2026-08-01;Detergente Líquido;500 ml;2.90;2.35;3.60;Brasília;2201002
+2026-08-01;Creme Dental;90 g;4.20;3.40;5.60;Brasília;6102001

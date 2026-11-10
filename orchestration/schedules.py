@@ -31,6 +31,7 @@ pib_internacional_job = define_asset_job(
     "pib_internacional_job", AssetSelection.groups("pib_internacional")
 )
 dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
+procon_job = define_asset_job("procon_job", AssetSelection.groups("procon"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 
@@ -49,6 +50,7 @@ JOBS = [
     pib_job,
     pib_internacional_job,
     dieese_job,
+    procon_job,
     clima_job,
     transacional_job,
     analitico_job,
@@ -116,5 +118,6 @@ SCHEDULES = [
         job=pib_internacional_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO
     ),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),
+    ScheduleDefinition(job=procon_job, cron_schedule="0 9 6 * *", execution_timezone=FUSO),
     ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
 ]

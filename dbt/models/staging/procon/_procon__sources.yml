@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: bronze_procon
+    description: Cesta Básica do PROCON, promovida da Bronze Delta pelo loader.
+    schema: bronze
+    tables:
+      - name: procon_cesta_basica
+        config:
+          meta:
+            dagster:
+              asset_key: ["procon_duckdb"]
+        description: Cotações mensais de produtos da cesta básica pesquisados pelo PROCON.
+        columns:
+          - name: data_pesquisa
+            data_tests: [not_null]
+          - name: produto
+            data_tests: [not_null]
+          - name: preco_medio
+            data_tests: [not_null]
+          - name: praca
+            data_tests: [not_null]
+          - name: _ingerido_em
+            data_tests: [not_null]

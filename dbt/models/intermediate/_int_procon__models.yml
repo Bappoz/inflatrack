@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_procon__mensal
+    description: Série mensal de preços e variações da cesta básica do PROCON.
+    columns:
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: produto
+        data_tests: [not_null]
+      - name: preco_medio
+        data_tests: [not_null]
+      - name: praca
+        data_tests: [not_null]

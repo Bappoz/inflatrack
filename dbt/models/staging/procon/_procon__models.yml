@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: stg_procon__cesta_basica
+    description: Cesta Básica do PROCON limpa e deduplicada na camada staging.
+    columns:
+      - name: data_pesquisa
+        data_tests: [not_null]
+      - name: produto
+        data_tests: [not_null]
+      - name: preco_medio
+        data_tests: [not_null]
+      - name: praca
+        data_tests: [not_null]
