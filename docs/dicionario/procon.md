@@ -43,3 +43,26 @@ Modelo intermediário que calcula a série de variações percentuais mês a mê
 | `preco_maximo` | `DECIMAL(14,2)` | Preço máximo no mês corrente. |
 | `preco_medio_anterior` | `DECIMAL(14,2)` | Preço médio do produto no mês anterior (`lag`). |
 | `variacao_mensal_preco_pct` | `DECIMAL(12,4)` | Variação percentual calculada em relação ao mês anterior. |
+
+---
+
+## 3. Tabela Fato Gold: `gold.fct_cesta_basica_mensal`
+
+Fato central de mercado que consolida os preços médios, variações mensais e vínculos com as dimensões de tempo (`dim_calendario`) e localidade (`dim_localidade`), pronta para consumo por dashboards e consultas de gestão.
+
+| Coluna | Tipo | Chave | Descrição |
+|---|---|---|---|
+| `mes_referencia` | `DATE` | FK | Primeiro dia do mês (`dim_calendario.mes_referencia`). |
+| `ano` | `SMALLINT` | | Ano civil da apuração (`dim_calendario.ano`). |
+| `mes` | `TINYINT` | | Mês civil da apuração (1 a 12). |
+| `codigo_localidade` | `INTEGER` | FK | Código IBGE da localidade (`dim_localidade.codigo_localidade`). |
+| `nome_praca` | `VARCHAR` | | Nome da praça/cidade pesquisada. |
+| `produto_mercado` | `VARCHAR` | | Nome padronizado do produto na cesta. |
+| `unidade` | `VARCHAR` | | Unidade de medida (ex.: `5 kg`, `1 l`). |
+| `codigo_subitem_ipca` | `VARCHAR` | | Código correspondente do subitem no IPCA para junções com `fct_inflacao_mensal`. |
+| `preco_medio_mercado` | `DECIMAL(14,2)` | | Preço médio apurado no varejo/atacado no mês. |
+| `preco_minimo_mercado` | `DECIMAL(14,2)` | | Preço mínimo encontrado no mercado. |
+| `preco_maximo_mercado` | `DECIMAL(14,2)` | | Preço máximo encontrado no mercado. |
+| `preco_anterior_mercado` | `DECIMAL(14,2)` | | Preço médio de mercado do mês anterior. |
+| `variacao_mensal_mercado_pct` | `DECIMAL(12,4)` | | Variação percentual do preço de mercado frente ao mês anterior. |
+

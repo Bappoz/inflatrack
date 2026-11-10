@@ -1336,15 +1336,15 @@ de tarefas nessa linha.
 - Implementou o módulo Delta Lake Bronze `src/inflatrack/bronze/bronze_procon.py` baseado no padrão compartilhado `inflatrack.common.bronze`, gerando tabelas de resposta e cotações com semântica de deduplicação e idempotência.
 - Criou o script de ingestão `src/inflatrack/bronze/ingest_procon.py` com salvamento bruto compactado em `data/raw/procon/` e promoção automática para Delta em `data/parquet/procon/`.
 - Criou o script DDL `scripts/sql/setup_duckdb_procon.sql` e o loader `src/inflatrack/loaders/load_procon.py`, com suporte aos modos `substitui` e `so_acrescenta`.
-- Implementou os modelos dbt de staging e intermediate (`stg_procon__cesta_basica.sql` e `int_procon__mensal.sql`), calculando variações mensais e integrando os testes dbt de unicidade e valores não-nulos.
+- Implementou os modelos dbt em todas as camadas analíticas: staging (`stg_procon__cesta_basica.sql`), intermediate (`int_procon__mensal.sql`) e a tabela fato Gold (`fct_cesta_basica_mensal.sql` em `marts/core/`), conectando preços nominais de mercado com as dimensões canônicas de calendário e localidade.
 - Configurou os ativos no Dagster (`orchestration/assets/procon.py`), com retry policy e pool de escrita `duckdb_writer`, além de agendamento mensal em `orchestration/schedules.py`.
 - Adicionou receitas de execução e carga no `justfile` (`procon-ingest`, `procon-load`, `procon`, `bronze-procon`).
-- Escreveu a documentação completa da fonte e dicionário de dados em `docs/fontes/procon.md` e `docs/dicionario/procon.md`, integrando-as à navegação estrita do `mkdocs.yml`.
+- Escreveu a documentação completa da fonte e dicionário de dados em `docs/fontes/procon.md` e `docs/dicionario/procon.md` (incluindo o dicionário da tabela Gold), integrando-as à navegação estrita do `mkdocs.yml`.
 - Desenvolveu testes automatizados unitários, de integração e orquestração (`tests/unit/test_procon.py`, `tests/integration/test_load_procon.py`).
 
 **O que foi verificado e como**
 - Suíte completa de testes unitários, integração e orquestração executada com sucesso (`147 passed`).
-- Modelos e testes do dbt compilados e construídos com sucesso via `uv run dbt build --select +int_procon__mensal` (15/15 OK).
+- Pipeline completo do dbt compilado e construído com sucesso (`uv run dbt build --select stg_procon__cesta_basica+` -> 17/17 PASS, 0 erros).
 - Verificação de formatação e tipagem com `ruff check` e `ruff format` aprovada sem avisos em todos os módulos novos e alterados.
 - Build estrito da documentação aprovado com `uv run mkdocs build --strict` sem avisos ou links quebrados.
 
