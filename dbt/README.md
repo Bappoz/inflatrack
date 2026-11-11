@@ -18,8 +18,9 @@ uv run dbt build --select +int_<fonte>__mensal     # só a sua trilha
 O preparo aplica os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql` no banco
 selecionado por `DBT_DUCKDB_PATH` (ou no caminho padrão). Cria, entre outras, as tabelas
 vazias `bronze.clima_estacao` e `bronze.clima_medicao`, sem exigir ingestão real e sem
-apagar dados. O ativo dbt do Dagster faz o mesmo antes do build. Fontes sem DDL inicial
-continuam exigindo seu loader; a preparação não coleta dados nem substitui essa carga.
+apagar dados. No Dagster isso não é preciso: os loaders do clima e do salário mínimo
+aplicam o próprio DDL antes de carregar. Fontes sem DDL inicial continuam exigindo seu
+loader; a preparação não coleta dados nem substitui essa carga.
 
 ## O que criar (um arquivo por fonte, para não dar conflito)
 

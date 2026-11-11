@@ -175,12 +175,13 @@ test:
 # O gate antes de dizer "pronto".
 check: fmt lint test
 
-# Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
-# Prepara os schemas existentes sem consultar APIs; fontes sem DDL ainda exigem loader.
+# Aplica os DDLs idempotentes de scripts/sql/setup_duckdb*.sql no banco de DBT_DUCKDB_PATH:
+# sem consultar APIs e sem apagar dados. Fontes sem DDL (PIB, commodities...) exigem o loader.
 duckdb-init:
     uv run python scripts/init_db.py
 
-# O dbt só lê bronze.*. O preparo permite a trilha de clima mesmo antes da primeira coleta.
+# Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
+# O dbt só lê bronze.*: os loaders precisam ter rodado (o duckdb-init cobre as tabelas com DDL).
 dbt: duckdb-init
     uv run dbt build
 
@@ -311,16 +312,18 @@ bronze-salario-minimo-checar:
 bronze-salario-minimo-load modo="substitui":
     uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
-# INMET: Dados de Clima e Estações
+# INMET: catálogo de estações (API) e medições diárias (BDMEP, desde 2006). A primeira
+# coleta baixa ~20 pacotes anuais; as seguintes só o que o INMET republicou.
 clima-ingest:
     uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --medicoes
 
 clima-load:
     uv run python -m inflatrack.loaders.load_clima
 
 clima: clima-ingest clima-load
 
-# Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
+# Bronze do Clima em Delta (data/parquet/clima/): só o cadastro de estações.
 bronze-clima:
     uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
 

@@ -12,6 +12,7 @@ from dagster import AssetCheckSeverity, build_asset_check_context
 from orchestration.assets import checks
 from orchestration.assets.checks import (
     check_clima_estacoes_freshness_e_volume,
+    check_clima_medicoes_freshness_e_volume,
     check_commodities_freshness_e_volume,
     check_dolar_freshness_e_volume,
     check_ipca_freshness_e_volume,
@@ -33,6 +34,7 @@ TODOS_OS_CHECKS = (
     check_pib_freshness_e_volume,
     check_pib_internacional_freshness_e_volume,
     check_clima_estacoes_freshness_e_volume,
+    check_clima_medicoes_freshness_e_volume,
     check_commodities_freshness_e_volume,
 )
 
@@ -85,6 +87,11 @@ def _demais_fontes(con, ultimo_dia: date) -> None:
         [ultimo_dia],
     )
     con.execute(
+        "create table bronze.clima_medicao as select (?::date - (i % 3000)::int) "
+        "as data_referencia from range(60000) t(i)",
+        [ultimo_dia],
+    )
+    con.execute(
         "create table bronze.commodities_cotacao as "
         "select 'WTI' as symbol, 'daily' as intervalo, (?::date - i::int) as data_referencia "
         "from range(150) t(i) "
@@ -119,6 +126,7 @@ def test_asset_checks_registrados_nas_definicoes():
     assert ("pib_duckdb", "check_pib_freshness_e_volume") in check_keys
     assert ("salario_minimo_duckdb", "check_salario_minimo_freshness_e_volume") in check_keys
     assert ("clima_duckdb", "check_clima_estacoes_freshness_e_volume") in check_keys
+    assert ("clima_medicoes_duckdb", "check_clima_medicoes_freshness_e_volume") in check_keys
     assert ("commodities_duckdb", "check_commodities_freshness_e_volume") in check_keys
     assert (
         "pib_internacional_duckdb",

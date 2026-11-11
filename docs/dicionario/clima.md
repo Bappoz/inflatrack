@@ -98,17 +98,21 @@ As tabelas da fonte meteorológica gravadas pelo ingestor em `data/parquet/clima
 
 ### clima_resposta
 
-Armazena o payload JSON bruto da resposta recebida da API do INMET. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`).
+Armazena a resposta original de cada coleta. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`). Três tipos, pelo `tipo_conteudo`:
+
+- `application/json` com `_requisicao` em `/estacoes/T`: o catálogo de estações da API;
+- `text/csv; charset=iso-8859-1`: o CSV horário de uma estação dentro do pacote anual do BDMEP, na íntegra (`_requisicao` = `{url do zip}#{arquivo no zip}`);
+- `application/json; charset=utf-8` com `_requisicao` = URL do zip: o **manifesto** do pacote processado (`Last-Modified`, tamanho e lista de estações). Se o manifesto já existe, a coleta seguinte não baixa o pacote de novo.
 
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `id_resposta` | string | Identificador da resposta: o hash SHA-256 do corpo |
 | `_fonte` | string | Sempre `"clima"` |
-| `_requisicao` | string | URL consultada na API do INMET (`/estacoes/T`) |
+| `_requisicao` | string | URL consultada (API do INMET ou pacote do BDMEP com o arquivo após `#`) |
 | `_ingerido_em` | timestamp (UTC) | Momento do download da resposta |
 | `status_http` | smallint, nulo | Status HTTP da resposta (200, ou nulo se importado do Raw) |
 | `tipo_conteudo` | string, nulo | `Content-Type` do cabeçalho HTTP |
-| `corpo` | string | O JSON original na íntegra |
+| `corpo` | string | O conteúdo original na íntegra (JSON ou CSV) |
 | `hash_corpo` | string | SHA-256 do corpo (idempotência) |
 | `tamanho_bytes` | bigint | Tamanho do payload em bytes |
 
@@ -137,7 +141,11 @@ Cadastro nacional das estações meteorológicas (automáticas e convencionais) 
 
 ### clima_medicao
 
-Tabela Delta em `data/parquet/clima/medicao/`, com uma linha por versão de leitura diária. O campo
+Tabela Delta em `data/parquet/clima/medicao/`, com uma linha por versão de leitura diária, resumida
+das 24 leituras horárias do CSV do BDMEP no dia UTC (o BDMEP publica em UTC; hora repetida no CSV
+conta uma vez, valendo a última linha). Cada métrica só sai
+com ao menos 18 horas válidas (`HORAS_MINIMAS`); vazio, `-9999` e valores fora da faixa física
+(temperatura de -15 a 50 °C, chuva de 0 a 200 mm/h, umidade de 0 a 100%) viram nulo. O campo
 `id_medicao` é calculado a partir dos valores da leitura, sem incluir metadados de ingestão; assim,
 uma reexecução idêntica não duplica linhas e uma revisão histórica é preservada como versão nova.
 
@@ -145,4 +153,39 @@ O loader espelha a tabela em `bronze.clima_medicao`, criada por
 `scripts/sql/setup_duckdb_clima.sql`. O script SQL é necessário ao loader e não deve ser removido.
 Na Silver, a leitura mais recente por estação e dia alimenta a consolidação mensal, com defasagens
 `t-1`, `t-2` e `t-3`. Campos ausentes e sentinelas viram `NULL`; zeros reais permanecem zero.
+
+| Campo | Tipo | Origem no CSV do BDMEP | Descrição |
+|---|---|---|---|
+| `id_medicao` | string | — | SHA-256 dos valores da leitura (inclui `horas_com_registro`) |
+| `estacao_id` | string | `CODIGO (WMO)` | Código INMET da estação |
+| `data_referencia` | date | `Data` / `DATA (YYYY-MM-DD)` | Dia UTC |
+| `temp_min` | double, nulo | `TEMPERATURA MÍNIMA NA HORA ANT.` | Menor mínima horária do dia (°C) |
+| `temp_max` | double, nulo | `TEMPERATURA MÁXIMA NA HORA ANT.` | Maior máxima horária do dia (°C) |
+| `temp_media` | double, nulo | `TEMPERATURA DO AR - BULBO SECO, HORARIA` | Média das temperaturas horárias (°C) |
+| `precipitacao_total_mm` | double, nulo | `PRECIPITAÇÃO TOTAL, HORÁRIO` | Soma da chuva horária (mm) |
+| `umidade_relativa_media_pct` | double, nulo | `UMIDADE RELATIVA DO AR, HORARIA` | Média da umidade horária (%) |
+| `umidade_relativa_min_pct` | double, nulo | `UMIDADE REL. MIN. NA HORA ANT.` | Menor umidade mínima horária (%) |
+| `horas_com_registro` | smallint | — | Horas do dia com ao menos uma medida válida |
+| `observado` | boolean | — | Sempre verdadeiro: leitura medida, não estimada |
+| `_id_resposta` | string | — | Chave para `clima_resposta.id_resposta` (o CSV de origem) |
+| `_fonte`, `_requisicao`, `_ingerido_em` | — | — | Procedência, como nas demais tabelas |
+
+## Gold: `gold.fct_clima_mensal`
+
+Uma linha por praça do IPCA x mês, do primeiro ao último mês com medição. É a tabela de clima do
+modelo preditivo e se junta a `gold.fct_inflacao_mensal` por `(codigo_localidade, mes_referencia)`.
+A praça vem de `dbt/seeds/seed_de_para_estacao_localidade.csv` (uma estação por praça; o Brasil não
+entra). Nenhuma coluna usa meses futuros: as normais climatológicas são só dos anos anteriores.
+
+| Campo | Descrição |
+|---|---|
+| `codigo_localidade`, `mes_referencia` | Chave (FK para `dim_localidade` e `dim_calendario`) |
+| `mes_fechado` | Falso no mês que o BDMEP ainda não publicou inteiro: não usar no treino |
+| `estacoes_com_dado`, `dias_com_registro`, `dias_no_mes`, `cobertura_dias` | Cobertura do mês (0 a 1) |
+| `temp_media`, `temp_min_absoluta`, `temp_max_absoluta` | Temperatura média e extremos (°C) |
+| `temp_media_anomalia` | Temperatura menos a normal do mesmo mês nos anos anteriores (mín. 3 anos) |
+| `precipitacao_total_mm`, `dias_com_chuva` | Chuva do mês; nulos com menos de 80% dos dias medidos |
+| `precipitacao_anomalia_mm` | Chuva menos a normal do mesmo mês nos anos anteriores |
+| `umidade_relativa_media_pct` | Umidade média (%) |
+| `*_t_menos_1`, `*_t_menos_2`, `*_t_menos_3`, `temp_media_mm3` | Lags de 1 a 3 meses de calendário e média móvel de 3 meses |
 

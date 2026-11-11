@@ -14,3 +14,4 @@ A401,2901,Estação INMET identificada como Salvador no catálogo
 A203,2111300,Estação INMET identificada como São Luís no catálogo
 A701,3501,Estação INMET no município de São Paulo
 A612,3201,Estação INMET em Vitória para a região metropolitana Grande Vitória
+A305,2301,Estação INMET de Fortaleza no BDMEP; ausente do catálogo da API em 2026-11 e com série falha em 2025

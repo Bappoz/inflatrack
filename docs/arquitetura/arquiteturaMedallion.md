@@ -4,8 +4,7 @@ O Medallion é a arquitetura do pipeline analítico do InflaTrack e está
 implementado até a Gold e a vitrine desde a Entrega 3: a Bronze é Delta Lake, a
 Silver e a Gold são modelos dbt no DuckDB, e uma cópia da Gold vai para o schema
 `serie` do PostgreSQL, que o Metabase lê. Nem toda fonte chegou à Gold: PIB do
-Brasil, commodities e clima têm Silver mensal, mas ainda não têm fato próprio na
-Gold. A camada semântica das métricas é da Entrega 4.
+Brasil e commodities têm Silver mensal, mas ainda não têm fato próprio na Gold. A camada semântica das métricas é da Entrega 4.
 
 O PostgreSQL roda em paralelo e guarda o lado transacional — cadastro e
 histórico de reajustes — além da referência atual do IPCA/INPC. Ele não é uma
@@ -18,7 +17,7 @@ camada do Medallion.
 | **Raw** | Resposta original de cada coleta, com o SHA-256 do corpo, na tabela `<fonte>_resposta` do Delta (desde a E3). Os `.json.gz`/`.html.gz` em `data/raw/<fonte>/` são o formato antigo, ainda lidos pelos comandos `importar`. | Preservar a entrada para auditoria e reprocessamento. | Em uso. A coleta do salário mínimo ainda grava também o HTML em `data/raw/dieese/`; cargas históricas importadas podem conter respostas reserializadas pelo fluxo antigo. |
 | **Bronze** | Tabelas Delta Lake sobre Parquet em `data/parquet/<fonte>/`, espelhadas em `bronze.*` no DuckDB pelos loaders. | Guardar payload tipado por fonte, ainda sem regra analítica comum. | Em uso em todas as fontes. O Parquet simples só sobra na coleta legada do salário mínimo. |
 | **Silver** | Modelos SQL em `dbt-duckdb`: `stg_*` (limpeza 1:1) e `int_*__mensal` (grão mensal, `mes_referencia` no dia 1), em `dbt/models/staging` e `intermediate`. | Limpar, deduplicar e conformar cada fonte. | Em uso (E3), com testes dbt de unicidade, não nulo, integridade e volume. |
-| **Gold** | Tabelas analíticas no DuckDB produzidas a partir de `dbt/models/marts/`: `dim_calendario`, `dim_localidade`, `dim_cesta_ipca_scd2`, `dim_produto_preco_scd2`, `fct_inflacao_mensal`, `fct_macroeconomia_mensal`, `fct_salario_minimo_mensal`, `fct_pib_internacional_anual` e `fct_reajuste_lojista`. | Cruzar as fontes e fornecer métricas para painel e análise. | Em uso (E3), com SCD tipo 2 na cesta do IPCA e no preço do lojista. As tabelas que o painel lê são copiadas para `serie` pelo ativo `serie_postgres`. |
+| **Gold** | Tabelas analíticas no DuckDB produzidas a partir de `dbt/models/marts/`: `dim_calendario`, `dim_localidade`, `dim_cesta_ipca_scd2`, `dim_produto_preco_scd2`, `fct_inflacao_mensal`, `fct_macroeconomia_mensal`, `fct_salario_minimo_mensal`, `fct_pib_internacional_anual`, `fct_clima_mensal` e `fct_reajuste_lojista`. | Cruzar as fontes e fornecer métricas para painel e análise. | Em uso (E3), com SCD tipo 2 na cesta do IPCA e no preço do lojista. As tabelas que o painel lê são copiadas para `serie` pelo ativo `serie_postgres`. |
 
 <div class="diagrama">
 --8<-- "docs/assets/diagramas/medallion.svg"
@@ -41,7 +40,7 @@ migradas, as subpastas contêm tabelas Delta (arquivos Parquet e log
 | [PIB dos EUA](../fontes/pib_usa.md) | resposta guardada no Delta | Delta em `data/parquet/pib_usa/` |
 | [PIB da Rússia](../fontes/pib_russia.md) | resposta guardada no Delta | Delta em `data/parquet/pib_russia/` |
 | [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `salario_minimo_resposta` no Delta; HTML também em `data/raw/dieese/` | Delta em `data/parquet/salario_minimo/` (`salario_minimo_resposta`, `salario_minimo_mes`); o fluxo legado ainda grava `data/parquet/dieese/` |
-| [Dados do Clima (INMET)](../fontes/clima.md) | `clima_resposta` no Delta | Delta em `data/parquet/clima/` (`clima_resposta`, `clima_estacao`, `clima_medicao`) |
+| [Dados do Clima (INMET)](../fontes/clima.md) | `clima_resposta` no Delta: JSON do catálogo e o CSV de cada estação dos pacotes anuais do BDMEP | Delta em `data/parquet/clima/` (`clima_resposta`, `clima_estacao`, `clima_medicao`) |
 
 ## Fluxo
 
@@ -85,6 +84,6 @@ DuckDB, nem o dbt nem os loaders conseguem escrever.
   camadas vem do `dagster-dbt`.
 - A dimensão histórica da cesta existe no Postgres (`classificacao_versao`, migration
   `0004`) e na Gold (`dim_cesta_ipca_scd2`); ver [ADR 0001](../arquitetura.md).
-- Limites: as medições diárias do clima não entram no pipeline automático, então
-  `int_clima__anomalia_mensal` está vazia; PIB do Brasil, commodities e clima não
-  têm fato na Gold; a camada semântica e o modelo preditivo são da Entrega 4.
+- Limites: PIB do Brasil e commodities não têm fato na Gold; o clima chega à Gold
+  (`fct_clima_mensal`) com buracos onde a estação do INMET parou (ver
+  [carga do BDMEP](../evidencias/e3/clima_bdmep.md)); a camada semântica e o modelo preditivo são da Entrega 4.

@@ -19,6 +19,7 @@ DELTA_PADRAO = Path("data/parquet/clima")
 SCHEMA_SQL = Path(__file__).resolve().parents[3] / "scripts" / "sql" / "setup_duckdb_clima.sql"
 
 MODOS_CARGA = ("substitui", "so_acrescenta")
+TABELAS = ("estacao", "medicao", "todas")
 
 
 def carregar_bronze_estacoes(
@@ -158,7 +159,7 @@ def carregar_bronze_medicoes(
     colunas = """
         id_medicao, estacao_id, data_referencia, temp_min, temp_max, temp_media,
         precipitacao_total_mm, umidade_relativa_media_pct, umidade_relativa_min_pct,
-        observado, _id_resposta, _fonte, _requisicao, _ingerido_em
+        horas_com_registro, observado, _id_resposta, _fonte, _requisicao, _ingerido_em
     """
 
     if modo == "substitui":
@@ -269,6 +270,12 @@ def main(argv: list[str] | None = None) -> int:
         default="substitui",
         help="Modo de carga na Bronze: 'substitui' ou 'so_acrescenta'",
     )
+    parser.add_argument(
+        "--tabela",
+        choices=TABELAS,
+        default="todas",
+        help="Só o catálogo (estacao), só as medições (medicao) ou as duas",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -278,38 +285,33 @@ def main(argv: list[str] | None = None) -> int:
     delta_dir = Path(args.delta_dir)
     caminho_estacoes = Path(args.parquet_estacoes)
     caminho_clima = Path(args.parquet_clima)
+    estacoes = args.tabela in ("estacao", "todas")
+    medicoes = args.tabela in ("medicao", "todas")
 
     sucesso = False
     with duckdb.connect(str(db)) as conexao:
+        # As duas tabelas bronze.clima_* existem mesmo sem Delta: o dbt lê ambas.
         conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
-        if DeltaTable.is_deltatable(str(delta_dir / "estacao")):
-            total_bronze = carregar_bronze_estacoes(conexao, delta_dir, modo=args.modo)
-            logger.info(
-                "Bronze Delta carregada no DuckDB (%s): %d estações em bronze.clima_estacao",
-                args.modo,
-                total_bronze,
-            )
+        cargas = [
+            (estacoes, "estacao", carregar_bronze_estacoes, "bronze.clima_estacao"),
+            (medicoes, "medicao", carregar_bronze_medicoes, "bronze.clima_medicao"),
+        ]
+        for pedida, tabela_delta, carregar, destino in cargas:
+            if not pedida:
+                continue
+            if not DeltaTable.is_deltatable(str(delta_dir / tabela_delta)):
+                logger.warning("Tabela Delta não encontrada em %s/%s", delta_dir, tabela_delta)
+                continue
+            total = carregar(conexao, delta_dir, modo=args.modo)
+            logger.info("Bronze Delta carregada (%s): %d linhas em %s", args.modo, total, destino)
             sucesso = True
-        else:
-            logger.warning("Tabela Delta não encontrada em %s/estacao", delta_dir)
 
-        if DeltaTable.is_deltatable(str(delta_dir / "medicao")):
-            total_medicoes = carregar_bronze_medicoes(conexao, delta_dir, modo=args.modo)
-            logger.info(
-                "Bronze Delta carregada (%s): %d versões em bronze.clima_medicao",
-                args.modo,
-                total_medicoes,
-            )
-            sucesso = True
-        else:
-            logger.info("Tabela Delta de medições ainda não existe em %s/medicao", delta_dir)
-
-        if caminho_estacoes.is_file():
+        if estacoes and caminho_estacoes.is_file():
             total_est = carregar_estacoes(conexao, caminho_estacoes)
             logger.info("Carga legada concluída: %d estações em estacao_meteorologica", total_est)
             sucesso = True
 
-        if caminho_clima.is_file():
+        if medicoes and caminho_clima.is_file():
             total_cli = carregar_clima(conexao, caminho_clima)
             logger.info("Carga legada concluída: %d medições em clima_diario", total_cli)
             sucesso = True

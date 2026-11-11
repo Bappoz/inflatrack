@@ -8,6 +8,7 @@ select
     cast(precipitacao_total_mm as decimal(10, 3)) as precipitacao_total_mm,
     cast(umidade_relativa_media_pct as decimal(8, 3)) as umidade_relativa_media_pct,
     cast(umidade_relativa_min_pct as decimal(8, 3)) as umidade_relativa_min_pct,
+    horas_com_registro,
     observado,
     _ingerido_em
 from {{ source('bronze_clima', 'clima_medicao') }}

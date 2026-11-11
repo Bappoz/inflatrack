@@ -24,7 +24,7 @@ from dagster import (
     asset_check,
 )
 
-from orchestration.assets.clima import clima_duckdb
+from orchestration.assets.clima import clima_duckdb, clima_medicoes_duckdb
 from orchestration.assets.commodities import commodities_duckdb
 from orchestration.assets.comum import POOL_DUCKDB
 from orchestration.assets.dolar import dolar_duckdb
@@ -124,6 +124,18 @@ SLA_CLIMA_ESTACOES = Sla(
     604,
     "Catálogo de estações do INMET",
     "estações",
+)
+# Medições: o INMET republica o pacote BDMEP do ano corrente cerca de 1×/mês, com o mês anterior
+# fechado. Antes da republicação o último dia publicado tem até ~40 dias; 60 dá folga. O mínimo
+# equivale a ~10 anos de 14 estações (a carga desde 2006 traz mais de 100 mil leituras).
+SLA_CLIMA_MEDICOES = Sla(
+    "bronze.clima_medicao",
+    "data_referencia",
+    60,
+    "Pacote BDMEP republicado ~1×/mês (máximo 60 dias desde o último dia medido)",
+    50_000,
+    "Medições diárias do INMET (BDMEP)",
+    "leituras",
 )
 
 # Commodities misturam séries diárias e mensais (`intervalo`); o SLA vale por intervalo.
@@ -278,6 +290,12 @@ check_clima_estacoes_freshness_e_volume = _check_de(
     clima_duckdb,
     SLA_CLIMA_ESTACOES,
     "Coleta diária e volume mínimo do catálogo de estações do INMET.",
+)
+check_clima_medicoes_freshness_e_volume = _check_de(
+    "check_clima_medicoes_freshness_e_volume",
+    clima_medicoes_duckdb,
+    SLA_CLIMA_MEDICOES,
+    "Defasagem do último dia medido e volume mínimo das medições diárias do INMET (BDMEP).",
 )
 
 

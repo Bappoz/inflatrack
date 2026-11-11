@@ -42,7 +42,7 @@ Postgres novo com as migrations `0001..0005`, Dagster local e o `.env` do grupo.
 
 ## Limitações conhecidas
 
-* **Clima sem medições no pipeline.** O catálogo de estações é coletado todo dia (668 estações em 2026-11-08), mas as medições diárias (`clima_medicoes`) exigem estações e intervalo por config e ficam fora do `clima_job` e do `popular_banco_job`. Em 2026-11-08 o endpoint `estacao/diaria` respondeu 404 e, logo depois, derrubou a conexão. Por isso `int_clima__anomalia_mensal` está vazia, e a P2 sai sem o efeito do clima.
+* **Clima sem medições no pipeline.** O catálogo de estações é coletado todo dia (668 estações em 2026-11-08), mas as medições diárias (`clima_medicoes`) exigem estações e intervalo por config e ficam fora do `clima_job` e do `popular_banco_job`. Em 2026-11-08 o endpoint `estacao/diaria` respondeu 404 e, logo depois, derrubou a conexão. Por isso `int_clima__anomalia_mensal` está vazia, e a P2 sai sem o efeito do clima. *Resolvido depois da release, ver [carga do BDMEP](clima_bdmep.md).*
 * **Salário mínimo fora da Gold.** A Silver existe (387 meses), mas não chega a `serie`; a P3 mostra só a inflação pelo número-índice. *Resolvido depois da release, ver abaixo.*
 * **Lojista fictício.** O banco do lojista nasce vazio; os dados vêm de `just simular-cdc`. A P5 mostra todas as lojas até o RLS da E4.
 * **Frescura** declarada só para Dólar, Selic e `fct_macroeconomia_mensal`. *Resolvido depois da release, ver abaixo.*
@@ -68,7 +68,7 @@ Verificado em 2026-11-09, numa cópia isolada da árvore de trabalho com dados r
 
 O Parquet e o HTML legados que a coleta do salário mínimo ainda grava em `data/parquet/dieese/` e `data/raw/dieese/` foram **mantidos** de propósito (decisão de 2026-11-09): o loader do DuckDB os usa para as tabelas da E1. O prazo de 75 dias do SLA de IPCA/INPC e do salário mínimo também foi confirmado (ver [SLA e frescura](sla_e_freshness.md#5-decisoes-registradas)).
 
-Continuam abertas as medições do clima no pipeline e os diários de bordo que faltam.
+Continuam abertos os diários de bordo que faltam. As medições do clima entraram no pipeline em seguida, pelos pacotes anuais do BDMEP, até a nova `gold.fct_clima_mensal` (ver [carga do BDMEP](clima_bdmep.md)).
 
 ### Cobertura ponta a ponta (`tests/e2e/`)
 

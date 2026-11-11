@@ -28,7 +28,7 @@ Em paralelo, o **PostgreSQL** atende o lado transacional: cadastro de lojista e 
 | Alpha Vantage | diária / mensal | diária | manual (`just seed-macro`) |
 | Banco Mundial (PIB da China) | anual | anual | manual (`just pib-china`) |
 | DIEESE (salário mínimo) | mensal | mensal | manual (`just salario-minimo`) |
-| INMET (clima e estações) | diária | diária | manual (`just clima`) |
+| INMET (clima e estações) | diária (pacote anual do BDMEP, republicado ~1×/mês) | diária | `clima_job` 1×/dia às 7h (`just clima` fora do Dagster) |
 
 O gatilho manual continua valendo, mas cada linha acima também é um ativo do Dagster, com retry, partições (IPCA, INPC e PIB) e backfill da janela histórica. Os agendamentos existem e nascem desligados; ver [Orquestração](../pipeline/orquestracao.md).
 

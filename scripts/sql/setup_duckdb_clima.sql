@@ -56,9 +56,13 @@ CREATE TABLE IF NOT EXISTS bronze.clima_medicao (
     precipitacao_total_mm DOUBLE,
     umidade_relativa_media_pct DOUBLE,
     umidade_relativa_min_pct DOUBLE,
+    horas_com_registro SMALLINT,
     observado BOOLEAN NOT NULL,
     _id_resposta VARCHAR NOT NULL,
     _fonte VARCHAR NOT NULL,
     _requisicao VARCHAR NOT NULL,
     _ingerido_em TIMESTAMPTZ NOT NULL
 );
+
+-- Bancos criados antes do BDMEP (E3): a contagem de horas válidas entra sem recriar a tabela.
+ALTER TABLE bronze.clima_medicao ADD COLUMN IF NOT EXISTS horas_com_registro SMALLINT;

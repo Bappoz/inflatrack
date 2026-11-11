@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 25 | 2026-09-14 a 2026-11-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (12), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
@@ -72,6 +72,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Docs de arquitetura e ADRs desatualizados (dbt, Silver, Gold, Metabase) e primeiro teste E2E |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
+| 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
 
 ---
 
@@ -1268,6 +1269,28 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - O asset `serie_postgres` com `AutomationCondition.eager` não foi visto disparando sozinho (o sensor de automação nasce desligado); só a execução manual.
 - A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
+
+### 2026-11-11 — Claude Code (Opus 5.5) — revisão do PR #22 (clima): BDMEP até a Gold
+
+**O que a ferramenta fez**
+- Revisou o PR #22 (`feat/ajusteClima`, do Johnnatan) a pedido do integrante. Achou o PR em conflito com a main (que tinha fundido `ingest_clima` e `bronze_clima` em `bronze/clima.py`) e agendando a coleta diária pela rota `estacao/diaria` da API do INMET.
+- Testou a API: a rota diária responde 404 e a horária devolve 204 sem token. Os pacotes anuais do BDMEP, que a evidência da E2 já recomendava, estão no ar. Perguntou ao integrante antes de trocar a fonte, o ano inicial (2006), o formato da Gold e a inclusão de Fortaleza (A305) no de-para; seguiu o que ele escolheu.
+- Resolveu os conflitos, portou as mudanças do PR para `bronze/clima.py` e implementou a coleta pelo BDMEP: o CSV de cada estação vai inteiro para `clima_resposta`, as leituras horárias viram um resumo por dia em `clima_medicao`, e um manifesto por pacote evita baixar de novo o que não mudou.
+- Ajustou a Silver mensal (cobertura, extremos, chuva só com 80% dos dias, anomalia contra a normal só dos anos anteriores) e criou `gold.fct_clima_mensal` (praça do IPCA x mês, lags de 1 a 3 meses, `mes_fechado`). Criou também o check de frescura das medições.
+- Tirou o `init_db` de dentro do ativo dbt do Dagster (orquestração importando `scripts/`): os loaders já aplicam o DDL. Manteve a melhoria do PR no `scripts/init_db.py` e o `just duckdb-init`.
+- Pediu uma revisão independente do diff a um subagente. Corrigiu o que procedia: falha quando o pacote de um ano encerrado some ou não tem nenhuma estação, falha por arquivo sem descartar as outras estações, id repetido no lote, hora repetida no CSV, aviso quando o portal não manda `Last-Modified`, e grade e `mes_fechado` por praça. A revisão que volta ao valor anterior ficou registrada como limite.
+- Copiou o Delta de clima e o DuckDB do integrante para `data/backup-old-lixo/` antes de gravar; nada foi apagado.
+
+**O que foi verificado e como**
+- Coleta real de 2006 a 2026 nos dados locais. A primeira passada falhou em 2019 (acentos do cabeçalho trocados por `?`); o parser foi corrigido com teste de regressão. A segunda passada releu tudo, trouxe 2019 e não mudou nenhum valor dos outros anos: 110.687 leituras de 16 estações.
+- `dagster asset materialize --select '*gold/fct_clima_mensal'`: `RUN_SUCCESS`, check de frescura passando, dbt PASS=40. `dbt build` do projeto inteiro numa cópia do DuckDB: PASS=277.
+- `pytest` com Postgres descartável (projeto compose e porta próprios, para não gerar eventos de CDC no banco de desenvolvimento): todos passaram, nenhum pulado. Inclui um teste E2E novo, do .zip à Gold, com anomalia, lag e cobertura conferidos contra contas feitas fora do SQL.
+- Conferência de sanidade: São Paulo em set/2024 com +3,0 °C e −57 mm de chuva, a seca real daquele mês. Números completos em `docs/evidencias/e3/clima_bdmep.md`.
+
+**O que NÃO foi verificado**
+- O agendamento diário não rodou no `dagster dev`; só a materialização pela linha de comando.
+- Recife (A301) e Fortaleza (A305) não têm dado recente; a troca por outra estação ficou para a Squad.
+- O modelo preditivo ainda não existe: a utilidade das variáveis de clima para ele não foi medida.
 
 ---
 

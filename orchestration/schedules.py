@@ -6,8 +6,6 @@ cota da Alpha Vantage nem bater nas APIs só por abrir o `dagster dev`.
 
 from __future__ import annotations
 
-from datetime import timedelta
-
 from dagster import (
     AssetKey,
     AssetSelection,
@@ -105,28 +103,6 @@ def agendamento_pib(context: ScheduleEvaluationContext):
         yield RunRequest(run_key=f"pib-{ano}-{execucao:%Y-%m-%d}", partition_key=str(ano))
 
 
-@schedule(
-    name="clima_job_schedule",
-    job=clima_job,
-    cron_schedule="0 7 * * *",
-    execution_timezone=FUSO,
-)
-def agendamento_clima(context: ScheduleEvaluationContext):
-    """Fixa a janela no dia do tick, mesmo se o run só for executado depois."""
-    fim = context.scheduled_execution_time.date() - timedelta(days=1)
-    inicio = fim - timedelta(days=6)
-    return RunRequest(
-        run_key=f"clima-{fim.isoformat()}",
-        run_config={
-            "ops": {
-                "clima_medicoes": {
-                    "config": {"data_inicio": inicio.isoformat(), "data_fim": fim.isoformat()}
-                }
-            }
-        },
-    )
-
-
 # Ordem do dia (fuso de São Paulo): clima 7h, commodities 8h, 9h para PIB (meses de
 # divulgação), PIB internacional (dia 1) e DIEESE (dia 5), IPCA 10h (dias 9 a 13),
 # Dólar/Selic 19h (dias úteis), transacional de hora em hora; o analitico_job fecha o dia
@@ -139,7 +115,8 @@ SCHEDULES = [
     ScheduleDefinition(job=macro_job, cron_schedule="0 19 * * 1-5", execution_timezone=FUSO),
     # 1×/dia: 9 requisições cabem na cota de 25/dia.
     ScheduleDefinition(job=commodities_job, cron_schedule="0 8 * * *", execution_timezone=FUSO),
-    agendamento_clima,
+    # 1×/dia: o catálogo é barato e as medições só baixam o pacote anual que o INMET republicou.
+    ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
     # De hora em hora: cada leitura só traz o que mudou, e o WAL segura o resto entre as leituras.
     ScheduleDefinition(job=transacional_job, cron_schedule="0 * * * *", execution_timezone=FUSO),
     agendamento_pib,

@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: fct_clima_mensal
+    description: >
+      Uma linha por praça do IPCA x mês, do primeiro ao último mês com medição do INMET
+      (BDMEP). Variáveis climáticas do modelo preditivo: temperatura, extremos, chuva,
+      umidade, anomalias contra a normal dos anos anteriores e lags de 1 a 3 meses (o efeito
+      atrasado do clima na colheita). Junta-se a fct_inflacao_mensal por
+      (codigo_localidade, mes_referencia). Grão garantido por assert_fct_clima_mensal_chave_unica.
+    columns:
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_localidade')
+                field: codigo_localidade
+      - name: mes_referencia
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: mes_fechado
+        description: >
+          Verdadeiro se o último dia do mês já está publicado no BDMEP. O mês em curso
+          (falso) não deve entrar no treino.
+        data_tests: [not_null]
+      - name: estacoes_com_dado
+        description: Estações da praça com ao menos um dia medido no mês.
+        data_tests: [not_null]
+      - name: dias_com_registro
+        description: Dias com ao menos uma leitura horária válida (máximo entre as estações).
+        data_tests: [not_null]
+      - name: cobertura_dias
+        description: dias_com_registro / dias_no_mes, de 0 a 1.
+        data_tests: [not_null]
+      - name: temp_media
+        description: Média das temperaturas médias diárias (°C).
+      - name: temp_min_absoluta
+        description: Menor mínima do mês (°C), sinal de geada.
+      - name: temp_max_absoluta
+        description: Maior máxima do mês (°C), sinal de onda de calor.
+      - name: temp_media_anomalia
+        description: Temperatura do mês menos a normal do mesmo mês nos anos anteriores (°C).
+      - name: precipitacao_total_mm
+        description: Chuva acumulada; nula com menos de 80% dos dias medidos.
+      - name: precipitacao_anomalia_mm
+        description: Chuva do mês menos a normal do mesmo mês nos anos anteriores (mm).
+      - name: dias_com_chuva
+        description: Dias com 1 mm ou mais.

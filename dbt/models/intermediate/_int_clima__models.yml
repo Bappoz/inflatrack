@@ -4,14 +4,36 @@ models:
   - name: int_clima__anomalia_mensal
     description: >
       Uma linha por estação x mês (mes_referencia = YYYY-MM-01), sem buracos entre o
-      primeiro e o último mês observado. Médias, desvios, acumulado de chuva e lags
-      t-1, t-2 e t-3; meses sem registros ficam com métricas nulas e contagem zero.
+      primeiro e o último mês observado. Médias, extremos, desvios, acumulado de chuva,
+      anomalia contra a normal dos anos anteriores e lags t-1, t-2 e t-3; meses sem
+      registros ficam com métricas nulas e contagem zero.
     columns:
       - name: estacao_id
         data_tests: [not_null]
       - name: mes_referencia
         data_tests: [not_null]
+      - name: precipitacao_total_mm
+        description: >
+          Soma da chuva diária. Nula se menos de 80% dos dias do mês têm chuva medida,
+          para um mês com falha de sensor não parecer seca.
+      - name: dias_no_mes
+        data_tests: [not_null]
       - name: dias_com_registro
+        description: Dias com ao menos uma leitura horária válida.
         data_tests: [not_null]
       - name: dias_com_temperatura
         data_tests: [not_null]
+      - name: dias_com_precipitacao
+        data_tests: [not_null]
+      - name: dias_com_chuva
+        description: Dias com 1 mm ou mais; nula quando a chuva do mês é nula.
+      - name: temp_media_normal
+        description: >
+          Média da temperatura do mesmo mês do calendário nos anos ANTERIORES da estação
+          (sem vazamento do futuro para o treino).
+      - name: temp_media_anomalia
+        description: temp_media - temp_media_normal; exige ao menos 3 anos anteriores.
+      - name: precipitacao_anomalia_mm
+        description: precipitacao_total_mm - precipitacao_normal_mm; exige ao menos 3 anos anteriores.
+      - name: codigo_localidade
+        description: Praça do IPCA da estação, pelo seed_de_para_estacao_localidade.
