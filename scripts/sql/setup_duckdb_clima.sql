@@ -64,5 +64,26 @@ CREATE TABLE IF NOT EXISTS bronze.clima_medicao (
     _ingerido_em TIMESTAMPTZ NOT NULL
 );
 
+-- Clima provisório (Open-Meteo): cobre os dias que o INMET ainda não publicou. Fica à parte
+-- de clima_medicao; a Silver só o usa depois do último dia oficial.
+CREATE TABLE IF NOT EXISTS bronze.clima_medicao_provisoria (
+    id_medicao VARCHAR PRIMARY KEY,
+    estacao_id VARCHAR NOT NULL,
+    data_referencia DATE NOT NULL,
+    temp_min DOUBLE,
+    temp_max DOUBLE,
+    temp_media DOUBLE,
+    precipitacao_total_mm DOUBLE,
+    umidade_relativa_media_pct DOUBLE,
+    umidade_relativa_min_pct DOUBLE,
+    latitude_grade DOUBLE,
+    longitude_grade DOUBLE,
+    fonte VARCHAR NOT NULL,
+    _id_resposta VARCHAR NOT NULL,
+    _fonte VARCHAR NOT NULL,
+    _requisicao VARCHAR NOT NULL,
+    _ingerido_em TIMESTAMPTZ NOT NULL
+);
+
 -- Bancos criados antes do BDMEP (E3): a contagem de horas válidas entra sem recriar a tabela.
 ALTER TABLE bronze.clima_medicao ADD COLUMN IF NOT EXISTS horas_com_registro SMALLINT;

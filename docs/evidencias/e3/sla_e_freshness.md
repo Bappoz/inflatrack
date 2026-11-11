@@ -20,6 +20,7 @@ Documentamos nesta evidência as políticas formais de SLA (*Service Level Agree
 | **`pib_internacional_duckdb`** (`bronze.pib_internacional_indicador`) | Ingestão / Carga (Bronze) | Anual (Banco Mundial) | **730 dias** após o fim do ano de referência | $\ge 100$ linhas | `WARN` com metadados de defasagem |
 | **`clima_duckdb`** (`bronze.clima_estacao`) | Ingestão / Carga (Bronze) | Catálogo coletado todo dia | **7 dias** desde a última coleta (`_ingerido_em`) | $\ge 604$ estações | `WARN` no Dagster caso falte coleta recente |
 | **`clima_medicoes_duckdb`** (`bronze.clima_medicao`) | Ingestão / Carga (Bronze) | Pacote anual do BDMEP, republicado ~1×/mês | **60 dias** desde o último dia medido | $\ge 50.000$ leituras | `WARN` com metadados de defasagem |
+| **`clima_provisorio_duckdb`** (`bronze.clima_medicao_provisoria`) | Ingestão / Carga (Bronze) | Open-Meteo, coleta diária até ontem | **5 dias** desde o último dia coberto | $\ge 16$ leituras | `WARN` com metadados de defasagem |
 | **`commodities_duckdb`** (`bronze.commodities_cotacao`) | Ingestão / Carga (Bronze) | Diária ou mensal, por série | Diária: **7 dias**; mensal: **75 dias** após o início do mês | $\ge 100$ linhas | `WARN` listando as séries atrasadas |
 
 ### Justificativa dos Prazos de SLA:
@@ -101,7 +102,7 @@ Durante o desenvolvimento isolado da branch `feat/e3-pedro`, as tabelas da Bronz
 Conforme planejado:
 - **Na Entrega da Trilha:** O SLA foi validado e formalizado para a tabela de consumo de macroeconomia e seus ativos de origem.
 - **Na Revisão Geral Pós-Merge (feita):** Com as branches unificadas, os *Asset Checks* análogos foram estendidos em `orchestration/assets/checks.py` ao PIB setorial, PIB internacional, commodities Alpha Vantage, catálogo de clima INMET, salário mínimo DIEESE e IPCA/INPC (seção 1).
-- **Depois, com o BDMEP:** as medições diárias do clima ganharam check próprio (`check_clima_medicoes_freshness_e_volume`).
+- **Depois, com o BDMEP:** as medições diárias do clima ganharam check próprio (`check_clima_medicoes_freshness_e_volume`), e o clima provisório do Open-Meteo também (`check_clima_provisorio_freshness_e_volume`: 5 dias, porque a coleta vai até ontem e 5 dias cobrem um fim de semana sem coleta; mínimo de 16 leituras, um dia das estações do de-para).
 - **Ainda de fora:** um calendário de dias úteis do BCB para tornar exato o prazo de 5 dias de Dólar e Selic.
 
 ---

@@ -313,10 +313,17 @@ bronze-salario-minimo-load modo="substitui":
     uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
 # INMET: catálogo de estações (API) e medições diárias (BDMEP, desde 2006). A primeira
-# coleta baixa ~20 pacotes anuais; as seguintes só o que o INMET republicou.
+# coleta baixa ~20 pacotes anuais; as seguintes só o que o INMET republicou. Depois, o clima
+# provisório (Open-Meteo) cobre do dia seguinte ao último publicado pelo INMET até ontem.
 clima-ingest:
     uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
     uv run python -m inflatrack.bronze.clima coletar --medicoes
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+
+# Só o clima provisório (Open-Meteo), sem baixar o BDMEP.
+clima-provisorio:
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+    uv run python -m inflatrack.loaders.load_clima --tabela provisoria
 
 clima-load:
     uv run python -m inflatrack.loaders.load_clima

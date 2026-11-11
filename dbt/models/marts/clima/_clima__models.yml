@@ -25,8 +25,14 @@ models:
                 field: mes_referencia
       - name: mes_fechado
         description: >
-          Verdadeiro se o último dia do mês já está publicado no BDMEP. O mês em curso
-          (falso) não deve entrar no treino.
+          Verdadeiro se o último dia do mês já está publicado pelo INMET (BDMEP). O mês em
+          curso e os meses com dia provisório ficam falsos e não devem entrar no treino.
+        data_tests: [not_null]
+      - name: dias_provisorios
+        description: >
+          Dias do mês cobertos pelo Open-Meteo (modelo em grade) porque o INMET ainda não
+          publicou. Somem quando o pacote oficial chega. A chuva do modelo diverge bastante da
+          do pluviômetro; a temperatura fica perto.
         data_tests: [not_null]
       - name: estacoes_com_dado
         description: Estações da praça com ao menos um dia medido no mês.

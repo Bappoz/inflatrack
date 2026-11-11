@@ -7,7 +7,9 @@ Só o portal é falso (``ClienteBdmepFalso`` monta o .zip); o CSV tem o cabeçal
 real e valores escolhidos para que média, anomalia e lag possam ser conferidos fora do SQL.
 
 Série de Brasília (A001, praça 5300108), janeiros de 2021 a 2024 com chuva de 0,1 mm/h e
-temperatura 20, 21, 22 e 25 °C, mais dezembro de 2023 a 30 °C. Fevereiro de 2024 tem só 10 dias.
+temperatura 20, 21, 22 e 25 °C, mais dezembro de 2023 a 30 °C. Fevereiro de 2024 tem só 10 dias
+oficiais (18 °C); o Open-Meteo, falso também, cobre de 8 a 15/02 a 30 °C, e só os dias depois do
+último oficial (11 a 15) podem entrar.
 """
 
 import os
@@ -23,12 +25,13 @@ import pytest
 
 from inflatrack.bronze import clima
 from inflatrack.loaders import load_clima
-from tests.clima_bdmep import ClienteBdmepFalso, csv_bdmep
+from tests.clima_bdmep import ClienteBdmepFalso, csv_bdmep, json_open_meteo
 
 RAIZ = Path(__file__).resolve().parents[2]
 BRASILIA = 5300108
 TEMPERATURA_JANEIRO = {2021: 20.0, 2022: 21.0, 2023: 22.0, 2024: 25.0}
 CHUVA_HORA = 0.1
+PROVISORIO = {date(2024, 2, dia): (30.0, 1.0) for dia in range(8, 16)}
 
 
 def _mes(ano: int, mes: int, temperatura: float, dias: int | None = None) -> dict:
@@ -53,7 +56,10 @@ def gold(tmp_path_factory) -> Path:
         ClienteBdmepFalso(_pacotes()), ["A001"], list(TEMPERATURA_JANEIRO), delta
     )
     assert resumo.falhas == []
-    argumentos = ["--db", str(banco), "--delta-dir", str(delta), "--tabela", "medicao"]
+    clima.gravar_provisorio(
+        delta, json_open_meteo({"A001": PROVISORIO}), "https://archive-api.teste", ["A001"]
+    )
+    argumentos = ["--db", str(banco), "--delta-dir", str(delta), "--tabela", "todas"]
     assert load_clima.main(argumentos) == 0
 
     # Em subprocesso: o dbt-duckdb mantém o arquivo aberto no processo e travaria as leituras.
@@ -67,6 +73,7 @@ def gold(tmp_path_factory) -> Path:
             "--log-path", str(pasta / "dbt_logs"),
             "--indirect-selection", "cautious",
             "--select", "+fct_clima_mensal", "assert_clima_valores_plausiveis",
+            "assert_stg_clima__medicao_diaria_chave_unica",
         ],
         env={**os.environ, "DBT_DUCKDB_PATH": str(banco)},
         capture_output=True,
@@ -136,10 +143,30 @@ def test_lag_da_anomalia_carrega_o_choque_para_o_mes_seguinte(gold) -> None:
     assert fevereiro["temp_media_anomalia_t_menos_1"] == janeiro["temp_media_anomalia"]
 
 
-def test_mes_com_poucos_dias_mantem_temperatura_e_anula_a_chuva(gold) -> None:
+def test_provisorio_entra_so_depois_do_ultimo_dia_oficial(gold) -> None:
+    with duckdb.connect(str(gold), read_only=True) as con:
+        dias = con.execute(
+            "SELECT day(data_referencia), fonte, observado FROM silver.stg_clima__medicao_diaria "
+            "WHERE data_referencia BETWEEN DATE '2024-02-08' AND DATE '2024-02-15' ORDER BY 1"
+        ).fetchall()
+
+    assert dias == [(d, "inmet_bdmep", True) for d in (8, 9, 10)] + [
+        (d, "open_meteo", False) for d in range(11, 16)
+    ]
+
+
+def test_mes_com_provisorio_nao_fecha_e_conta_os_dias_de_modelo(gold) -> None:
     fevereiro = _linha(gold, date(2024, 2, 1))
 
-    assert fevereiro["dias_com_registro"] == 10
-    assert fevereiro["mes_fechado"] is False  # a última leitura é 10/02/2024
-    assert fevereiro["temp_media"] == Decimal("18.000")
-    assert fevereiro["precipitacao_total_mm"] is None
+    assert fevereiro["dias_com_registro"] == 15
+    assert fevereiro["dias_provisorios"] == 5
+    assert fevereiro["mes_fechado"] is False  # o último dia OFICIAL é 10/02/2024
+    assert fevereiro["temp_media"] == Decimal("22.000")  # (10 x 18 + 5 x 30) / 15
+    assert fevereiro["precipitacao_total_mm"] is None  # 15 de 29 dias: menos de 80%
+
+
+def test_meses_oficiais_nao_tem_dia_provisorio(gold) -> None:
+    janeiro = _linha(gold, date(2024, 1, 1))
+
+    assert janeiro["dias_provisorios"] == 0
+    assert janeiro["mes_fechado"] is True

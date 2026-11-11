@@ -9,17 +9,37 @@ from orchestration.definitions import defs
 from orchestration.schedules import SCHEDULES
 
 
-def test_job_clima_coleta_e_carrega_catalogo_e_medicoes_sem_config():
+def test_job_clima_coleta_e_carrega_catalogo_medicoes_e_provisorio_sem_config():
     job = defs.resolve_job_def("clima_job")
     assert {chave.to_user_string() for chave in job.asset_layer.executable_asset_keys} == {
         "clima_parquet",
         "clima_duckdb",
         "clima_medicoes",
         "clima_medicoes_duckdb",
+        "clima_provisorio",
+        "clima_provisorio_duckdb",
     }
     validate_run_config(job, {})
     grafo = defs.resolve_asset_graph()
     assert grafo.get(AssetKey("clima_medicoes_duckdb")).parent_keys == {AssetKey("clima_medicoes")}
+
+
+def test_provisorio_roda_depois_do_bdmep_no_mesmo_run():
+    """A janela do Open-Meteo começa no dia seguinte ao último oficial: precisa do BDMEP antes."""
+    grafo = defs.resolve_asset_graph()
+    assert grafo.get(AssetKey("clima_provisorio")).parent_keys == {AssetKey("clima_medicoes")}
+    assert grafo.get(AssetKey("clima_provisorio_duckdb")).parent_keys == {
+        AssetKey("clima_provisorio")
+    }
+
+
+def test_provisorio_chama_a_coleta_do_open_meteo():
+    with (
+        patch.object(clima.clima, "main", return_value=0) as main,
+        build_asset_context() as context,
+    ):
+        clima.clima_provisorio(context)
+    main.assert_called_once_with(["coletar", "--provisorio"])
 
 
 def test_clima_job_e_diario_sem_config_fixa():
@@ -62,13 +82,15 @@ def test_cada_carga_do_duckdb_le_so_a_sua_tabela():
     ):
         clima.clima_duckdb(context)
         clima.clima_medicoes_duckdb(context)
+        clima.clima_provisorio_duckdb(context)
     assert [chamada.args[0] for chamada in main.call_args_list] == [
         ["--tabela", "estacao"],
         ["--tabela", "medicao"],
+        ["--tabela", "provisoria"],
     ]
 
 
-def test_gold_do_clima_depende_das_medicoes():
+def test_gold_do_clima_depende_das_medicoes_e_do_provisorio():
     grafo = defs.resolve_asset_graph()
     ancestrais, fila = set(), [AssetKey(["gold", "fct_clima_mensal"])]
     while fila:
@@ -76,3 +98,4 @@ def test_gold_do_clima_depende_das_medicoes():
             ancestrais.add(pai)
             fila.append(pai)
     assert AssetKey("clima_medicoes_duckdb") in ancestrais
+    assert AssetKey("clima_provisorio_duckdb") in ancestrais

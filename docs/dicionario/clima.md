@@ -170,6 +170,27 @@ Na Silver, a leitura mais recente por estação e dia alimenta a consolidação 
 | `_id_resposta` | string | — | Chave para `clima_resposta.id_resposta` (o CSV de origem) |
 | `_fonte`, `_requisicao`, `_ingerido_em` | — | — | Procedência, como nas demais tabelas |
 
+### clima_medicao_provisoria
+
+Tabela Delta em `data/parquet/clima/medicao_provisoria/`, espelhada em
+`bronze.clima_medicao_provisoria`. Uma linha por versão de dia provisório do Open-Meteo para os
+dias que o INMET ainda não publicou. Mesmas medidas de `clima_medicao` (`temp_min`, `temp_max`,
+`temp_media`, `precipitacao_total_mm`, `umidade_relativa_media_pct`, `umidade_relativa_min_pct`),
+mais:
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `id_medicao` | string | SHA-256 dos valores do dia (uma revisão do modelo vira linha nova) |
+| `latitude_grade`, `longitude_grade` | double | Ponto da grade do modelo que o Open-Meteo usou |
+| `fonte` | string | Sempre `open_meteo` |
+| `_id_resposta` | string | Chave para o JSON original em `clima_resposta` |
+
+### Silver: `silver.stg_clima__medicao_diaria`
+
+Uma linha por estação x dia: a última revisão do INMET e, só depois do último dia oficial, o
+provisório. `fonte` diz de onde veio (`inmet_bdmep` ou `open_meteo`) e `observado` é falso no
+provisório. `horas_com_registro` fica nulo no provisório (não há leitura horária).
+
 ## Gold: `gold.fct_clima_mensal`
 
 Uma linha por praça do IPCA x mês, do primeiro ao último mês com medição. É a tabela de clima do
@@ -180,7 +201,8 @@ entra). Nenhuma coluna usa meses futuros: as normais climatológicas são só do
 | Campo | Descrição |
 |---|---|
 | `codigo_localidade`, `mes_referencia` | Chave (FK para `dim_localidade` e `dim_calendario`) |
-| `mes_fechado` | Falso no mês que o BDMEP ainda não publicou inteiro: não usar no treino |
+| `mes_fechado` | Falso no mês que o INMET ainda não publicou inteiro (inclui todo mês com dia provisório): não usar no treino |
+| `dias_provisorios` | Dias do mês cobertos pelo Open-Meteo enquanto o INMET não publica |
 | `estacoes_com_dado`, `dias_com_registro`, `dias_no_mes`, `cobertura_dias` | Cobertura do mês (0 a 1) |
 | `temp_media`, `temp_min_absoluta`, `temp_max_absoluta` | Temperatura média e extremos (°C) |
 | `temp_media_anomalia` | Temperatura menos a normal do mesmo mês nos anos anteriores (mín. 3 anos) |

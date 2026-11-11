@@ -5,6 +5,10 @@
 -- acumulado e faria um mês sem dado parecer seca. Temperatura e umidade são médias e ficam com
 -- qualquer cobertura; a contagem de dias acompanha cada linha.
 --
+-- Dias provisórios (Open-Meteo, só depois do último dia publicado pelo INMET) entram nas médias do
+-- mês em curso e são contados em dias_provisorios. As normais dos anos anteriores são sempre
+-- oficiais: o provisório de um dia sai da staging quando o INMET o publica.
+--
 -- Anomalia = valor do mês menos a normal do mesmo mês do calendário naquela estação, calculada só
 -- com os anos ANTERIORES (no mínimo 3). Usar a série inteira vazaria o futuro para o treino do
 -- modelo preditivo (walk-forward, Seção 2).
@@ -27,7 +31,8 @@ mensal_observado as (
         count(*) as dias_com_registro,
         count(temp_media) as dias_com_temperatura,
         count(precipitacao_total_mm) as dias_com_precipitacao,
-        count(*) filter (where precipitacao_total_mm >= 1) as dias_com_chuva
+        count(*) filter (where precipitacao_total_mm >= 1) as dias_com_chuva,
+        count(*) filter (where not observado) as dias_provisorios
     from diario
     group by estacao_id, mes_referencia
 ),
@@ -59,7 +64,8 @@ mensal as (
         m.umidade_relativa_media_pct,
         coalesce(m.dias_com_registro, 0) as dias_com_registro,
         coalesce(m.dias_com_temperatura, 0) as dias_com_temperatura,
-        coalesce(m.dias_com_precipitacao, 0) as dias_com_precipitacao
+        coalesce(m.dias_com_precipitacao, 0) as dias_com_precipitacao,
+        coalesce(m.dias_provisorios, 0) as dias_provisorios
     from grade as g
     left join (
         select
@@ -126,6 +132,7 @@ select
     d.dias_com_temperatura,
     d.dias_com_precipitacao,
     d.dias_com_chuva,
+    d.dias_provisorios,
     cast(d.temp_media_normal as decimal(8, 3)) as temp_media_normal,
     cast(d.temp_media_anomalia as decimal(8, 3)) as temp_media_anomalia,
     cast(d.precipitacao_normal_mm as decimal(10, 3)) as precipitacao_normal_mm,

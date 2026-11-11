@@ -212,3 +212,37 @@ def test_sem_medicoes_coleta_so_o_catalogo() -> None:
 
     catalogo.assert_called_once()
     coletar.assert_not_called()
+
+
+def test_provisorio_usa_as_coordenadas_do_de_para() -> None:
+    with patch.object(clima, "processar_provisorio") as coletar:
+        assert clima.main(["coletar", "--provisorio", "--estacao", "A001"]) == 0
+
+    coordenadas = coletar.call_args.args[1]
+    assert set(coordenadas) == {"A001"}
+    assert coordenadas["A001"] == pytest.approx((-15.789, -47.926), abs=1e-3)
+
+
+def test_provisorio_recusa_estacao_fora_do_de_para_sem_chamar_a_rede() -> None:
+    with patch.object(clima, "processar_provisorio") as coletar:
+        assert clima.main(["coletar", "--provisorio", "--estacao", "A999"]) == 1
+
+    coletar.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "argumentos",
+    [
+        ["coletar", "--provisorio", "--de-ano", "2020"],
+        ["coletar", "--provisorio", "--medicoes"],
+    ],
+)
+def test_provisorio_com_opcao_que_nao_se_aplica_falha_antes_da_rede(argumentos) -> None:
+    with (
+        patch.object(clima, "processar_provisorio") as coletar,
+        pytest.raises(SystemExit) as erro,
+    ):
+        clima.main(argumentos)
+
+    assert erro.value.code == 2
+    coletar.assert_not_called()

@@ -97,10 +97,17 @@ seeds:
     description: >
       Relação manual de estações do INMET a localidades do IPCA. Inclui apenas
       vínculos conferidos pelo nome e pelas coordenadas do catálogo do INMET.
+      É também a lista de estações que a coleta busca (BDMEP e Open-Meteo); a
+      latitude e a longitude vêm do cabeçalho do CSV da estação no BDMEP.
     config:
+      # Recriada a cada build: sem isso, um banco que já tem a tabela com as colunas antigas
+      # (antes das coordenadas) falha no `dbt seed`. São 16 linhas, recriar não custa nada.
+      full_refresh: true
       column_types:
         estacao_id: varchar
         codigo_localidade: integer
+        latitude: double
+        longitude: double
         justificativa: varchar
     columns:
       - name: estacao_id
@@ -112,5 +119,9 @@ seeds:
               arguments:
                 to: ref('seed_localidade_ibge')
                 field: codigo_localidade
+      - name: latitude
+        data_tests: [not_null]
+      - name: longitude
+        data_tests: [not_null]
       - name: justificativa
         data_tests: [not_null]

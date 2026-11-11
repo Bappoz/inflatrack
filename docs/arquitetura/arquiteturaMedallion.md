@@ -40,7 +40,7 @@ migradas, as subpastas contêm tabelas Delta (arquivos Parquet e log
 | [PIB dos EUA](../fontes/pib_usa.md) | resposta guardada no Delta | Delta em `data/parquet/pib_usa/` |
 | [PIB da Rússia](../fontes/pib_russia.md) | resposta guardada no Delta | Delta em `data/parquet/pib_russia/` |
 | [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `salario_minimo_resposta` no Delta; HTML também em `data/raw/dieese/` | Delta em `data/parquet/salario_minimo/` (`salario_minimo_resposta`, `salario_minimo_mes`); o fluxo legado ainda grava `data/parquet/dieese/` |
-| [Dados do Clima (INMET)](../fontes/clima.md) | `clima_resposta` no Delta: JSON do catálogo e o CSV de cada estação dos pacotes anuais do BDMEP | Delta em `data/parquet/clima/` (`clima_resposta`, `clima_estacao`, `clima_medicao`) |
+| [Dados do Clima (INMET)](../fontes/clima.md) | `clima_resposta` no Delta: JSON do catálogo, o CSV de cada estação dos pacotes anuais do BDMEP e o JSON do Open-Meteo | Delta em `data/parquet/clima/` (`clima_resposta`, `clima_estacao`, `clima_medicao` e, à parte, o provisório `clima_medicao_provisoria`) |
 
 ## Fluxo
 

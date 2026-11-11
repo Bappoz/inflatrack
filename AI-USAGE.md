@@ -1292,6 +1292,21 @@ de tarefas nessa linha.
 - Recife (A301) e Fortaleza (A305) não têm dado recente; a troca por outra estação ficou para a Squad.
 - O modelo preditivo ainda não existe: a utilidade das variáveis de clima para ele não foi medida.
 
+**Continuação (2026-11-11): clima provisório pelo Open-Meteo**
+- A pedido do integrante, pesquisou fontes grátis do clima do dia (Open-Meteo, NASA POWER, INMET com token, NOAA GHCN-Daily), testou as APIs ao vivo e comparou o Open-Meteo com o medido em Brasília. A temperatura ficou de 0,1 a 0,7 °C acima; a chuva divergiu muito. O integrante escolheu o Open-Meteo para cobrir os dias que o INMET ainda não publicou.
+- Implementou o provisório no fluxo Medallion: cliente `clients/open_meteo.py` (uma chamada para as 16 estações), JSON no Raw, tabela Delta e DuckDB à parte (`clima_medicao_provisoria`), staging que só usa o provisório depois do último dia oficial (`fonte`, `observado = false`), `dias_provisorios` na Gold com `mes_fechado` só pelo oficial, ativos `clima_provisorio` e `clima_provisorio_duckdb` no `clima_job` e check de frescura de 5 dias.
+- As coordenadas das estações entraram no seed de-para, tiradas do cabeçalho dos CSVs do BDMEP (a A305 não está no catálogo da API).
+- Achou na execução real que o `dbt seed` falhava num banco com o seed antigo, de 3 colunas; passou a usar `full_refresh: true` no seed, com teste que falha sem a correção. Os testes novos da CLI acharam `--provisorio --estacao` recusado pela validação, e a validação foi corrigida.
+- Atualizou a documentação da fonte, o dicionário, a orquestração, a Medallion, o SLA, a evidência e o README (atribuição CC BY 4.0).
+
+**O que foi verificado e como (continuação)**
+- `dagster job execute -j clima_job` com os dados locais: `RUN_SUCCESS`, 160 leituras provisórias (16 estações, 01 a 10/11/2026), os 3 checks de clima passando. A materialização até a Gold deu `RUN_SUCCESS` com dbt PASS=47.
+- Nenhum dia provisório em data já publicada pelo INMET. O E2E cobre a sobreposição (provisório de 8 a 15/02, oficial até 10/02: só 11 a 15 entram).
+
+**O que NÃO foi verificado (continuação)**
+- A troca automática do provisório pelo oficial com um pacote real novo do INMET; só nos testes, com pacote sintético.
+- O uso do Open-Meteo como não comercial foi lido nos termos, não confirmado com o Open-Meteo.
+
 ---
 
 ## Artur Fernandes Galdino

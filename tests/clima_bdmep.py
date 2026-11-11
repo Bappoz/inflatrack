@@ -6,6 +6,7 @@ horárias são sintéticas, para que o teste saiba de antemão a média, a chuva
 
 from __future__ import annotations
 
+import json
 import zipfile
 from datetime import date
 from pathlib import Path
@@ -77,3 +78,47 @@ class ClienteBdmepFalso:
         if ano in self.falhar_em:
             raise OSError(f"queda de rede simulada em {ano}")
         return gravar_pacote(destino, ano, self.pacotes[ano])
+
+
+def json_open_meteo(series: dict[str, dict[date, tuple[float, float]]]) -> str:
+    """Resposta do archive-api do Open-Meteo, uma entrada por estação na ordem do dicionário.
+
+    Cada dia tem (temperatura média, chuva do dia); máxima e mínima ficam 4 °C acima e abaixo.
+    """
+    blocos = []
+    for dias in series.values():
+        ordenados = sorted(dias.items())
+        blocos.append(
+            {
+                "latitude": -15.78,
+                "longitude": -47.88,
+                "daily": {
+                    "time": [dia.isoformat() for dia, _ in ordenados],
+                    "temperature_2m_mean": [t for _, (t, _) in ordenados],
+                    "temperature_2m_max": [t + 4 for _, (t, _) in ordenados],
+                    "temperature_2m_min": [t - 4 for _, (t, _) in ordenados],
+                    "precipitation_sum": [c for _, (_, c) in ordenados],
+                    "relative_humidity_2m_mean": [70 for _ in ordenados],
+                    "relative_humidity_2m_min": [50 for _ in ordenados],
+                },
+            }
+        )
+    return json.dumps(blocos[0] if len(blocos) == 1 else blocos)
+
+
+class ClienteOpenMeteoFalso:
+    """Faz o papel do Open-Meteo: devolve a série do teste e registra a janela pedida."""
+
+    def __init__(self, series: dict[str, dict[date, tuple[float, float]]]) -> None:
+        self.series = series
+        self.janelas: list[tuple[date, date]] = []
+
+    def buscar_diario(self, coordenadas, inicio: date, fim: date) -> tuple[str, str]:
+        self.janelas.append((inicio, fim))
+        recorte = {
+            estacao: {dia: v for dia, v in dias.items() if inicio <= dia <= fim}
+            for estacao, dias in self.series.items()
+        }
+        return f"https://archive-api.open-meteo.com/v1/archive?teste={inicio}", json_open_meteo(
+            recorte
+        )

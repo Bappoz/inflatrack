@@ -6,6 +6,8 @@ Este documento registra as características arquiteturais e de negócio para a f
 
 O catálogo de estações vem da API REST do INMET (`apitempo.inmet.gov.br/estacoes/T`). As medições vêm dos pacotes anuais do BDMEP (`portal.inmet.gov.br/uploads/dadoshistoricos/{ano}.zip`, um CSV horário por estação), resumidas por dia: a rota diária da API responde 404 e a horária só devolve vazio sem token ([evidência da E2](../evidencias/e2/clima.md#diagnostico-e-validacao-da-api-do-inmet); carga em [BDMEP](../evidencias/e3/clima_bdmep.md)).
 
+Como o INMET publica o pacote do ano corrente cerca de 1×/mês, os dias entre o último publicado e ontem vêm do **Open-Meteo** como clima **provisório** (ver [seção 6](#6-clima-provisorio-open-meteo)): valores de modelo, guardados à parte e trocados pelo oficial quando ele chega.
+
 | Indicador | Descrição | Unidade | Frequência de acesso |
 |---|---|---|---|
 | `temp_min` | Temperatura mínima registrada no dia | Graus Celsius (°C) | Diária |
@@ -66,12 +68,14 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 - **Escrita real vs. custo de coleta:** o CSV de cada estação vai inteiro para `resposta/`; cada dia vira uma linha tipada em `medicao/`. Reexecuções não duplicam (hash do conteúdo) e revisões do INMET entram como versão nova.
 - **Escrita transacional:** Nenhuma. O loader espelha a tabela Delta em `bronze.clima_medicao`; a Silver escolhe a revisão mais recente por estação e dia.
 - **Falha parcial:** um ano que falha não impede os outros e não grava manifesto, então é refeito na execução seguinte; a coleta termina com código 1 e o run fica vermelho. Contam como falha: erro de rede, zip corrompido, pacote de ano já encerrado que sumiu do portal (404), pacote sem nenhuma das estações pedidas e CSV recusado (coluna faltando ou código do cabeçalho diferente do nome do arquivo). Um CSV recusado não descarta os das outras estações. Estação ausente só em alguns anos (começou depois, parou antes) é aviso.
+- **Provisório (Open-Meteo):** no mesmo `clima_job`, depois do BDMEP, uma chamada ao Open-Meteo traz as 16 estações, do dia seguinte ao último oficial até ontem (no máximo 92 dias). A janela inteira é relida todo dia, porque o Open-Meteo troca a previsão pela reanálise ERA5 nos dias recentes; o hash do conteúdo evita duplicar o que não mudou.
 - **Mudança na regra de leitura:** `VERSAO_LEITURA` entra no manifesto; ao subir o número, a coleta seguinte relê todos os pacotes uma vez, e só as leituras com valor diferente viram versão nova.
 
 ### Execução e preparação do banco
 
 - `just clima`: coleta catálogo e medições e promove as duas tabelas Delta ao DuckDB.
 - `just bronze-clima`: só o catálogo de estações.
+- `just clima-provisorio`: só o provisório do Open-Meteo e a carga dele no DuckDB.
 - Recorte manual: `uv run python -m inflatrack.bronze.clima coletar --medicoes --estacao A001 --de-ano 2020 --ate-ano 2021` (repita `--estacao`), depois `just clima-load`. No Dagster, `clima_medicoes` aceita os campos opcionais `estacoes`, `ano_inicio` e `ano_fim`.
 - As cargas `clima_duckdb` e `clima_medicoes_duckdb` aplicam `scripts/sql/setup_duckdb_clima.sql` antes de carregar (`load_clima --tabela estacao|medicao`), então as duas tabelas existem para o dbt mesmo antes da primeira coleta. Fora do Dagster, `just duckdb-init` faz o mesmo sem API nem Delta (idempotente, respeita `DBT_DUCKDB_PATH`, não apaga dados) e `just dbt` já o chama.
 
@@ -110,3 +114,26 @@ sumiu do pacote de 2025. A cobertura real por estação está na
 [evidência da carga](../evidencias/e3/clima_bdmep.md).
 
 Vazio, `-9999` e valores fora da faixa física viram `NULL`; zero é leitura válida e fica zero.
+
+## 6. Clima provisório (Open-Meteo)
+
+| Atributo | Resposta |
+| :--- | :--- |
+| **Fonte** | [Open-Meteo](https://open-meteo.com/), `archive-api.open-meteo.com/v1/archive` (o *best match* junta a reanálise ERA5, com ~5 dias de atraso, e a análise do ECMWF IFS até ontem) |
+| **Custo e licença** | Grátis, sem chave, para uso não comercial (projeto acadêmico, sem anúncio nem assinatura). Dados sob CC BY 4.0: citar *Weather data by Open-Meteo.com*. Limite de 10 mil chamadas por dia; a coleta faz 1. |
+| **O que é** | Valor de **modelo em grade** no ponto da estação (coordenadas no seed de-para, tiradas do CSV do BDMEP), não medição. O dia é UTC (`timezone=GMT`), como no BDMEP. |
+| **Quando entra** | Só nos dias **depois do último dia publicado pelo INMET** e até ontem. Nunca preenche buraco do histórico oficial, nem de estação parada no passado. |
+| **Onde fica** | Raw: o JSON em `clima_resposta`. Bronze: Delta `data/parquet/clima/medicao_provisoria/` e `bronze.clima_medicao_provisoria`, à parte de `clima_medicao`. Silver: `stg_clima__medicao_diaria` com `fonte = 'open_meteo'` e `observado = false`. Gold: `dias_provisorios` em `fct_clima_mensal`. |
+| **Quando sai** | Sozinho: quando o pacote do INMET chega, o corte avança e a staging descarta o provisório daqueles dias. Ele continua no Delta (só acrescenta), para auditoria. |
+
+**Quão perto do medido.** Comparação mensal em Brasília (A001), nov/2025 a out/2026: a
+temperatura média do Open-Meteo ficou 0,1 a 0,7 °C acima da do INMET em todos os meses; a chuva
+divergiu muito mês a mês (275 mm medidos contra 134 mm do modelo em nov/2025, 79 contra 204 em
+fev/2026), porque chuva de verão é localizada e o modelo dá a média de uma célula de vários km.
+Por isso:
+
+- **para treinar o modelo**, use só `mes_fechado = true`: nenhum mês com dia provisório está
+  fechado;
+- **para prever o mês corrente**, a temperatura provisória é confiável; a chuva provisória é
+  só indicativa, e a anomalia do mês em curso pode sair levemente positiva pelo viés de
+  temperatura do modelo.

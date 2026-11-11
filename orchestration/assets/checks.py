@@ -24,7 +24,7 @@ from dagster import (
     asset_check,
 )
 
-from orchestration.assets.clima import clima_duckdb, clima_medicoes_duckdb
+from orchestration.assets.clima import clima_duckdb, clima_medicoes_duckdb, clima_provisorio_duckdb
 from orchestration.assets.commodities import commodities_duckdb
 from orchestration.assets.comum import POOL_DUCKDB
 from orchestration.assets.dolar import dolar_duckdb
@@ -135,6 +135,17 @@ SLA_CLIMA_MEDICOES = Sla(
     "Pacote BDMEP republicado ~1×/mês (máximo 60 dias desde o último dia medido)",
     50_000,
     "Medições diárias do INMET (BDMEP)",
+    "leituras",
+)
+# Provisório (Open-Meteo): a coleta diária vai até ontem; 5 dias cobrem um fim de semana sem
+# coleta e o atraso da reanálise. O mínimo é um dia das estações do de-para.
+SLA_CLIMA_PROVISORIO = Sla(
+    "bronze.clima_medicao_provisoria",
+    "data_referencia",
+    5,
+    "Coleta diária até ontem (máximo 5 dias desde o último dia coberto)",
+    16,
+    "Clima provisório (Open-Meteo)",
     "leituras",
 )
 
@@ -296,6 +307,12 @@ check_clima_medicoes_freshness_e_volume = _check_de(
     clima_medicoes_duckdb,
     SLA_CLIMA_MEDICOES,
     "Defasagem do último dia medido e volume mínimo das medições diárias do INMET (BDMEP).",
+)
+check_clima_provisorio_freshness_e_volume = _check_de(
+    "check_clima_provisorio_freshness_e_volume",
+    clima_provisorio_duckdb,
+    SLA_CLIMA_PROVISORIO,
+    "Clima provisório (Open-Meteo) coberto até poucos dias atrás, enquanto o INMET não publica.",
 )
 
 

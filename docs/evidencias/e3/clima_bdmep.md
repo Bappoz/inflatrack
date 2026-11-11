@@ -5,7 +5,9 @@ O clima chegava só até a Silver, e vazia: a coleta de medições usava a rota
 [evidência da E2](../e2/clima.md#diagnostico-e-validacao-da-api-do-inmet)). O PR #22 punha essa
 coleta no agendamento diário, o que faria o `clima_job` falhar todo dia. Esta revisão troca a
 fonte das medições pelos pacotes anuais do BDMEP, como a própria evidência da E2 recomendava, e
-leva o clima até a Gold.
+leva o clima até a Gold. Como o BDMEP chega com até ~1 mês de atraso, os dias ainda não
+publicados são cobertos por um clima **provisório** do Open-Meteo (ver
+[abaixo](#clima-provisorio-open-meteo)).
 
 ## Fonte: o que foi testado em 2026-11-11
 
@@ -88,6 +90,44 @@ Cobertura = média de `dias_com_registro / dias_no_mes`.
 | Recife | A301 | 250 | 0,73 | 0,16 | ausente dos pacotes de 2024 e 2025 |
 | Rio Branco | A104 | 220 | 0,69 | 1,00 | começa em jul/2008, com buracos antes de 2024 |
 
+## Clima provisório (Open-Meteo)
+
+Pesquisa de 2026-11-11 por fonte gratuita do clima do dia:
+
+| Fonte | Acesso | Até quando | Decisão |
+|---|---|---|---|
+| Open-Meteo (`archive-api`) | grátis, sem chave, não comercial, CC BY 4.0 | até ontem | **usada** como provisório |
+| NASA POWER | grátis, sem chave | ~3 dias de atraso (até 08/11 em 11/11) | não usada: mais atraso, grade mais grossa |
+| INMET com token | grátis, por e-mail a `cadastro.act@inmet.gov.br` | até ontem, medido | melhor opção quando houver token |
+| NOAA GHCN-Daily | grátis | estações do Brasil paradas nos anos 1990 | descartada |
+
+O Open-Meteo é **modelo em grade**, não estação. Contra o medido em Brasília (A001), de nov/2025
+a out/2026, a temperatura média mensal ficou de 0,1 a 0,7 °C acima em todos os meses. A chuva
+divergiu muito: 275 mm medidos contra 134 mm do modelo em nov/2025, e 79 contra 204 em fev/2026.
+Por isso o provisório fica à parte e é trocado pelo oficial.
+
+| Regra | Onde |
+|---|---|
+| Janela: do dia seguinte ao último oficial até ontem (dia UTC), no máximo 92 dias; sem dado oficial, nada | `janela_provisoria` em `bronze/clima.py` |
+| Uma chamada para as 16 estações; coordenadas do cabeçalho do CSV do BDMEP, no seed de-para | `clients/open_meteo.py`, `seed_de_para_estacao_localidade` |
+| JSON no Raw (`clima_resposta`); linhas em Delta e DuckDB **separadas** do oficial | `medicao_provisoria/`, `bronze.clima_medicao_provisoria` |
+| A staging só usa o provisório depois do último dia oficial; o oficial sempre vence | `stg_clima__medicao_diaria` (`fonte`, `observado`) |
+| Gold conta `dias_provisorios`; `mes_fechado` olha só o oficial | `fct_clima_mensal` |
+| Check de frescura: 5 dias, mínimo 16 leituras | `check_clima_provisorio_freshness_e_volume` |
+
+**Execução real (2026-11-11, dados locais):**
+
+| Execução | Resultado |
+|---|---|
+| `dagster job execute -j clima_job` | `RUN_SUCCESS`; catálogo com 678 estações, BDMEP com 21 anos sem mudança, Open-Meteo de 01/11 a 10/11/2026 com 160 leituras (16 estações x 10 dias), os 3 checks de clima passando |
+| `dagster asset materialize --select '*gold/fct_clima_mensal'` | `RUN_SUCCESS`, dbt PASS=47; a releitura do Open-Meteo não trouxe linha nova |
+| Conferência | 0 dia provisório em data já publicada pelo INMET (até 31/10); nov/2026 na Gold com 16 praças, `dias_provisorios = 10` e `mes_fechado = false` |
+
+Achado durante a execução: o seed de-para ganhou `latitude` e `longitude`, e o `dbt seed` falhava
+num banco que já tinha a tabela com as 3 colunas antigas (o dbt reaproveita a tabela sem
+`--full-refresh`). O seed passou a ter `full_refresh: true`, e o teste de build cria antes a
+tabela antiga para não deixar o erro voltar.
+
 ## Limites conhecidos
 
 - **Fortaleza e Recife sem dado recente.** As estações pararam; trocar por outra estação da
@@ -100,5 +140,8 @@ Cobertura = média de `dias_com_registro / dias_no_mes`.
 - **Revisão que volta ao valor anterior.** O `id_medicao` é o hash do conteúdo, então uma leitura
   revisada de A para B e de volta para A fica em B. Corrigir exige tirar a chave primária de
   `bronze.clima_medicao`; ficou registrado em vez de alterado.
+- **Provisório é modelo.** A chuva do Open-Meteo não deve entrar no treino; o `mes_fechado`
+  já tira esses meses. Quando a Squad tiver o token do INMET, o provisório pode passar a vir
+  da medição das próprias estações, mudando só o cliente.
 - **Dia UTC.** O resumo diário usa o dia UTC, como o BDMEP publica (3 h de diferença para
   Brasília); no grão mensal o efeito é desprezível.

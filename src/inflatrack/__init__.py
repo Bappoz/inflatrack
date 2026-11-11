@@ -12,6 +12,7 @@ _CLIENT_NAMES = [
     "dieese",
     "dolar_olinda",
     "inmet",
+    "open_meteo",
     "pib",
     "selic_sgs",
     "sidra",

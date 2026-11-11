@@ -66,3 +66,29 @@ def clima_medicoes(context: AssetExecutionContext) -> None:
 )
 def clima_medicoes_duckdb(context: AssetExecutionContext) -> None:
     executar(context, load_clima.main, "--tabela", "medicao")
+
+
+@asset(
+    group_name="clima",
+    # Depois do BDMEP no mesmo run: a janela começa no dia seguinte ao último dia oficial.
+    deps=[clima_medicoes],
+    retry_policy=RETRY_REDE,
+    kinds={"python", "delta"},
+    description=(
+        "Clima PROVISÓRIO do Open-Meteo (modelo, não estação) para os dias que o INMET ainda "
+        "não publicou, até ontem. Tabela à parte; a Silver descarta quando o oficial chega."
+    ),
+)
+def clima_provisorio(context: AssetExecutionContext) -> None:
+    executar(context, clima.main, "coletar", "--provisorio")
+
+
+@asset(
+    group_name="clima",
+    deps=[clima_provisorio],
+    pool=POOL_DUCKDB,
+    kinds={"python", "duckdb"},
+    description="Promove o clima provisório do Delta para bronze.clima_medicao_provisoria.",
+)
+def clima_provisorio_duckdb(context: AssetExecutionContext) -> None:
+    executar(context, load_clima.main, "--tabela", "provisoria")

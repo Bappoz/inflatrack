@@ -23,6 +23,13 @@ um HEAD por ano e só baixa o pacote se a versão publicada, a lista de estaçõ
 leitura (``VERSAO_LEITURA``) mudou. Assim a primeira
 execução traz a série desde ``ANO_INICIAL`` e as seguintes só o que o INMET republicou.
 
+**Clima provisório** (``coletar --provisorio``): entre o último dia publicado pelo INMET e
+ontem, o Open-Meteo (modelo em grade, não estação) cobre o buraco em
+``data/parquet/clima/medicao_provisoria/``. É uma tabela à parte: nunca se mistura com
+``clima_medicao``. A Silver só usa o provisório depois do último dia oficial, então ele sai
+sozinho quando o pacote do INMET chega. A janela é relida a cada coleta, porque o Open-Meteo
+troca a previsão pela reanálise ERA5 nos dias recentes.
+
 Todas as tabelas só acrescentam. Reexecutar não grava nada; uma revisão do INMET (no cadastro ou
 numa leitura) entra como linha nova e a anterior permanece.
 
@@ -32,6 +39,7 @@ Uso::
     uv run python -m inflatrack.bronze.clima coletar --medicoes
     uv run python -m inflatrack.bronze.clima coletar --medicoes --estacao A001 \\
         --de-ano 2024 --ate-ano 2025
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
     uv run python -m inflatrack.bronze.clima checar
     uv run python -m inflatrack.bronze.clima importar --raw-dir data/raw/inmet
     uv run python -m inflatrack.bronze.clima load --modo so_acrescenta
@@ -52,7 +60,7 @@ import unicodedata
 import zipfile
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -62,6 +70,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 
+from inflatrack.clients import open_meteo
 from inflatrack.clients.inmet import (
     BASE_URL,
     InmetClient,
@@ -129,6 +138,28 @@ ESQUEMA_MEDICAO = pa.schema(
     ]
 )
 
+# Mesmas medidas de clima_medicao, mais a origem e o ponto da grade do modelo.
+ESQUEMA_MEDICAO_PROVISORIA = pa.schema(
+    [
+        pa.field("id_medicao", pa.string(), nullable=False),
+        pa.field("estacao_id", pa.string(), nullable=False),
+        pa.field("data_referencia", pa.date32(), nullable=False),
+        pa.field("temp_min", pa.float64()),
+        pa.field("temp_max", pa.float64()),
+        pa.field("temp_media", pa.float64()),
+        pa.field("precipitacao_total_mm", pa.float64()),
+        pa.field("umidade_relativa_media_pct", pa.float64()),
+        pa.field("umidade_relativa_min_pct", pa.float64()),
+        pa.field("latitude_grade", pa.float64()),
+        pa.field("longitude_grade", pa.float64()),
+        pa.field("fonte", pa.string(), nullable=False),
+        pa.field("_id_resposta", pa.string(), nullable=False),
+        pa.field("_fonte", pa.string(), nullable=False),
+        pa.field("_requisicao", pa.string(), nullable=False),
+        pa.field("_ingerido_em", pa.timestamp("us", tz="UTC"), nullable=False),
+    ]
+)
+
 CHAVE_ESTACAO = (
     "estacao_id",
     "nome",
@@ -156,6 +187,11 @@ TIPO_CSV_BDMEP = "text/csv; charset=iso-8859-1"
 # vez (só leituras com valor diferente viram linha nova).
 VERSAO_LEITURA = 2
 TIPO_MANIFESTO = "application/json; charset=utf-8"
+TIPO_JSON = "application/json; charset=utf-8"
+FONTE_PROVISORIA = "open_meteo"
+# O provisório só cobre o atraso de publicação do INMET (~1 mês). Se o último dia oficial for
+# mais antigo que isso, a fonte parou: a janela é cortada para não virar histórico de modelo.
+DIAS_MAXIMOS_PROVISORIO = 92
 
 
 class ChecagemError(ValueError):
@@ -354,6 +390,48 @@ def acrescentar_estacoes(destino: Path, linhas: list[dict]) -> int:
     return len(novas)
 
 
+def _id_por_conteudo(linha: dict, colunas: tuple[str, ...]) -> str:
+    conteudo = json.dumps(
+        {coluna: linha.get(coluna) for coluna in colunas},
+        sort_keys=True,
+        default=str,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
+
+
+COLUNAS_PROVISORIAS = (
+    "estacao_id",
+    "data_referencia",
+    "temp_min",
+    "temp_max",
+    "temp_media",
+    "precipitacao_total_mm",
+    "umidade_relativa_media_pct",
+    "umidade_relativa_min_pct",
+    "latitude_grade",
+    "longitude_grade",
+    "fonte",
+)
+
+
+def _acrescentar_por_id(caminho: str, linhas: list[dict], esquema: pa.Schema) -> int:
+    """Acrescenta as linhas cujo ``id_medicao`` ainda não está na tabela; devolve quantas."""
+    unicas = {linha["id_medicao"]: linha for linha in linhas}
+    if DeltaTable.is_deltatable(caminho):
+        existentes = (
+            DeltaTable(caminho)
+            .to_pyarrow_dataset()
+            .to_table(columns=["id_medicao"], filter=ds.field("id_medicao").isin(list(unicas)))
+        )
+        for id_medicao in existentes.column("id_medicao").to_pylist():
+            unicas.pop(id_medicao, None)
+    if unicas:
+        tabela = pa.Table.from_pylist(list(unicas.values()), esquema)
+        write_deltalake(caminho, tabela, mode="append")
+    return len(unicas)
+
+
 def _id_medicao(linha: dict) -> str:
     colunas_de_dado = (
         "estacao_id",
@@ -367,13 +445,7 @@ def _id_medicao(linha: dict) -> str:
         "horas_com_registro",
         "observado",
     )
-    conteudo = json.dumps(
-        {coluna: linha.get(coluna) for coluna in colunas_de_dado},
-        sort_keys=True,
-        default=str,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(conteudo.encode("utf-8")).hexdigest()
+    return _id_por_conteudo(linha, colunas_de_dado)
 
 
 def acrescentar_medicoes(destino: Path, linhas: list[dict]) -> int:
@@ -381,29 +453,9 @@ def acrescentar_medicoes(destino: Path, linhas: list[dict]) -> int:
     if not linhas:
         return 0
 
-    caminho = _caminho(destino, "medicao")
-    linhas_com_id = [linha | {"id_medicao": _id_medicao(linha)} for linha in linhas]
-    ids = {linha["id_medicao"] for linha in linhas_com_id}
-    if DeltaTable.is_deltatable(caminho):
-        existentes = (
-            DeltaTable(caminho)
-            .to_pyarrow_dataset()
-            .to_table(columns=["id_medicao"], filter=ds.field("id_medicao").isin(list(ids)))
-        )
-        ids_existentes = set(existentes.column("id_medicao").to_pylist())
-    else:
-        ids_existentes = set()
-
     # Dois CSVs do mesmo lote podem trazer a mesma leitura: um id só uma vez.
-    unicas = {linha["id_medicao"]: linha for linha in linhas_com_id}
-    novas = [linha for id_, linha in unicas.items() if id_ not in ids_existentes]
-    if novas:
-        write_deltalake(
-            caminho,
-            pa.Table.from_pylist(novas, ESQUEMA_MEDICAO),
-            mode="append",
-        )
-    return len(novas)
+    linhas_com_id = [linha | {"id_medicao": _id_medicao(linha)} for linha in linhas]
+    return _acrescentar_por_id(_caminho(destino, "medicao"), linhas_com_id, ESQUEMA_MEDICAO)
 
 
 def _com_metadados(
@@ -454,6 +506,23 @@ def estacoes_mapeadas(caminho: Path | None = None) -> list[str]:
     if not estacoes or "" in estacoes:
         raise ChecagemError(f"Mapeamento de estações vazio ou inválido: {caminho}")
     return sorted(estacoes)
+
+
+def coordenadas_mapeadas(caminho: Path | None = None) -> dict[str, tuple[float, float]]:
+    """Latitude e longitude de cada estação do de-para (do cabeçalho do CSV do BDMEP)."""
+    caminho = caminho or MAPEAMENTO_ESTACOES
+    with caminho.open(encoding="utf-8", newline="") as arquivo:
+        linhas = list(csv.DictReader(arquivo))
+    try:
+        coordenadas = {
+            linha["estacao_id"].strip(): (float(linha["latitude"]), float(linha["longitude"]))
+            for linha in linhas
+        }
+    except (KeyError, TypeError, ValueError) as erro:
+        raise ChecagemError(f"De-para sem latitude/longitude válidas: {caminho} ({erro})") from erro
+    if not coordenadas:
+        raise ChecagemError(f"Mapeamento de estações vazio ou inválido: {caminho}")
+    return coordenadas
 
 
 def _normalizar(texto: str) -> str:
@@ -812,6 +881,103 @@ def processar_medicoes(
     return resumo
 
 
+def ultimo_dia_oficial(destino: Path) -> date | None:
+    """O dia mais recente já publicado pelo INMET (BDMEP) na Bronze."""
+    caminho = _caminho(destino, "medicao")
+    if not DeltaTable.is_deltatable(caminho):
+        return None
+    datas = DeltaTable(caminho).to_pyarrow_dataset().to_table(columns=["data_referencia"])
+    valores = [dia for dia in datas.column("data_referencia").to_pylist() if dia is not None]
+    return max(valores) if valores else None
+
+
+def janela_provisoria(ultimo_oficial: date | None, hoje: date) -> tuple[date, date] | None:
+    """Do dia seguinte ao último oficial até ontem (dia UTC), com teto de DIAS_MAXIMOS_PROVISORIO.
+
+    Sem nenhum dado oficial não há o que cobrir: o provisório nunca substitui o histórico.
+    """
+    if ultimo_oficial is None:
+        return None
+    fim = hoje - timedelta(days=1)
+    mais_antigo = fim - timedelta(days=DIAS_MAXIMOS_PROVISORIO - 1)
+    inicio = max(ultimo_oficial + timedelta(days=1), mais_antigo)
+    if inicio > fim:
+        return None
+    if inicio > ultimo_oficial + timedelta(days=1):
+        logger.warning(
+            "Último dia oficial (%s) tem mais de %d dias: o provisório cobre só de %s a %s",
+            ultimo_oficial,
+            DIAS_MAXIMOS_PROVISORIO,
+            inicio,
+            fim,
+        )
+    return inicio, fim
+
+
+@dataclass(frozen=True)
+class GravacaoProvisoria:
+    inicio: date | None
+    fim: date | None
+    resposta_nova: bool
+    linhas_lidas: int
+    linhas_novas: int
+
+
+def gravar_provisorio(
+    destino: Path,
+    corpo: str,
+    requisicao: str,
+    estacoes: list[str],
+    ingerido_em: datetime | None = None,
+) -> GravacaoProvisoria:
+    """Guarda o JSON do Open-Meteo no Raw e as linhas diárias em clima_medicao_provisoria."""
+    ingerido_em = ingerido_em or datetime.now(UTC)
+    try:
+        payload = json.loads(corpo)
+    except json.JSONDecodeError as erro:
+        raise ChecagemError(f"Open-Meteo devolveu JSON inválido: {erro}") from erro
+    linhas = open_meteo.transformar_diario(payload, estacoes)
+    if not linhas:
+        return GravacaoProvisoria(None, None, False, 0, 0)
+    resposta = _linha_resposta(corpo, requisicao, ingerido_em, TIPO_JSON)
+    resposta_nova = bool(_acrescentar_respostas(destino, [resposta]))
+    com_id = []
+    for linha in _com_metadados(linhas, resposta["id_resposta"], requisicao, ingerido_em):
+        linha = linha | {"fonte": FONTE_PROVISORIA}
+        com_id.append(linha | {"id_medicao": _id_por_conteudo(linha, COLUNAS_PROVISORIAS)})
+    novas = _acrescentar_por_id(
+        _caminho(destino, "medicao_provisoria"), com_id, ESQUEMA_MEDICAO_PROVISORIA
+    )
+    datas = [linha["data_referencia"] for linha in linhas]
+    return GravacaoProvisoria(min(datas), max(datas), resposta_nova, len(linhas), novas)
+
+
+def processar_provisorio(
+    cliente: open_meteo.OpenMeteoClient,
+    coordenadas: dict[str, tuple[float, float]],
+    destino: Path = Path(DIRETORIO_PADRAO),
+    hoje: date | None = None,
+) -> GravacaoProvisoria:
+    """Cobre com o Open-Meteo os dias que o INMET ainda não publicou, numa chamada só."""
+    hoje = hoje or datetime.now(UTC).date()
+    janela = janela_provisoria(ultimo_dia_oficial(destino), hoje)
+    if janela is None:
+        logger.info("Nada a cobrir: sem dado oficial ou o INMET já publicou até ontem")
+        return GravacaoProvisoria(None, None, False, 0, 0)
+    estacoes = sorted(coordenadas)
+    requisicao, corpo = cliente.buscar_diario([coordenadas[e] for e in estacoes], *janela)
+    grav = gravar_provisorio(destino, corpo, requisicao, estacoes)
+    logger.info(
+        "Open-Meteo de %s a %s: %d estações, %d de %d leituras provisórias novas",
+        janela[0],
+        janela[1],
+        len(estacoes),
+        grav.linhas_novas,
+        grav.linhas_lidas,
+    )
+    return grav
+
+
 def importar_raw(
     raw_dir: Path,
     destino: Path,
@@ -878,6 +1044,24 @@ def carregar_duckdb(
         return load_clima.carregar_bronze_estacoes(conexao, destino, modo=modo)
 
 
+def _coletar_provisorio(destino: Path, estacoes: list[str]) -> int:
+    try:
+        coordenadas = coordenadas_mapeadas()
+        if estacoes:
+            desconhecidas = sorted(set(estacoes) - set(coordenadas))
+            if desconhecidas:
+                raise ChecagemError(f"Estações fora do de-para: {', '.join(desconhecidas)}")
+            coordenadas = {e: coordenadas[e] for e in estacoes}
+        processar_provisorio(open_meteo.OpenMeteoClient(), coordenadas, destino)
+        return 0
+    except (open_meteo.OpenMeteoError, ChecagemError, OSError) as erro:
+        logger.error("Falha no clima provisório (Open-Meteo): %s", erro)
+        return 1
+    except Exception:
+        logger.exception("Falha inesperada no clima provisório (Open-Meteo)")
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="comando", required=True)
@@ -897,6 +1081,11 @@ def main(argv: list[str] | None = None) -> int:
             f"Só as medições do BDMEP: estações do de-para, de {ANO_INICIAL} até o ano corrente, "
             "baixando apenas os pacotes que mudaram"
         ),
+    )
+    modos.add_argument(
+        "--provisorio",
+        action="store_true",
+        help="Só o clima provisório (Open-Meteo) dos dias que o INMET ainda não publicou",
     )
     p_coletar.add_argument(
         "--estacao", action="append", default=[], help="ID INMET no lugar do de-para; pode repetir"
@@ -926,8 +1115,12 @@ def main(argv: list[str] | None = None) -> int:
 
     destino = Path(args.destino)
     if args.comando == "coletar":
-        if not args.medicoes and (args.estacao or args.de_ano or args.ate_ano):
-            parser.error("--estacao, --de-ano e --ate-ano exigem --medicoes")
+        if not (args.medicoes or args.provisorio) and (args.estacao or args.de_ano or args.ate_ano):
+            parser.error("--estacao, --de-ano e --ate-ano exigem --medicoes ou --provisorio")
+        if args.provisorio:
+            if args.de_ano or args.ate_ano:
+                parser.error("--de-ano e --ate-ano não valem para --provisorio")
+            return _coletar_provisorio(destino, args.estacao)
         cliente = InmetClient()
         if not args.medicoes:
             try:

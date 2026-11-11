@@ -10,15 +10,22 @@
 -- Sem vazamento: toda coluna de um mês usa só aquele mês e os anteriores (normais climatológicas
 -- vêm só de anos anteriores, ver int_clima__anomalia_mensal). mes_fechado diz se o INMET já
 -- publicou o mês inteiro daquela praça; o mês em curso não deve entrar no treino.
+--
+-- Clima provisório: os dias que o INMET ainda não publicou vêm do Open-Meteo (modelo em grade) e
+-- são contados em dias_provisorios. mes_fechado olha só o dado oficial, então um mês com dia
+-- provisório nunca está fechado. Para prever o mês corrente, use o provisório; para treinar, não.
 
 with estacao_mes as (
     select * from {{ ref('int_clima__anomalia_mensal') }}
     where codigo_localidade is not null
 ),
 
--- Último dia publicado de cada praça: uma estação parada não fecha o mês por causa das outras.
+-- Último dia publicado pelo INMET em cada praça (só o oficial): uma estação parada não fecha o
+-- mês por causa das outras, e o provisório não fecha mês nenhum.
 ultima_leitura as (
-    select mapa.codigo_localidade, max(d.data_referencia) as data_referencia
+    select
+        mapa.codigo_localidade,
+        max(d.data_referencia) filter (where d.observado) as data_referencia
     from {{ ref('stg_clima__medicao_diaria') }} as d
     inner join {{ ref('seed_de_para_estacao_localidade') }} as mapa using (estacao_id)
     group by mapa.codigo_localidade
@@ -37,7 +44,8 @@ localidade_mes as (
         avg(precipitacao_anomalia_mm) as precipitacao_anomalia_mm,
         avg(dias_com_chuva) as dias_com_chuva,
         avg(umidade_relativa_media_pct) as umidade_relativa_media_pct,
-        max(dias_com_registro) as dias_com_registro
+        max(dias_com_registro) as dias_com_registro,
+        max(dias_provisorios) as dias_provisorios
     from estacao_mes
     group by codigo_localidade, mes_referencia
 ),
@@ -59,6 +67,7 @@ serie as (
         g.mes_referencia,
         coalesce(m.estacoes_com_dado, 0) as estacoes_com_dado,
         coalesce(m.dias_com_registro, 0) as dias_com_registro,
+        coalesce(m.dias_provisorios, 0) as dias_provisorios,
         day(last_day(g.mes_referencia)) as dias_no_mes,
         m.temp_media,
         m.temp_min_absoluta,
@@ -75,9 +84,10 @@ serie as (
 select
     s.codigo_localidade,
     s.mes_referencia,
-    last_day(s.mes_referencia) <= u.data_referencia as mes_fechado,
+    coalesce(last_day(s.mes_referencia) <= u.data_referencia, false) as mes_fechado,
     s.estacoes_com_dado,
     s.dias_com_registro,
+    s.dias_provisorios,
     s.dias_no_mes,
     cast(round(s.dias_com_registro / s.dias_no_mes, 4) as decimal(5, 4)) as cobertura_dias,
 
