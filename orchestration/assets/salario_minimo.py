@@ -10,7 +10,7 @@ from dagster import (
     asset,
 )
 
-from inflatrack import ingest_salario_minimo, load_salario_minimo
+from inflatrack import load_salario_minimo, salario_minimo
 
 POOL_DUCKDB = "duckdb_writer"
 RETRY_REDE = RetryPolicy(max_retries=2, delay=30, backoff=Backoff.EXPONENTIAL)
@@ -30,7 +30,7 @@ def _executar(context: AssetExecutionContext, main: Callable[..., int], *argv: s
     description="Salário mínimo do DIEESE: Raw, Parquet e Bronze Delta.",
 )
 def salario_minimo_parquet(context: AssetExecutionContext) -> None:
-    _executar(context, ingest_salario_minimo.main)
+    _executar(context, salario_minimo.main, "coletar")
 
 
 @asset(

@@ -1,15 +1,28 @@
 """Ativos da fonte Dados do Clima (INMET): catálogo de estações e medições."""
 
+from collections.abc import Callable
+
 from dagster import (
     Array,
     AssetExecutionContext,
-    Field,
+    Backoff,
+    Failure,
+    RetryPolicy,
     String,
     asset,
 )
 
-from inflatrack import ingest_clima, load_clima
-from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
+from inflatrack import clima, load_clima
+
+POOL_DUCKDB = "duckdb_writer"
+RETRY_REDE = RetryPolicy(max_retries=2, delay=30, backoff=Backoff.EXPONENTIAL)
+
+
+def _executar(context: AssetExecutionContext, main: Callable[..., int], *argv: str) -> None:
+    context.log.info("%s %s", main.__module__, " ".join(argv))
+    codigo = main(list(argv))
+    if codigo != 0:
+        raise Failure(f"{main.__module__} terminou com código {codigo}")
 
 
 @asset(
@@ -19,7 +32,7 @@ from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
     description="Cadastro das estações meteorológicas do INMET em Raw, Parquet e Bronze Delta.",
 )
 def clima_parquet(context: AssetExecutionContext) -> None:
-    executar(context, ingest_clima.main, "--apenas-estacoes")
+    _executar(context, clima.main, "coletar", "--apenas-estacoes")
 
 
 @asset(
@@ -32,42 +45,45 @@ def clima_parquet(context: AssetExecutionContext) -> None:
     ),
 )
 def clima_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_clima.main)
+    _executar(context, load_clima.main)
 
 
 @asset(
-    group_name="clima",
+    group_name="clima_medicoes",
     deps=[clima_parquet],
     retry_policy=RETRY_REDE,
     kinds={"python", "delta"},
     config_schema={
-        "estacoes": Field(Array(String), default_value=[]),
-        "data_inicio": Field(String, is_required=False),
-        "data_fim": Field(String, is_required=False),
+        "estacoes": Array(String),
+        "data_inicio": String,
+        "data_fim": String,
     },
     description=(
-        "Coleta as estações mapeadas nos últimos 7 dias completos. "
-        "Estações e intervalo podem ser sobrescritos para carga histórica."
+        "Coleta diária manual do INMET. Exige IDs de estação e intervalo explícitos; "
+        "não participa do job diário de catálogo."
     ),
 )
 def clima_medicoes(context: AssetExecutionContext) -> None:
-    config = context.op_execution_context.op_config
-    argumentos = ["--medicoes"]
-    if "data_inicio" in config:
-        argumentos.extend(("--de", config["data_inicio"]))
-    if "data_fim" in config:
-        argumentos.extend(("--ate", config["data_fim"]))
+    config = context.op_config
+    argumentos = [
+        "coletar",
+        "--medicoes",
+        "--de",
+        config["data_inicio"],
+        "--ate",
+        config["data_fim"],
+    ]
     for estacao in config["estacoes"]:
         argumentos.extend(("--estacao", estacao))
-    executar(context, ingest_clima.main, *argumentos)
+    _executar(context, clima.main, *argumentos)
 
 
 @asset(
-    group_name="clima",
-    deps=[clima_medicoes, clima_duckdb],
+    group_name="clima_medicoes",
+    deps=[clima_medicoes],
     pool=POOL_DUCKDB,
     kinds={"python", "duckdb"},
     description="Promove as medições diárias do Delta para bronze.clima_medicao.",
 )
 def clima_medicoes_duckdb(context: AssetExecutionContext) -> None:
-    executar(context, load_clima.main)
+    _executar(context, load_clima.main)
