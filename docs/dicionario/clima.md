@@ -204,9 +204,9 @@ entra). Nenhuma coluna usa meses futuros: as normais climatológicas são só do
 | `mes_fechado` | Falso no mês que o INMET ainda não publicou inteiro (inclui todo mês com dia provisório): não usar no treino |
 | `dias_provisorios` | Dias do mês cobertos pelo Open-Meteo enquanto o INMET não publica |
 | `estacoes_com_dado`, `dias_com_registro`, `dias_no_mes`, `cobertura_dias` | Cobertura do mês (0 a 1) |
-| `temp_media`, `temp_min_absoluta`, `temp_max_absoluta` | Temperatura média e extremos (°C) |
+| `temp_media`, `temp_min_absoluta`, `temp_max_absoluta` | Temperatura média e extremos (°C); nulos se faltarem mais de 5 dias já decorridos ou mais de 3 seguidos (regra 3/5) |
 | `temp_media_anomalia` | Temperatura menos a normal do mesmo mês nos anos anteriores (mín. 3 anos) |
-| `precipitacao_total_mm`, `dias_com_chuva` | Chuva do mês; nulos com menos de 80% dos dias medidos |
+| `precipitacao_total_mm`, `dias_com_chuva` | Chuva do mês; nulos se faltarem mais de 5 dias do mês ou mais de 3 seguidos, contando os ainda não decorridos (regra 3/5 da OMM) |
 | `precipitacao_anomalia_mm` | Chuva menos a normal do mesmo mês nos anos anteriores |
 | `umidade_relativa_media_pct` | Umidade média (%) |
 | `*_t_menos_1`, `*_t_menos_2`, `*_t_menos_3`, `temp_media_mm3` | Lags de 1 a 3 meses de calendário e média móvel de 3 meses |

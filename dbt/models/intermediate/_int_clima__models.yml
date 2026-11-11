@@ -12,10 +12,26 @@ models:
         data_tests: [not_null]
       - name: mes_referencia
         data_tests: [not_null]
+      - name: temp_media
+        description: >
+          Média das temperaturas diárias. Regra 3/5 da OMM: nula se faltam mais de 5 dias
+          já decorridos do mês, ou mais de 3 seguidos. Vale também para desvio e extremos.
       - name: precipitacao_total_mm
         description: >
-          Soma da chuva diária. Nula se menos de 80% dos dias do mês têm chuva medida,
-          para um mês com falha de sensor não parecer seca.
+          Soma da chuva diária. Regra 3/5 da OMM contando também os dias que ainda não
+          aconteceram: um total parcial faria o mês parecer seco.
+      - name: dias_sem_temperatura
+        description: Dias já decorridos do mês sem temperatura (entrada da regra 3/5).
+        data_tests: [not_null]
+      - name: maior_sequencia_sem_temperatura
+        description: Maior sequência de dias seguidos sem temperatura no mês.
+        data_tests: [not_null]
+      - name: dias_sem_chuva_medida
+        description: Dias do mês sem chuva medida, inclusive os ainda não decorridos.
+        data_tests: [not_null]
+      - name: maior_sequencia_sem_chuva
+        description: Maior sequência de dias seguidos sem chuva medida no mês.
+        data_tests: [not_null]
       - name: dias_no_mes
         data_tests: [not_null]
       - name: dias_com_registro
@@ -26,7 +42,7 @@ models:
       - name: dias_com_precipitacao
         data_tests: [not_null]
       - name: dias_com_chuva
-        description: Dias com 1 mm ou mais; nula quando a chuva do mês é nula.
+        description: Dias com 1 mm ou mais; nula quando a chuva do mês é nula (regra 3/5).
       - name: temp_media_normal
         description: >
           Média da temperatura do mesmo mês do calendário nos anos ANTERIORES da estação

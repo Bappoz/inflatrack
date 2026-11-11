@@ -44,7 +44,9 @@ models:
         description: dias_com_registro / dias_no_mes, de 0 a 1.
         data_tests: [not_null]
       - name: temp_media
-        description: Média das temperaturas médias diárias (°C).
+        description: >
+          Média das temperaturas médias diárias (°C); nula se faltam mais de 5 dias já
+          decorridos ou mais de 3 seguidos (regra 3/5 da OMM).
       - name: temp_min_absoluta
         description: Menor mínima do mês (°C), sinal de geada.
       - name: temp_max_absoluta
@@ -52,7 +54,9 @@ models:
       - name: temp_media_anomalia
         description: Temperatura do mês menos a normal do mesmo mês nos anos anteriores (°C).
       - name: precipitacao_total_mm
-        description: Chuva acumulada; nula com menos de 80% dos dias medidos.
+        description: >
+          Chuva acumulada; nula se faltam mais de 5 dias do mês ou mais de 3 seguidos
+          (regra 3/5 da OMM, contando os dias que ainda não aconteceram).
       - name: precipitacao_anomalia_mm
         description: Chuva do mês menos a normal do mesmo mês nos anos anteriores (mm).
       - name: dias_com_chuva

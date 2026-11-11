@@ -102,8 +102,20 @@ A coleta prioriza as estações meteorológicas localizadas nos principais polos
 
 `silver.int_clima__anomalia_mensal` apresenta uma linha por estação x mês, com médias, extremos,
 desvios-padrão, precipitação acumulada, contagem de dias, anomalia contra a normal dos anos
-anteriores e defasagens de um a três meses. A chuva do mês só sai com ao menos 80% dos dias
-medidos, para uma falha de sensor não parecer seca.
+anteriores e defasagens de um a três meses.
+
+**Mês incompleto (regra 3/5 da OMM, WMO-No. 1203).** Cada variável do mês só sai se faltarem
+no máximo 5 dias no total e no máximo 3 dias seguidos:
+
+- **temperatura e umidade** (médias): conta como falta só o dia que já passou sem leitura, então o
+  mês em curso tem a média dos dias decorridos (útil para prever o mês corrente);
+- **chuva** (total): contam também os dias que ainda não aconteceram, porque somar parte do mês
+  faria o mês parecer seco diante da normal.
+
+O padrão estrito da OMM para totais é nenhum dia faltando. A Squad optou pela 3/5 também na chuva
+(2026-11-11): nos dados de 2006 a 2026 ela mantém 89% dos meses de estação com chuva válida,
+contra 82% do critério estrito. A regra anterior (80% dos dias com chuva medida, sem regra para a
+temperatura) deixava 138 meses com média de temperatura calculada sobre menos da metade dos dias.
 
 `gold.fct_clima_mensal` leva isso para o grão praça do IPCA x mês, com a grade completa de meses,
 lags calculados sobre a série da praça e `mes_fechado` para tirar do treino o mês ainda não

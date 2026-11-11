@@ -9,7 +9,8 @@ real e valores escolhidos para que média, anomalia e lag possam ser conferidos 
 Série de Brasília (A001, praça 5300108), janeiros de 2021 a 2024 com chuva de 0,1 mm/h e
 temperatura 20, 21, 22 e 25 °C, mais dezembro de 2023 a 30 °C. Fevereiro de 2024 tem só 10 dias
 oficiais (18 °C); o Open-Meteo, falso também, cobre de 8 a 15/02 a 30 °C, e só os dias depois do
-último oficial (11 a 15) podem entrar.
+último oficial (11 a 15) podem entrar. Regra 3/5 da OMM: mar/2023 perde 4 dias seguidos (10 a 13)
+e fica sem valor; abr/2023 perde 5 dias espalhados e vale.
 """
 
 import os
@@ -42,6 +43,13 @@ def _mes(ano: int, mes: int, temperatura: float, dias: int | None = None) -> dic
 def _pacotes() -> dict[int, dict[str, str]]:
     dias_por_ano: dict[int, dict] = {ano: _mes(ano, 1, t) for ano, t in TEMPERATURA_JANEIRO.items()}
     dias_por_ano[2023] |= _mes(2023, 12, 30.0)
+    marco = _mes(2023, 3, 15.0)
+    abril = _mes(2023, 4, 15.0)
+    for dia in (10, 11, 12, 13):
+        del marco[date(2023, 3, dia)]
+    for dia in (5, 10, 15, 20, 25):
+        del abril[date(2023, 4, dia)]
+    dias_por_ano[2023] |= marco | abril
     dias_por_ano[2024] |= _mes(2024, 2, 18.0, dias=10)
     return {ano: {"A001": csv_bdmep("A001", dias)} for ano, dias in dias_por_ano.items()}
 
@@ -170,3 +178,19 @@ def test_meses_oficiais_nao_tem_dia_provisorio(gold) -> None:
 
     assert janeiro["dias_provisorios"] == 0
     assert janeiro["mes_fechado"] is True
+
+
+def test_regra_3_5_anula_mes_com_quatro_dias_seguidos_sem_leitura(gold) -> None:
+    marco = _linha(gold, date(2023, 3, 1))
+
+    assert marco["dias_com_registro"] == 27  # só 4 faltando, mas seguidos
+    assert marco["temp_media"] is None
+    assert marco["precipitacao_total_mm"] is None
+
+
+def test_regra_3_5_aceita_cinco_dias_espalhados_sem_leitura(gold) -> None:
+    abril = _linha(gold, date(2023, 4, 1))
+
+    assert abril["dias_com_registro"] == 25
+    assert abril["temp_media"] == Decimal("15.000")
+    assert float(abril["precipitacao_total_mm"]) == pytest.approx(25 * 24 * CHUVA_HORA)

@@ -61,7 +61,8 @@ carga; nada foi apagado.
 `silver.stg_clima__medicao_diaria`: 110.687 dias de 16 estações, de 2006-01-01 a 2026-10-31.
 `gold.fct_clima_mensal`: 3.881 linhas (praça x mês), 16 praças, de jan/2006 a out/2026;
 3.078 com anomalia de temperatura e 2.792 com anomalia de chuva (as outras não têm 3 anos
-anteriores do mesmo mês, ou a chuva do mês tem menos de 80% dos dias).
+anteriores do mesmo mês, ou a chuva do mês tem menos de 80% dos dias; a regra depois passou a ser
+a 3/5 da OMM, ver [fonte do clima](../../fontes/clima.md#5-modelo-mensal-e-vinculo-com-o-ipca)).
 
 Conferência de sanidade: São Paulo (A701) em set/2024 tem anomalia de **+3,0 °C** e
 **−57 mm** de chuva, a seca com onda de calor daquele mês; o choque aparece no mês seguinte em
