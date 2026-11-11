@@ -119,3 +119,27 @@ models:
         description: Peso da categoria na cesta da localidade no mês.
       - name: numero_indice
         description: Só no índice geral do Brasil (agregado 1737, base dez/1993 = 100).
+
+  - name: fct_cesta_basica_mensal
+    description: >
+      Fato da Cesta Básica do PROCON. Uma linha por produto pesquisado, praça e mês,
+      confrontando o preço médio real de mercado e sua variação com a inflação do IPCA (SIDRA).
+    columns:
+      - name: mes_referencia
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_localidade')
+                field: codigo_localidade
+      - name: produto_mercado
+        data_tests: [not_null]
+      - name: preco_medio_mercado
+        data_tests: [not_null]

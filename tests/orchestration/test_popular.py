@@ -22,6 +22,7 @@ FONTES = {
     "commodities_job",
     "pib_internacional_job",
     "dieese_job",
+    "procon_job",
     "clima_job",
     "transacional_job",
 }

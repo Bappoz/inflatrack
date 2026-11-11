@@ -1,3 +1,3 @@
 """Clientes HTTP e extratores de fontes externas."""
 
-from inflatrack.clients import worldbank  # noqa: F401
+from inflatrack.clients import procon, worldbank  # noqa: F401

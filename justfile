@@ -329,6 +329,22 @@ bronze-clima-checar:
 bronze-clima-load modo="substitui":
     uv run python -m inflatrack.loaders.load_clima --modo {{modo}}
 
+# PROCON: Cesta Básica de Alimentos, Higiene e Limpeza
+procon-ingest:
+    uv run python -m inflatrack.bronze.ingest_procon
+
+procon-load modo="substitui":
+    uv run python -m inflatrack.loaders.load_procon --modo {{modo}}
+
+procon: procon-ingest procon-load
+
+# Bronze do PROCON em Delta (data/parquet/procon/)
+bronze-procon:
+    uv run python -m inflatrack.bronze.ingest_procon
+
+bronze-procon-load modo="substitui":
+    uv run python -m inflatrack.loaders.load_procon --modo {{modo}}
+
 # Dagster: interface em http://localhost:3002 (DAGSTER_PORT no .env), histórico em .dagster/.
 orquestrador:
     uv run dagster dev --port {{DAGSTER_PORT}}

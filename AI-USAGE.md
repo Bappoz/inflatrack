@@ -14,7 +14,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
 | João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
-| Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
+| Artur Fernandes Galdino | 8 | 2026-09-25 a 2026-11-08 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (7) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
 
@@ -68,6 +68,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 2) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Consolidação dos Testes e Loader do PIB Internacional no DuckDB (E3) |
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
+| 2026-11-08 | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Ingestão e Camada Bronze da Cesta Básica do PROCON |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Docs de arquitetura e ADRs desatualizados (dbt, Silver, Gold, Metabase) e primeiro teste E2E |
@@ -1409,6 +1410,30 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Execução em produção do Dagster em servidor externo (apenas ambiente local de desenvolvimento).
+
+### 2026-11-08 — Antigravity (Gemini 3.8 Flash) — Ingestão, Bronze, Loader DuckDB, dbt, Dagster e Documentação da Cesta Básica do PROCON
+
+**O que a ferramenta fez**
+- Avaliou com a squad a melhor fonte de dados de preços de atacado/varejo para enriquecer o InflaTrack e permitir o cálculo de defasagem de margem da cesta de produtos do IPCA.
+- Criou a especificação e fixture de dados da Cesta Básica do PROCON em `tests/fixtures/procon/cesta_basica.csv`, mapeando produtos essenciais diretamente aos códigos de subitem do IPCA no SIDRA.
+- Implementou o cliente e extrator `src/inflatrack/clients/procon.py` com tipagem estrita, conversão monetária/datas e tratamento de erros com `ProconError`.
+- Implementou o módulo Delta Lake Bronze `src/inflatrack/bronze/bronze_procon.py` baseado no padrão compartilhado `inflatrack.common.bronze`, gerando tabelas de resposta e cotações com semântica de deduplicação e idempotência.
+- Criou o script de ingestão `src/inflatrack/bronze/ingest_procon.py` com salvamento bruto compactado em `data/raw/procon/` e promoção automática para Delta em `data/parquet/procon/`.
+- Criou o script DDL `scripts/sql/setup_duckdb_procon.sql` e o loader `src/inflatrack/loaders/load_procon.py`, com suporte aos modos `substitui` e `so_acrescenta`.
+- Implementou os modelos dbt em todas as camadas analíticas: staging (`stg_procon__cesta_basica.sql`), intermediate (`int_procon__mensal.sql`) e a tabela fato Gold (`fct_cesta_basica_mensal.sql` em `marts/core/`), conectando preços nominais de mercado com as dimensões canônicas de calendário e localidade.
+- Configurou os ativos no Dagster (`orchestration/assets/procon.py`), com retry policy e pool de escrita `duckdb_writer`, além de agendamento mensal em `orchestration/schedules.py`.
+- Adicionou receitas de execução e carga no `justfile` (`procon-ingest`, `procon-load`, `procon`, `bronze-procon`).
+- Escreveu a documentação completa da fonte e dicionário de dados em `docs/fontes/procon.md` e `docs/dicionario/procon.md` (incluindo o dicionário da tabela Gold), integrando-as à navegação estrita do `mkdocs.yml`.
+- Desenvolveu testes automatizados unitários, de integração e orquestração (`tests/unit/test_procon.py`, `tests/integration/test_load_procon.py`).
+
+**O que foi verificado e como**
+- Suíte completa de testes unitários, integração e orquestração executada com sucesso (`147 passed`).
+- Pipeline completo do dbt compilado e construído com sucesso (`uv run dbt build --select stg_procon__cesta_basica+` -> 17/17 PASS, 0 erros).
+- Verificação de formatação e tipagem com `ruff check` e `ruff format` aprovada sem avisos em todos os módulos novos e alterados.
+- Build estrito da documentação aprovado com `uv run mkdocs build --strict` sem avisos ou links quebrados.
+
+**O que NÃO foi verificado**
+- Execução do scraper direto no portal web externo do PROCON em produção (foi utilizado o contrato estruturado de CSV/fixture).
 
 ---
 
