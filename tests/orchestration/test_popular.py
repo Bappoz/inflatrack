@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
+import yaml
 from dagster import DagsterRunStatus
+from dagster._core.storage.tags import AUTO_RETRY_RUN_ID_TAG, MAX_RETRIES_TAG, WILL_RETRY_TAG
 
 from orchestration.popular import (
     Disparador,
@@ -57,17 +60,30 @@ SUBMETIDOS: list[tuple[str, dict[str, str]]] = []
 
 
 class DisparadorFalso(Disparador):
-    """Registra em SUBMETIDOS o que foi pedido e devolve o status combinado por job."""
+    """Registra em SUBMETIDOS o que foi pedido e devolve o status combinado por job.
+
+    `refeitos`: o 1º run do job morre (processo encerrado) e o Dagster o refaz num run novo,
+    que termina com sucesso, a menos que o job também esteja em `falham`.
+    """
 
     falham: list[str] = []
+    refeitos: list[str] = []
 
     def submeter(self, job: str, tags: dict[str, str]) -> str:
         SUBMETIDOS.append((job, tags))
         return f"run-{job}"
 
     def status(self, run_id: str) -> DagsterRunStatus:
-        job = run_id.removeprefix("run-")
+        job = run_id.removeprefix("run-").removesuffix("-retry")
+        if job in self.refeitos and not run_id.endswith("-retry"):
+            return DagsterRunStatus.FAILURE
         return DagsterRunStatus.FAILURE if job in self.falham else DagsterRunStatus.SUCCESS
+
+    def tags(self, run_id: str) -> dict[str, str]:
+        job = run_id.removeprefix("run-")
+        if job in self.refeitos:
+            return {WILL_RETRY_TAG: "true", AUTO_RETRY_RUN_ID_TAG: f"{run_id}-retry"}
+        return {WILL_RETRY_TAG: "false"}
 
 
 def test_falha_de_uma_fonte_nao_impede_as_outras() -> None:
@@ -95,6 +111,47 @@ def test_sem_falhas_o_job_termina_em_sucesso() -> None:
     resultado = popular_banco_job.execute_in_process(resources={"disparador": disparador})
     assert resultado.success
     assert len(SUBMETIDOS) == len(FONTES)
+
+
+def test_run_refeito_pelo_dagster_conta_pelo_resultado_do_run_novo() -> None:
+    """O processo de um run morre e o Dagster o refaz: vale o status do run novo."""
+    SUBMETIDOS.clear()
+    resultado = popular_banco_job.execute_in_process(
+        resources={"disparador": DisparadorFalso(refeitos=["ipca_job", "enso_job"])}
+    )
+    assert resultado.success
+    assert resultado.output_for_node("popular_ipca_job") == "SUCCESS"
+    # O run novo é do Dagster, não um segundo pedido: cada fonte é submetida uma vez só.
+    assert len(SUBMETIDOS) == len(FONTES)
+
+
+def test_run_refeito_que_falha_de_novo_aparece_no_resumo() -> None:
+    SUBMETIDOS.clear()
+    resultado = popular_banco_job.execute_in_process(
+        resources={"disparador": DisparadorFalso(refeitos=["enso_job"], falham=["enso_job"])},
+        raise_on_error=False,
+    )
+    assert resultado.is_node_failed("resumo")
+    assert "enso_job" in resultado.failure_data_for_node("resumo").error.message
+
+
+def test_popular_banco_job_nao_e_refeito_pelo_dagster() -> None:
+    """Refazer o pai dispararia de novo as fontes que ainda estão rodando."""
+    assert popular_banco_job.tags[MAX_RETRIES_TAG] == "0"
+
+
+def test_instancia_refaz_so_runs_cujo_processo_morreu() -> None:
+    """O processo de um run ou de um passo morre sem traceback quando o `popular_banco_job`
+    sobe as 11 fontes juntas (2026-11-12). Erro de verdade num passo não refaz o run: a cota
+    de 25 req./dia das commodities não pode ir embora em retentativas."""
+    config = yaml.safe_load(
+        (Path(__file__).resolve().parents[2] / ".dagster" / "dagster.yaml").read_text("utf-8")
+    )
+    assert config["run_retries"] == {
+        "enabled": True,
+        "max_retries": 2,
+        "retry_on_asset_or_op_failure": False,
+    }
 
 
 def test_definicoes_registram_o_job_com_o_disparador_real() -> None:
