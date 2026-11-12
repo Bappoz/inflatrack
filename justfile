@@ -201,6 +201,11 @@ explain-serie:
 metabase-painel:
     uv run python scripts/metabase_painel.py
 
+# Põe o painel no ar em http://localhost:3001 (METABASE_PORT no .env): Postgres, vitrine `serie`,
+# contêiner do Metabase e o painel. A Gold precisa existir no DuckDB (dbt ou Dagster antes).
+painel-up: up serie && metabase-painel
+    docker compose --profile bi up -d --wait metabase
+
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
     uv run --group docs mkdocs serve
