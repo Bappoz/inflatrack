@@ -48,6 +48,9 @@ TABELAS: tuple[str, ...] = (
     "fct_reajuste_lojista",
     "fct_macroeconomia_mensal",
     "fct_salario_minimo_mensal",
+    "fct_clima_mensal",
+    "fct_clima_polo_mensal",
+    "fct_enso_mensal",
 )
 
 
