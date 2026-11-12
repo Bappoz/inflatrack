@@ -55,6 +55,7 @@ Postgres novo com as migrations `0001..0005`, Dagster local e o `.env` do grupo.
 | Salário mínimo fora da Gold | `fct_salario_minimo_mensal` (reajuste e ganho real em 12 meses, valores corrigidos pelo IPCA), copiada para `serie` (tabela acrescentada à migration `0005`; num volume que já a tinha, `just migrar 0005_serie_historica.sql`) e nova pergunta P3 no painel (`p3_salario_minimo_real.sql`) |
 | Frescura só para Dólar, Selic e a macro | Checks de frescura e volume para IPCA/INPC, salário mínimo, PIB, PIB internacional, catálogo de clima e commodities; SLA por fonte em [SLA e frescura](sla_e_freshness.md) |
 | `ingest_*` e `bronze_*` separados | Um arquivo por fonte: `bronze/salario_minimo.py` e `bronze/clima.py`. A linha de comando passou a ser `coletar`, `checar`, `importar` e `load` (as receitas do `justfile` e os ativos do Dagster já usam) |
+| Clima sem medições no pipeline (PR #22) | Medições pelos pacotes anuais do BDMEP desde 2006, provisório do Open-Meteo para os dias ainda não publicados, regra 3/5 da OMM, 14 polos agrícolas, SPI-3 e RONI (El Niño / La Niña), até `fct_clima_mensal`, `fct_clima_polo_mensal` e `fct_enso_mensal`; ver [carga do BDMEP](clima_bdmep.md) |
 
 Verificado em 2026-11-09, numa cópia isolada da árvore de trabalho com dados reais (Postgres e portas próprios; o IPCA, já coletado, veio do banco de desenvolvimento):
 

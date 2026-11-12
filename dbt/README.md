@@ -55,7 +55,8 @@ sources:
 
 O `asset_key` é o nome do ativo do seu loader em `orchestration/assets/<fonte>.py` (ex.:
 `pib_duckdb`, `clima_duckdb`, `salario_minimo_duckdb`). Com ele, o Dagster roda o seu modelo
-depois do loader. Não é preciso escrever Python: todo modelo novo aparece sozinho no Dagster
+depois do loader. Não é preciso escrever Python (a exceção é `int_clima__spi_mensal.py`, porque o SPI-3 precisa
+da distribuição gama do SciPy, que o SQL do DuckDB não tem): todo modelo novo aparece sozinho no Dagster
 (`orchestration/assets/dbt_assets.py`), e os testes do dbt viram *asset checks*.
 
 ## Regras que valem para todos (PLAN_E3_E4.md, Seções 1 e 6)

@@ -368,7 +368,7 @@ def diagramas_de_fluxo() -> list[Diagrama]:
         fluxo(
             "fluxo-dados",
             "Fluxo de dados do InflaTrack",
-            "Seis provedores públicos alimentam as camadas Raw, Bronze, Silver e Gold; a Gold serve "
+            "Oito provedores públicos alimentam as camadas Raw, Bronze, Silver e Gold; a Gold serve "
             "notebooks e o painel, que também lê o PostgreSQL transacional. O Dagster orquestra as quatro camadas.",
             fontes=[
                 "SIDRA / IBGE",
@@ -377,10 +377,12 @@ def diagramas_de_fluxo() -> list[Diagrama]:
                 "Banco Mundial",
                 "DIEESE",
                 "INMET",
+                "Open-Meteo",
+                "NOAA (RONI)",
             ],
             rotulo_fontes="FONTES",
             etapas=CAMADAS,
-            consumidores=[("Notebooks", "MLflow"), ("Streamlit", "Plotly")],
+            consumidores=[("Notebooks", "MLflow"), ("Metabase", "Plotly")],
             postgres=("PostgreSQL", "lojista, produto, reajuste"),
             orquestrador="Dagster",
         ),
@@ -406,14 +408,14 @@ def diagramas_de_fluxo() -> list[Diagrama]:
                 ("SILVER", "Silver", "limpa e conformada", "dbt-duckdb"),
                 ("GOLD", "Gold", "pronta para consumo", "tabelas no DuckDB"),
             ],
-            consumidores=[("Notebooks", "MLflow"), ("Streamlit", "Plotly")],
+            consumidores=[("Notebooks", "MLflow"), ("Metabase", "Plotly")],
             postgres=("PostgreSQL", "transacional"),
             orquestrador="Dagster",
         ),
         fluxo(
             "dicionario-visao-geral",
             "Onde vive cada conjunto de dados",
-            "Sete grupos de fontes passam por Raw, Bronze, Silver e Gold até o painel e os modelos; "
+            "Oito grupos de fontes passam por Raw, Bronze, Silver e Gold até o painel e os modelos; "
             "o PostgreSQL transacional alimenta o painel diretamente.",
             fontes=[
                 "SIDRA · IPCA/INPC",
@@ -423,6 +425,7 @@ def diagramas_de_fluxo() -> list[Diagrama]:
                 "World Bank",
                 "DIEESE",
                 "INMET · Clima",
+                "NOAA · El Niño",
             ],
             rotulo_fontes="FONTES",
             etapas=[
@@ -438,7 +441,7 @@ def diagramas_de_fluxo() -> list[Diagrama]:
             "orquestracao-assets",
             "Grafo de assets do Dagster",
             "Seis assets de ingestão em Python alimentam o asset Bronze de cada fonte; os assets dbt produzem "
-            "a Silver e a Gold, de onde saem a matriz de treino e a cópia publicada para o Streamlit.",
+            "a Silver e a Gold, de onde saem a matriz de treino e a cópia publicada para o Metabase.",
             fontes=[
                 "raw_sidra",
                 "raw_bcb",
@@ -456,7 +459,7 @@ def diagramas_de_fluxo() -> list[Diagrama]:
             ],
             consumidores=[
                 ("matriz_treino", "modelos"),
-                ("gold_publicada", "cópia para o Streamlit"),
+                ("gold_publicada", "cópia para o Metabase"),
             ],
             grupos=[("ASSET BRONZE", 0, 0), ("ASSETS DBT (DAGSTER-DBT)", 1, 2)],
         ),
@@ -775,36 +778,36 @@ def diagramas_de_esquema() -> list[Diagrama]:
         ),
         esquema_simples(
             "esquema-clima",
-            "Esquema físico do clima no DuckDB",
-            "Cada estação meteorológica registra uma linha de clima por dia.",
+            "Esquema físico do clima na Bronze do DuckDB",
+            "O catálogo de estações e as leituras diárias, ambos em versões (só acrescentam). "
+            "O provisório do Open-Meteo tem o mesmo formato em bronze.clima_medicao_provisoria.",
             [
                 (
-                    "estacao_meteorologica",
+                    "bronze.clima_estacao",
                     [
-                        ("estacao_id", "VARCHAR(10)", "PK"),
+                        ("estacao_id", "VARCHAR", ""),
                         ("nome", "VARCHAR", ""),
-                        ("estado", "VARCHAR(2)", ""),
-                        ("tipo", "VARCHAR(20)", ""),
+                        ("estado", "VARCHAR", ""),
+                        ("tipo", "VARCHAR", ""),
                         ("latitude", "DOUBLE", ""),
                         ("longitude", "DOUBLE", ""),
-                        ("altitude_m", "DOUBLE", ""),
-                        ("situacao", "VARCHAR(20)", ""),
-                        ("atualizado_em", "TIMESTAMP", ""),
+                        ("situacao", "VARCHAR", ""),
+                        ("_ingerido_em", "TIMESTAMPTZ", ""),
                     ],
                 ),
                 (
-                    "clima_diario",
+                    "bronze.clima_medicao",
                     [
-                        ("estacao_id", "VARCHAR(10)", "PK"),
-                        ("data_referencia", "DATE", "PK"),
+                        ("estacao_id", "VARCHAR", ""),
+                        ("id_medicao", "VARCHAR", "PK"),
+                        ("data_referencia", "DATE", ""),
                         ("temp_min", "DOUBLE", ""),
                         ("temp_max", "DOUBLE", ""),
                         ("temp_media", "DOUBLE", ""),
                         ("precipitacao_total_mm", "DOUBLE", ""),
                         ("umidade_relativa_media_pct", "DOUBLE", ""),
-                        ("umidade_relativa_min_pct", "DOUBLE", ""),
-                        ("observado", "BOOLEAN", ""),
-                        ("atualizado_em", "TIMESTAMP", ""),
+                        ("horas_com_registro", "SMALLINT", ""),
+                        ("_ingerido_em", "TIMESTAMPTZ", ""),
                     ],
                 ),
             ],

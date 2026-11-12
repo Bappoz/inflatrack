@@ -20,7 +20,59 @@ A seta é tracejada porque o DDL (`scripts/sql/setup_duckdb_clima.sql`) não dec
 
 ---
 
-## Entidades
+## Consultas de Exemplo (Gold)
+
+### 1. Inflação de alimentos x clima da praça
+
+Grupo Alimentação e bebidas do IPCA em São Paulo, com a anomalia de temperatura do mês e a chuva e
+o SPI-3 do mês anterior. Só meses com o clima oficial fechado (`mes_fechado`).
+
+```sql
+SELECT
+    f.mes_referencia,
+    f.variacao_mensal_pct          AS alimentacao_pct,
+    c.temp_media_anomalia,
+    c.precipitacao_anomalia_t_menos_1,
+    c.spi_3_t_menos_1
+FROM gold.fct_inflacao_mensal AS f
+JOIN gold.fct_clima_mensal AS c USING (codigo_localidade, mes_referencia)
+WHERE f.indice = 'IPCA'
+  AND f.codigo_categoria = '1'          -- grupo Alimentação e bebidas
+  AND f.codigo_localidade = 3501        -- RM de São Paulo
+  AND c.mes_fechado
+ORDER BY f.mes_referencia DESC
+LIMIT 12;
+```
+
+### 2. Seca nos polos de soja x El Niño de 6 meses antes
+
+SPI-3 médio dos polos de grãos e a intensidade do El Niño 6 meses antes (já publicada naquela data).
+
+```sql
+SELECT
+    p.mes_referencia,
+    round(avg(p.spi_3), 2)          AS spi_3_graos,
+    count(p.spi_3)                  AS polos_com_spi,
+    e.intensidade_el_nino_t_menos_6
+FROM gold.fct_clima_polo_mensal AS p
+JOIN gold.fct_enso_mensal AS e USING (mes_referencia)
+WHERE p.culturas LIKE '%soja%'
+  AND p.mes_referencia >= DATE '2024-01-01'
+GROUP BY p.mes_referencia, e.intensidade_el_nino_t_menos_6
+ORDER BY p.mes_referencia;
+```
+
+Como usar essas tabelas no treino do modelo preditivo sem vazar o futuro: Seção 2.4 do
+`PLAN_E3_E4.md`.
+
+---
+
+## Tabelas legadas (E1)
+
+`estacao_meteorologica` e `clima_diario` são da primeira entrega. O DDL
+(`scripts/sql/setup_duckdb_clima.sql`) ainda as cria e o `load_clima` só as preenche se existirem
+os Parquets antigos (`estacoes.parquet`, `clima_diario.parquet`), que a coleta não gera mais. O
+pipeline usa a Bronze em Delta e a Gold descritas abaixo.
 
 ### Tabela: `estacao_meteorologica`
 
@@ -52,43 +104,6 @@ Tabela de fato com granularidade diária por estação, acumulando medições de
 | `umidade_relativa_media_pct` | `DOUBLE` | | Umidade relativa do ar média observada no dia (em %). |
 | `umidade_relativa_min_pct` | `DOUBLE` | | Menor nível de umidade relativa registrado no dia (em %). |
 | `observado` | `BOOLEAN` | | `true` se coletado diretamente dos sensores; `false` se preenchido/imputado por interpolação regional. |
-
----
-
-## Consultas de Exemplo
-
-### 1. Precipitação Acumulada nos Últimos 30 Dias nos Cinturões Produtores
-
-```sql
-SELECT 
-    e.estado,
-    e.nome AS estacao,
-    round(sum(c.precipitacao_total_mm), 1) AS chuva_acumulada_30d_mm,
-    round(avg(c.temp_media), 1) AS temp_media_30d_c
-FROM clima_diario c
-JOIN estacao_meteorologica e ON e.estacao_id = c.estacao_id
-WHERE e.estado IN ('MT', 'GO', 'MS', 'PR')
-  AND c.data_referencia >= CURRENT_DATE - INTERVAL 30 DAYS
-GROUP BY e.estado, e.nome
-ORDER BY chuva_acumulada_30d_mm ASC;
-```
-
-### 2. Cruzamento de Choques Climáticos com Preço de Commodities Agrícolas
-
-Avalia a relação entre secas ou geadas e as cotações de milho, café ou trigo:
-
-```sql
-SELECT 
-    c.data_referencia,
-    round(avg(c.precipitacao_total_mm), 2) AS media_chuva_brasil_mm,
-    round(min(c.temp_min), 1) AS temperatura_minima_nacional_c,
-    p.preco AS preco_milho_usd
-FROM clima_diario c
-JOIN commodity_cotacao p ON p.data_referencia = c.data_referencia AND p.symbol = 'CORN'
-WHERE c.data_referencia >= '2024-01-01'
-GROUP BY c.data_referencia, p.preco
-ORDER BY c.data_referencia DESC;
-```
 
 ---
 

@@ -129,6 +129,73 @@ Já na **Entrega 3**, a camada Gold no DuckDB responderá diretamente às **5 pe
 4. **Diferença entre a inflação geral (Brasil) e a inflação regional/estadual do lojista nos últimos 5 anos** (`C1` / `C2` / `fct_inflacao_mensal` $\bowtie$ `dim_localidade`): comparativo entre o índice nacional e a região metropolitana do comerciante, além do recorte IPCA vs. INPC.
 5. **Taxa de reajuste mínima necessária para não perder margem operacional** (`C5` / `C11` / `fct_reajuste_lojista` + `recomendacao_reajuste`): cálculo da defasagem acumulada de cada produto do lojista frente ao subitem oficial e projeção preditiva para o próximo mês.
 
+
+### 2.4 Treinamento do Modelo Preditivo com as Variáveis de Clima
+
+O clima chega à Gold em três fatos. Esta seção diz como usá-los no treino sem enganar a validação. O clima é a fonte mais fácil de vazar o futuro sem perceber: as séries chegam com atrasos diferentes e algumas são médias centradas.
+
+**Onde está o clima e como se junta ao alvo**
+
+| Fato | Grão | Junta com o IPCA por | Uso principal |
+|---|---|---|---|
+| `gold.fct_clima_mensal` | praça do IPCA x mês | `(codigo_localidade, mes_referencia)` | Clima local da praça (hortifrúti perecível, consumo) |
+| `gold.fct_clima_polo_mensal` | polo agrícola x mês | `mes_referencia` (+ cultura -> subitem) | Clima onde o alimento é plantado (grãos, café, feijão, leite) |
+| `gold.fct_enso_mensal` | mês (global) | `mes_referencia` | El Niño / La Niña, sinal antecedente de 3 a 16 meses |
+
+**Regra 1 — Só entra o que já existia na data da previsão.** Fixe uma data de corte (*as-of*) para cada previsão e use apenas o que estava publicado nela:
+
+| Variável | Fica disponível | Consequência |
+|---|---|---|
+| IPCA do mês t | ~dia 10 de t+1 | O alvo de t só existe em t+1 |
+| Clima oficial (BDMEP) | o pacote do ano é republicado ~1×/mês | O mês t costuma estar fechado (`mes_fechado`) só no começo de t+1 ou depois |
+| Clima provisório (Open-Meteo) | até ontem | Só para prever o mês corrente, nunca no treino (Regra 2) |
+| RONI do mês t | `mes_publicacao` = t+2 (média centrada: usa t+1) | Para prever t, use só `mes_publicacao <= t`; os lags de 3 a 12 já respeitam isso |
+
+**Regra 2 — Treinar só com mês oficial e fechado.** No treino, filtre `mes_fechado = true`, que nunca inclui dia provisório. O provisório é modelo em grade: a temperatura dele fica 0,1 a 0,7 °C acima da medida, e a chuva diverge muito. Na inferência do mês corrente:
+- use a temperatura provisória;
+- trate a chuva do mês corrente como ausente e use a dos meses já fechados (lags) e o SPI-3 do mês anterior;
+- guarde `dias_provisorios` junto da previsão, para auditar depois.
+
+**Regra 3 — Walk-forward de verdade, sem nada ajustado na série inteira.**
+- As normais, as anomalias e o SPI-3 da Gold já usam só anos anteriores.
+- Qualquer coisa ajustada no pipeline do modelo (padronização, PCA, seleção de variáveis, imputação) também tem de ser ajustada **dentro de cada janela de treino**, nunca uma vez só com todos os meses.
+- Janela expansível, retreino a cada mês novo do IPCA, nada de `train_test_split` aleatório (já proibido na Seção 1).
+
+**Regra 4 — Defasagens que fazem sentido agronômico.** O clima de hoje mexe no preço depois:
+- **Hortifrúti in natura** (tomate, batata, cebola, folhosas, frutas): 0 a 2 meses. Use o mês corrente e t-1/t-2 da praça e dos polos de hortaliças (Itapeva, Irecê, Ituporanga).
+- **Grãos e derivados** (arroz, feijão, óleo, carnes via ração): 3 a 9 meses, também pelas commodities. Use t-1..t-3 e o SPI-3 dos polos de grãos, mais agregações próprias de 6 a 9 meses.
+- **El Niño / La Niña**: o Banco Central acha efeito na produtividade com o RONI de 9 a 16 meses antes de dezembro do ano da colheita, e análises de mercado apontam o pico na inflação de alimentos in natura ~6 meses depois do choque. Use os lags de 3, 6, 9 e 12 de `fct_enso_mensal` e as intensidades (`intensidade_el_nino`, `intensidade_la_nina`) em vez do RONI bruto, porque o efeito é assimétrico.
+
+**Regra 5 — Ligar cada polo ao alimento certo.** Clima entra para explicar **alimentação**, não o índice geral inteiro (em transporte ou habitação é só ruído):
+
+| Grupo do IPCA | Clima que faz sentido |
+|---|---|
+| Tubérculos, hortaliças e legumes | Polos Itapeva, Irecê, Ituporanga + clima da praça |
+| Cereais e leguminosas (arroz, feijão) | Alegrete (arroz), Unaí e Irecê (feijão) |
+| Café | Varginha, Patrocínio, Linhares |
+| Leite e derivados | Juiz de Fora |
+| Óleos, carnes (via soja/milho) | Sorriso, Rio Verde, Dourados, Passo Fundo, Barreiras + commodities |
+
+**Regra 6 — Poucas observações, muitas colunas: agregue antes de treinar.**
+- Há ~240 meses desde 2006, e só ~120 com SPI-3 (começa em ago/2016).
+- Trinta estações com dezenas de colunas cada passariam do número de meses. Monte índices por grupo antes do modelo (por exemplo, o SPI-3 médio dos polos de grãos, a anomalia de temperatura média dos polos de café) ou selecione estações com Lasso dentro de cada janela, como o Banco Central fez no Estudo Especial 57 (20 de 196 estações).
+- Prefira as anomalias e o SPI às variáveis brutas: elas já tiram a sazonalidade, e a temperatura bruta só repete o mês do ano.
+
+**Regra 7 — Ausência é informação: não imputar com o futuro.**
+- Meses com buraco ficam nulos (regra 3/5), e o SPI-3 é nulo antes de 2016.
+- XGBoost e LightGBM tratam nulo nativamente: deixe nulo.
+- Se outro modelo exigir imputação, ajuste-a dentro da janela de treino.
+- Recife (sem dado desde 2024) e Fortaleza (desde 2025) não devem entrar como variável até que outra estação seja escolhida para elas.
+
+**Regra 8 — O clima tem de provar que ajuda.** Compare sempre, na mesma validação walk-forward e por horizonte:
+- previsão ingênua (último valor e sazonal);
+- modelo sem clima;
+- modelo com clima.
+
+Fica com o clima só se ele melhorar o erro fora da amostra (MAE/RMSE). Vale olhar também o desempenho separado em meses de El Niño, La Niña e neutros.
+
+**Regra 9 — Reproduzir o treino.** Registre a data de corte e a versão das tabelas Delta usadas. O Delta só acrescenta, então dá para refazer exatamente o que o modelo viu.
+
 ---
 
 ## Seção 3 — Reorganização Geral e Profissional de Todas as Pastas do Repositório
@@ -177,7 +244,8 @@ inflatrack/
 │       ├── pib/               (resposta/, valor/)
 │       ├── commodities/       (resposta/, cotacao/)
 │       ├── salario_minimo/    (resposta/, mes/)
-│       ├── clima/             (resposta/, estacao/, medicao/)
+│       ├── clima/             (resposta/, estacao/, medicao/, medicao_provisoria/)  # BDMEP + Open-Meteo
+│       ├── enso/              (resposta/, roni/)   # RONI do NOAA (El Niño / La Niña)
 │       ├── pib_china/         (resposta/, indicador/)
 │       ├── pib_usa/           (resposta/, indicador/)
 │       ├── pib_russia/        (resposta/, indicador/)
@@ -194,7 +262,8 @@ inflatrack/
 │   │   ├── seed_variavel_sidra.csv                 # Códigos das variáveis do SIDRA
 │   │   ├── seed_pib_setor_catalogo.csv             # Classificação dos 23 setores do PIB (grupo e núcleo)
 │   │   ├── seed_commodity_catalogo.csv             # Catálogo das 9 commodities internacionais
-│   │   └── seed_de_para_estacao_localidade.csv     # Amarração Estação INMET <-> Localidade do IPCA (Consulta C7)
+│   │   ├── seed_de_para_estacao_localidade.csv     # Amarração Estação INMET <-> Localidade do IPCA (Consulta C7)
+│   │   └── seed_estacao_polo_agricola.csv          # 14 estações INMET em polos produtores (grãos, café, feijão...)
 │   ├── models/
 │   │   ├── staging/                                # [SILVER - PARTE 1] Limpeza 1:1 por fonte
 │   │   │   ├── ipca/              (_ipca__sources.yml, _ipca__models.yml, stg_ipca__observacao.sql, stg_ipca__metadados.sql)
@@ -204,12 +273,14 @@ inflatrack/
 │   │   │   ├── commodities/       (_commodities__sources.yml, _commodities__models.yml, stg_commodities__cotacao.sql)
 │   │   │   ├── salario_minimo/    (_salario_minimo__sources.yml, _salario_minimo__models.yml, stg_salario_minimo__mes.sql)
 │   │   │   ├── clima/             (_clima__sources.yml, _clima__models.yml, stg_clima__estacao.sql, stg_clima__medicao_diaria.sql)
+│   │   │   ├── enso/              (_enso__sources.yml, _enso__models.yml, stg_enso__roni.sql)
 │   │   │   ├── pib_internacional/ (_pib_int__sources.yml, _pib_int__models.yml, stg_pib_internacional__indicador.sql)
 │   │   │   └── transacional/      (_transacional__sources.yml, _transacional__models.yml, stg_transacional__mudanca.sql)
 │   │   ├── intermediate/                           # [SILVER - PARTE 2] Consolidação no Grão MENSAL (YYYY-MM-01)
 │   │   │   ├── int_macroeconomia__mensal.sql       # Média mensal, fechamento, média móvel, volatilidade e Selic acumulada
 │   │   │   ├── int_commodities__mensal.sql         # Consolidação mensal das 9 commodities + variações e médias móveis
-│   │   │   ├── int_clima__anomalia_mensal.sql      # Chuva/temperatura mensal por localidade + desvio padrão + lags (t-1..t-3)
+│   │   │   ├── int_clima__anomalia_mensal.sql      # Clima por estação x mês: regra 3/5 da OMM, anomalia vs. anos anteriores, lags
+│   │   │   ├── int_clima__spi_mensal.py            # [PYTHON + SciPy] SPI-3 (seca) só com anos anteriores (mín. 10)
 │   │   │   └── int_pib__mensal.sql                 # Alinhamento temporal correto do trimestre do PIB para os meses passados
 │   │   ├── marts/                                  # [GOLD] Esquema Estrela (Dimensões + SCD Tipo 2 + Tabelas Fato)
 │   │   │   ├── core/
@@ -224,6 +295,10 @@ inflatrack/
 │   │   │   │   ├── dim_commodity.sql
 │   │   │   │   ├── fct_macroeconomia_mensal.sql    # Painel macroeconômico consolidado (Dólar, Selic, Salário Mínimo, PIB)
 │   │   │   │   └── fct_pib_internacional_anual.sql # Comparativo anual Brasil x China x EUA x Rússia
+│   │   │   ├── clima/
+│   │   │   │   ├── fct_clima_mensal.sql            # Clima por praça do IPCA x mês (junta com fct_inflacao_mensal)
+│   │   │   │   ├── fct_clima_polo_mensal.sql       # Clima por polo agrícola x mês (onde o alimento é plantado)
+│   │   │   │   └── fct_enso_mensal.sql             # El Niño / La Niña (RONI) por mês, com mes_publicacao
 │   │   │   └── lojista/
 │   │   │       ├── _lojista__models.yml
 │   │   │       ├── dim_produto_preco_scd2.sql      # [SCD TIPO 2] Vigência histórica de preços dos produtos do lojista
@@ -246,6 +321,7 @@ inflatrack/
 │       │   ├── __init__.py
 │       │   ├── bronze.py                           # gravar_resposta, acrescentar, substituir_particao, carregar_duckdb
 │       │   ├── db.py                               # Conexões padronizadas com PostgreSQL e DuckDB
+│       │   ├── spi.py                              # SPI-3 (McKee/OMM) sem vazamento, usado pelo dbt
 │       │   └── settings.py                         # Variáveis de ambiente e diretórios padrão
 │       ├── clients/                                # Clientes HTTP e extratores de formato bruto
 │       │   ├── __init__.py
@@ -256,7 +332,9 @@ inflatrack/
 │       │   ├── alphavantage.py
 │       │   ├── worldbank.py
 │       │   ├── dieese.py
-│       │   └── inmet.py
+│       │   ├── inmet.py                            # Catálogo (API) e pacotes anuais do BDMEP
+│       │   ├── open_meteo.py                       # Clima provisório dos dias que o INMET ainda não publicou
+│       │   └── noaa.py                             # RONI (El Niño / La Niña)
 │       ├── bronze/                                 # Coleta da Fonte -> Gravação nas 2 Tabelas Delta Lake
 │       │   ├── __init__.py
 │       │   ├── ipca.py
@@ -266,6 +344,7 @@ inflatrack/
 │       │   ├── commodities.py
 │       │   ├── salario_minimo.py
 │       │   ├── clima.py
+│       │   ├── enso.py
 │       │   └── pib_internacional.py
 │       ├── loaders/                                # Merge/Upsert do Delta Lake -> DuckDB (schema bronze.*)
 │       │   ├── __init__.py
@@ -276,6 +355,7 @@ inflatrack/
 │       │   ├── load_commodities.py
 │       │   ├── load_salario_minimo.py
 │       │   ├── load_clima.py
+│       │   ├── load_enso.py
 │       │   ├── load_pib_internacional.py
 │       │   └── load_transacional.py
 │       ├── cdc/                                    # Captura de mudanças do banco do lojista (PostgreSQL)
@@ -306,6 +386,7 @@ inflatrack/
 │       ├── commodities.py
 │       ├── salario_minimo.py
 │       ├── clima.py
+│       ├── enso.py
 │       ├── pib_internacional.py
 │       ├── transacional.py
 │       ├── dbt_assets.py                           # [PRONTO] Roda os modelos e testes do dbt dentro do Dagster
@@ -611,6 +692,7 @@ Antes das tarefas específicas, todo integrante garante estas 5 coisas na fonte 
 * **Para a Entrega 3 (até 03/11):**
   * **Ligar cada estação de clima à cidade do IPCA** e organizar a série do Salário Mínimo e da Cesta Básica desde 2006 (poder de compra, pergunta 3).
   * **Tratar o Clima por mês na Silver considerando o tempo da colheita:** uma seca ou geada hoje só encarece o alimento daqui a alguns meses. Resumir o mês com média, desvio-padrão (mês fora do normal) e guardar também os valores de **1, 2 e 3 meses atrás**.
+* **Situação do clima em 2026-11-12 (PR #22):** feito. Medições pelo BDMEP desde 2006 (a rota diária da API morreu), provisório do Open-Meteo para os dias que o INMET ainda não publicou, regra 3/5 da OMM, 14 polos agrícolas, SPI-3 e RONI, até `fct_clima_mensal`, `fct_clima_polo_mensal` e `fct_enso_mensal`. Detalhes em `docs/fontes/clima.md`, `docs/fontes/enso.md` e `docs/evidencias/e3/clima_bdmep.md`. Como usar no modelo: Seção 2.4.
 * **Para a Entrega 4 (até 24/11):**
   * **Ligar o produto do lojista ao item oficial do IPCA:** começar com um de-para manual feito sobre a FK que já existe. **Se sobrar tempo**, adicionar a busca por semelhança de significado (`pgvector`) para sugerir o item automaticamente (ex.: *"Leite Caixa 1L"* → *"Leite longa vida"*). Data de corte: **17/11**; passando disso, fica só o de-para manual e nada quebra.
   * **Revisar o script de teste em computador limpo (`scripts/verificar_clone_limpo.sh`):** simular `git clone` em pasta vazia e garantir que o monitor consiga subir e testar tudo com um único comando sem dor de cabeça.

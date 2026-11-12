@@ -10,9 +10,9 @@ A linha `Status` distingue o que já roda no repositório do que está decidido 
 
 | Aspecto | Detalhe |
 |---|---|
-| Módulos | `src/inflatrack/<origem>.py` (`sidra`, `alphavantage`, `dolar_olinda`, `selic_sgs`, `pib`, `dieese`, `inmet`, Banco Mundial) |
+| Módulos | `src/inflatrack/<origem>.py` (`sidra`, `alphavantage`, `dolar_olinda`, `selic_sgs`, `pib`, `dieese`, `inmet`, `open_meteo`, `noaa`, Banco Mundial) |
 | Bibliotecas | `httpx`, `requests` |
-| Origens | 6 provedores, 10 conjuntos de dados |
+| Origens | 8 provedores, 12 conjuntos de dados (o Open-Meteo só cobre os dias que o INMET ainda não publicou) |
 | Autenticação | Só Alpha Vantage (chave gratuita com cota diária) |
 | Resiliência | Timeout explícito e retry com backoff |
 | Status | Em uso |
