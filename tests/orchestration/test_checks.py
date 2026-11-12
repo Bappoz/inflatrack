@@ -16,6 +16,7 @@ from orchestration.assets.checks import (
     check_clima_provisorio_freshness_e_volume,
     check_commodities_freshness_e_volume,
     check_dolar_freshness_e_volume,
+    check_enso_freshness_e_volume,
     check_ipca_freshness_e_volume,
     check_macroeconomia_mensal_freshness,
     check_pib_freshness_e_volume,
@@ -38,6 +39,7 @@ TODOS_OS_CHECKS = (
     check_clima_medicoes_freshness_e_volume,
     check_clima_provisorio_freshness_e_volume,
     check_commodities_freshness_e_volume,
+    check_enso_freshness_e_volume,
 )
 
 
@@ -99,6 +101,11 @@ def _demais_fontes(con, ultimo_dia: date) -> None:
         [ultimo_dia],
     )
     con.execute(
+        f"create table bronze.enso_roni as select ({mes})::date as mes_referencia "
+        "from range(950) t(i)",
+        [ultimo_dia],
+    )
+    con.execute(
         "create table bronze.commodities_cotacao as "
         "select 'WTI' as symbol, 'daily' as intervalo, (?::date - i::int) as data_referencia "
         "from range(150) t(i) "
@@ -136,6 +143,7 @@ def test_asset_checks_registrados_nas_definicoes():
     assert ("clima_medicoes_duckdb", "check_clima_medicoes_freshness_e_volume") in check_keys
     assert ("clima_provisorio_duckdb", "check_clima_provisorio_freshness_e_volume") in check_keys
     assert ("commodities_duckdb", "check_commodities_freshness_e_volume") in check_keys
+    assert ("enso_duckdb", "check_enso_freshness_e_volume") in check_keys
     assert (
         "pib_internacional_duckdb",
         "check_pib_internacional_freshness_e_volume",

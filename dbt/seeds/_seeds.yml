@@ -125,3 +125,33 @@ seeds:
         data_tests: [not_null]
       - name: justificativa
         data_tests: [not_null]
+
+  - name: seed_estacao_polo_agricola
+    description: >
+      Estações do INMET em polos produtores dos alimentos da cesta (grãos, arroz, café,
+      feijão e hortaliças, leite), escolhidas pela cobertura nos pacotes do BDMEP. Uma
+      estação por polo. A coleta lê este seed junto com o de-para das praças; a Gold é
+      gold.fct_clima_polo_mensal. Coordenadas do catálogo do INMET.
+    config:
+      full_refresh: true
+      column_types:
+        estacao_id: varchar
+        polo: varchar
+        uf: varchar
+        culturas: varchar
+        latitude: double
+        longitude: double
+        justificativa: varchar
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: polo
+        data_tests: [unique, not_null]
+      - name: uf
+        data_tests: [not_null]
+      - name: culturas
+        data_tests: [not_null]
+      - name: latitude
+        data_tests: [not_null]
+      - name: longitude
+        data_tests: [not_null]

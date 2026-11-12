@@ -28,6 +28,7 @@ from orchestration.assets.clima import clima_duckdb, clima_medicoes_duckdb, clim
 from orchestration.assets.commodities import commodities_duckdb
 from orchestration.assets.comum import POOL_DUCKDB
 from orchestration.assets.dolar import dolar_duckdb
+from orchestration.assets.enso import enso_duckdb
 from orchestration.assets.pib_internacional import pib_internacional_duckdb
 from orchestration.assets.salario_minimo import salario_minimo_duckdb
 from orchestration.assets.selic import selic_duckdb
@@ -147,6 +148,18 @@ SLA_CLIMA_PROVISORIO = Sla(
     16,
     "Clima provisório (Open-Meteo)",
     "leituras",
+)
+
+# RONI: o valor do mês central m usa o mês m+1 e sai no começo de m+2, uma vez por mês. Logo
+# antes da publicação seguinte, o último mês central começou há até ~95 dias; 110 dá folga.
+SLA_ENSO = Sla(
+    "bronze.enso_roni",
+    "mes_referencia",
+    110,
+    "Mensal, publicado no início do 2º mês após o mês central (máximo 110 dias)",
+    900,
+    "RONI (El Niño / La Niña)",
+    "temporadas",
 )
 
 # Commodities misturam séries diárias e mensais (`intervalo`); o SLA vale por intervalo.
@@ -307,6 +320,12 @@ check_clima_medicoes_freshness_e_volume = _check_de(
     clima_medicoes_duckdb,
     SLA_CLIMA_MEDICOES,
     "Defasagem do último dia medido e volume mínimo das medições diárias do INMET (BDMEP).",
+)
+check_enso_freshness_e_volume = _check_de(
+    "check_enso_freshness_e_volume",
+    enso_duckdb,
+    SLA_ENSO,
+    "SLA de publicação mensal e volume mínimo do RONI (NOAA).",
 )
 check_clima_provisorio_freshness_e_volume = _check_de(
     "check_clima_provisorio_freshness_e_volume",

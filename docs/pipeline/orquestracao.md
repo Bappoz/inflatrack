@@ -46,6 +46,7 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
 | `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `bronze.salario_minimo`, `load_salario_minimo` |
 | `clima` | `clima_parquet` → `clima_duckdb` (catálogo, API); `clima_medicoes` → `clima_medicoes_duckdb` (medições, BDMEP); `clima_medicoes` → `clima_provisorio` → `clima_provisorio_duckdb` (provisório, Open-Meteo) | Delta → DuckDB | `bronze.clima`, `load_clima --tabela estacao\|medicao\|provisoria` |
+| `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
@@ -83,6 +84,7 @@ Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados. As demais fonte
 | Dólar e Selic (BCB) | Diária | Dias úteis, após o fechamento | Publicação do BCB |
 | Commodities (Alpha Vantage) | Diária | 1×/dia, respeitando a cota de 25 req./dia | Cota da API |
 | Clima (INMET + Open-Meteo) | Anual (pacote BDMEP por ano, desde 2006) | 1×/dia às 7h: catálogo pela API; medições só baixam o pacote que o INMET republicou (HEAD + manifesto); o provisório (Open-Meteo) relê do dia seguinte ao último oficial até ontem | O INMET republica o pacote do ano corrente cerca de 1×/mês; o Open-Meteo tem o dia anterior |
+| El Niño / La Niña (RONI, NOAA) | Mensal | 1×/semana, segunda às 9h (série inteira, detecta revisão) | Publicação do NOAA no começo do mês |
 | Salário mínimo (DIEESE) | Mensal | 1×/mês | Publicação do DIEESE |
 | PIB internacional (Banco Mundial) | — | 1×/mês, dia 1 (detecta revisão) | Revisões fora de calendário |
 | Silver, Gold e vitrine (`analitico_job`) | — | 1×/dia às 20h30, depois das fontes | Dependência do grafo |

@@ -179,9 +179,12 @@ FUSO = ZoneInfo("America/Sao_Paulo")
 ANO_INICIAL = 2006
 # 18 de 24 leituras horárias (75%): abaixo disso a métrica do dia fica nula.
 HORAS_MINIMAS = 18
-MAPEAMENTO_ESTACOES = (
-    Path(__file__).resolve().parents[3] / "dbt" / "seeds" / "seed_de_para_estacao_localidade.csv"
-)
+SEEDS = Path(__file__).resolve().parents[3] / "dbt" / "seeds"
+# Estações coletadas: as das praças do IPCA (de-para) e as dos polos agrícolas. Os dois seeds
+# também alimentam o dbt (fct_clima_mensal e fct_clima_polo_mensal).
+MAPEAMENTO_ESTACOES = SEEDS / "seed_de_para_estacao_localidade.csv"
+POLOS_AGRICOLAS = SEEDS / "seed_estacao_polo_agricola.csv"
+MAPEAMENTOS = (MAPEAMENTO_ESTACOES, POLOS_AGRICOLAS)
 TIPO_CSV_BDMEP = "text/csv; charset=iso-8859-1"
 # Suba quando a leitura do CSV mudar: o manifesto muda e os pacotes já gravados são relidos uma
 # vez (só leituras com valor diferente viram linha nova).
@@ -498,31 +501,33 @@ def gravar(
     return Gravacao(id_resposta, nova, len(linhas), novas)
 
 
-def estacoes_mapeadas(caminho: Path | None = None) -> list[str]:
-    """As estações do de-para estação -> localidade do IPCA, o mesmo seed que a Silver usa."""
-    caminho = caminho or MAPEAMENTO_ESTACOES
-    with caminho.open(encoding="utf-8", newline="") as arquivo:
-        estacoes = {linha["estacao_id"].strip() for linha in csv.DictReader(arquivo)}
-    if not estacoes or "" in estacoes:
-        raise ChecagemError(f"Mapeamento de estações vazio ou inválido: {caminho}")
-    return sorted(estacoes)
+def _linhas_dos_seeds(caminhos: tuple[Path, ...]) -> list[dict]:
+    linhas = []
+    for caminho in caminhos:
+        with caminho.open(encoding="utf-8", newline="") as arquivo:
+            do_seed = list(csv.DictReader(arquivo))
+        if not do_seed or any(not linha.get("estacao_id", "").strip() for linha in do_seed):
+            raise ChecagemError(f"Mapeamento de estações vazio ou inválido: {caminho}")
+        linhas.extend(do_seed)
+    return linhas
 
 
-def coordenadas_mapeadas(caminho: Path | None = None) -> dict[str, tuple[float, float]]:
-    """Latitude e longitude de cada estação do de-para (do cabeçalho do CSV do BDMEP)."""
-    caminho = caminho or MAPEAMENTO_ESTACOES
-    with caminho.open(encoding="utf-8", newline="") as arquivo:
-        linhas = list(csv.DictReader(arquivo))
+def estacoes_mapeadas(*caminhos: Path) -> list[str]:
+    """As estações a coletar: praças do IPCA (de-para) e polos agrícolas, os seeds do dbt."""
+    linhas = _linhas_dos_seeds(caminhos or MAPEAMENTOS)
+    return sorted({linha["estacao_id"].strip() for linha in linhas})
+
+
+def coordenadas_mapeadas(*caminhos: Path) -> dict[str, tuple[float, float]]:
+    """Latitude e longitude de cada estação dos seeds (para o clima provisório)."""
+    caminhos = caminhos or MAPEAMENTOS
     try:
-        coordenadas = {
+        return {
             linha["estacao_id"].strip(): (float(linha["latitude"]), float(linha["longitude"]))
-            for linha in linhas
+            for linha in _linhas_dos_seeds(caminhos)
         }
     except (KeyError, TypeError, ValueError) as erro:
-        raise ChecagemError(f"De-para sem latitude/longitude válidas: {caminho} ({erro})") from erro
-    if not coordenadas:
-        raise ChecagemError(f"Mapeamento de estações vazio ou inválido: {caminho}")
-    return coordenadas
+        raise ChecagemError(f"Seed sem latitude/longitude válidas: {caminhos} ({erro})") from erro
 
 
 def _normalizar(texto: str) -> str:

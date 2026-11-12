@@ -16,8 +16,10 @@
 -- provisório nunca está fechado. Para prever o mês corrente, use o provisório; para treinar, não.
 
 with estacao_mes as (
-    select * from {{ ref('int_clima__anomalia_mensal') }}
-    where codigo_localidade is not null
+    select a.*, spi.precipitacao_3m_mm, spi.spi_3
+    from {{ ref('int_clima__anomalia_mensal') }} as a
+    left join {{ ref('int_clima__spi_mensal') }} as spi using (estacao_id, mes_referencia)
+    where a.codigo_localidade is not null
 ),
 
 -- Último dia publicado pelo INMET em cada praça (só o oficial): uma estação parada não fecha o
@@ -44,6 +46,8 @@ localidade_mes as (
         avg(precipitacao_anomalia_mm) as precipitacao_anomalia_mm,
         avg(dias_com_chuva) as dias_com_chuva,
         avg(umidade_relativa_media_pct) as umidade_relativa_media_pct,
+        avg(precipitacao_3m_mm) as precipitacao_3m_mm,
+        avg(spi_3) as spi_3,
         max(dias_com_registro) as dias_com_registro,
         max(dias_provisorios) as dias_provisorios
     from estacao_mes
@@ -76,7 +80,9 @@ serie as (
         m.precipitacao_total_mm,
         m.precipitacao_anomalia_mm,
         m.dias_com_chuva,
-        m.umidade_relativa_media_pct
+        m.umidade_relativa_media_pct,
+        m.precipitacao_3m_mm,
+        m.spi_3
     from grade as g
     left join localidade_mes as m using (codigo_localidade, mes_referencia)
 )
@@ -89,36 +95,7 @@ select
     s.dias_com_registro,
     s.dias_provisorios,
     s.dias_no_mes,
-    cast(round(s.dias_com_registro / s.dias_no_mes, 4) as decimal(5, 4)) as cobertura_dias,
-
-    -- temperatura (°C)
-    cast(s.temp_media as decimal(8, 3)) as temp_media,
-    cast(s.temp_min_absoluta as decimal(8, 3)) as temp_min_absoluta,
-    cast(s.temp_max_absoluta as decimal(8, 3)) as temp_max_absoluta,
-    cast(s.temp_media_anomalia as decimal(8, 3)) as temp_media_anomalia,
-    cast(avg(s.temp_media) over (w rows between 2 preceding and current row) as decimal(8, 3))
-        as temp_media_mm3,
-    cast(lag(s.temp_media, 1) over w as decimal(8, 3)) as temp_media_t_menos_1,
-    cast(lag(s.temp_media, 2) over w as decimal(8, 3)) as temp_media_t_menos_2,
-    cast(lag(s.temp_media, 3) over w as decimal(8, 3)) as temp_media_t_menos_3,
-    cast(lag(s.temp_media_anomalia, 1) over w as decimal(8, 3)) as temp_media_anomalia_t_menos_1,
-    cast(lag(s.temp_media_anomalia, 2) over w as decimal(8, 3)) as temp_media_anomalia_t_menos_2,
-    cast(lag(s.temp_media_anomalia, 3) over w as decimal(8, 3)) as temp_media_anomalia_t_menos_3,
-
-    -- chuva (mm) e umidade (%)
-    cast(s.precipitacao_total_mm as decimal(10, 3)) as precipitacao_total_mm,
-    cast(s.precipitacao_anomalia_mm as decimal(10, 3)) as precipitacao_anomalia_mm,
-    cast(s.dias_com_chuva as decimal(5, 2)) as dias_com_chuva,
-    cast(lag(s.precipitacao_total_mm, 1) over w as decimal(10, 3)) as precipitacao_t_menos_1,
-    cast(lag(s.precipitacao_total_mm, 2) over w as decimal(10, 3)) as precipitacao_t_menos_2,
-    cast(lag(s.precipitacao_total_mm, 3) over w as decimal(10, 3)) as precipitacao_t_menos_3,
-    cast(lag(s.precipitacao_anomalia_mm, 1) over w as decimal(10, 3))
-        as precipitacao_anomalia_t_menos_1,
-    cast(lag(s.precipitacao_anomalia_mm, 2) over w as decimal(10, 3))
-        as precipitacao_anomalia_t_menos_2,
-    cast(lag(s.precipitacao_anomalia_mm, 3) over w as decimal(10, 3))
-        as precipitacao_anomalia_t_menos_3,
-    cast(s.umidade_relativa_media_pct as decimal(8, 3)) as umidade_relativa_media_pct
+    {{ colunas_clima_mensal('s') }}
 from serie as s
 inner join ultima_leitura as u using (codigo_localidade)
 window w as (partition by s.codigo_localidade order by s.mes_referencia)

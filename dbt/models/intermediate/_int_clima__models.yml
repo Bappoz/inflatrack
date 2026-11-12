@@ -53,3 +53,25 @@ models:
         description: precipitacao_total_mm - precipitacao_normal_mm; exige ao menos 3 anos anteriores.
       - name: codigo_localidade
         description: Praça do IPCA da estação, pelo seed_de_para_estacao_localidade.
+
+  - name: int_clima__spi_mensal
+    description: >
+      SPI-3 (Índice de Precipitação Padronizado de 3 meses, McKee/OMM) por estação x mês.
+      A chuva de 3 meses só existe com os 3 meses válidos pela regra 3/5. A gama de cada ano é
+      ajustada só com os anos anteriores do mesmo mês do calendário (mínimo de 10), então o
+      SPI começa por volta de 2016 e não vaza o futuro. Modelo Python (scipy), lógica em
+      src/inflatrack/common/spi.py. Grão garantido por assert_int_clima__spi_chave_unica.
+    columns:
+      - name: estacao_id
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: precipitacao_3m_mm
+        description: Chuva acumulada no mês e nos 2 anteriores (mm).
+      - name: spi_3
+        description: >
+          SPI-3, limitado a ±3. Abaixo de -1 seca moderada, -1,5 severa, -2 extrema; acima de
+          +1 excesso de chuva. Nulo com menos de 10 anos anteriores daquele mês.
+      - name: anos_referencia_spi
+        description: Anos anteriores do mesmo mês usados no ajuste da gama.
+        data_tests: [not_null]

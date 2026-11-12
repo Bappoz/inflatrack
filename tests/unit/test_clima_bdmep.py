@@ -134,11 +134,14 @@ def test_estacao_do_arquivo(nome, esperado) -> None:
     assert clima.estacao_do_arquivo(nome) == esperado
 
 
-def test_de_para_tem_uma_estacao_por_praca_do_ipca() -> None:
-    estacoes = clima.estacoes_mapeadas()
+def test_coleta_cobre_as_pracas_do_ipca_e_os_polos_agricolas() -> None:
+    pracas = clima.estacoes_mapeadas(clima.MAPEAMENTO_ESTACOES)
+    polos = clima.estacoes_mapeadas(clima.POLOS_AGRICOLAS)
 
-    assert len(estacoes) == len(set(estacoes)) == 16
-    assert "A305" in estacoes  # Fortaleza
+    assert len(pracas) == 16 and "A305" in pracas  # Fortaleza
+    assert len(polos) == 14 and "A904" in polos  # Sorriso
+    assert not set(pracas) & set(polos)
+    assert clima.estacoes_mapeadas() == sorted(pracas + polos)
 
 
 def test_de_para_vazio_falha_explicitamente(tmp_path) -> None:

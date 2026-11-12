@@ -45,6 +45,7 @@ JOBS_DE_FONTE = {
     "pib_internacional_job": None,
     "dieese_job": None,
     "clima_job": None,
+    "enso_job": None,
     "transacional_job": None,
 }
 

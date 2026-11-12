@@ -17,7 +17,7 @@ camada do Medallion.
 | **Raw** | Resposta original de cada coleta, com o SHA-256 do corpo, na tabela `<fonte>_resposta` do Delta (desde a E3). Os `.json.gz`/`.html.gz` em `data/raw/<fonte>/` são o formato antigo, ainda lidos pelos comandos `importar`. | Preservar a entrada para auditoria e reprocessamento. | Em uso. A coleta do salário mínimo ainda grava também o HTML em `data/raw/dieese/`; cargas históricas importadas podem conter respostas reserializadas pelo fluxo antigo. |
 | **Bronze** | Tabelas Delta Lake sobre Parquet em `data/parquet/<fonte>/`, espelhadas em `bronze.*` no DuckDB pelos loaders. | Guardar payload tipado por fonte, ainda sem regra analítica comum. | Em uso em todas as fontes. O Parquet simples só sobra na coleta legada do salário mínimo. |
 | **Silver** | Modelos SQL em `dbt-duckdb`: `stg_*` (limpeza 1:1) e `int_*__mensal` (grão mensal, `mes_referencia` no dia 1), em `dbt/models/staging` e `intermediate`. | Limpar, deduplicar e conformar cada fonte. | Em uso (E3), com testes dbt de unicidade, não nulo, integridade e volume. |
-| **Gold** | Tabelas analíticas no DuckDB produzidas a partir de `dbt/models/marts/`: `dim_calendario`, `dim_localidade`, `dim_cesta_ipca_scd2`, `dim_produto_preco_scd2`, `fct_inflacao_mensal`, `fct_macroeconomia_mensal`, `fct_salario_minimo_mensal`, `fct_pib_internacional_anual`, `fct_clima_mensal` e `fct_reajuste_lojista`. | Cruzar as fontes e fornecer métricas para painel e análise. | Em uso (E3), com SCD tipo 2 na cesta do IPCA e no preço do lojista. As tabelas que o painel lê são copiadas para `serie` pelo ativo `serie_postgres`. |
+| **Gold** | Tabelas analíticas no DuckDB produzidas a partir de `dbt/models/marts/`: `dim_calendario`, `dim_localidade`, `dim_cesta_ipca_scd2`, `dim_produto_preco_scd2`, `fct_inflacao_mensal`, `fct_macroeconomia_mensal`, `fct_salario_minimo_mensal`, `fct_pib_internacional_anual`, `fct_clima_mensal`, `fct_clima_polo_mensal`, `fct_enso_mensal` e `fct_reajuste_lojista`. | Cruzar as fontes e fornecer métricas para painel e análise. | Em uso (E3), com SCD tipo 2 na cesta do IPCA e no preço do lojista. As tabelas que o painel lê são copiadas para `serie` pelo ativo `serie_postgres`. |
 
 <div class="diagrama">
 --8<-- "docs/assets/diagramas/medallion.svg"
@@ -41,6 +41,7 @@ migradas, as subpastas contêm tabelas Delta (arquivos Parquet e log
 | [PIB da Rússia](../fontes/pib_russia.md) | resposta guardada no Delta | Delta em `data/parquet/pib_russia/` |
 | [Salário Mínimo (DIEESE)](../fontes/salario_minimo.md) | `salario_minimo_resposta` no Delta; HTML também em `data/raw/dieese/` | Delta em `data/parquet/salario_minimo/` (`salario_minimo_resposta`, `salario_minimo_mes`); o fluxo legado ainda grava `data/parquet/dieese/` |
 | [Dados do Clima (INMET)](../fontes/clima.md) | `clima_resposta` no Delta: JSON do catálogo, o CSV de cada estação dos pacotes anuais do BDMEP e o JSON do Open-Meteo | Delta em `data/parquet/clima/` (`clima_resposta`, `clima_estacao`, `clima_medicao` e, à parte, o provisório `clima_medicao_provisoria`) |
+| [El Niño / La Niña (RONI)](../fontes/enso.md) | `enso_resposta` no Delta (o `.txt` do NOAA) | Delta em `data/parquet/enso/` (`enso_resposta`, `enso_roni`) |
 
 ## Fluxo
 

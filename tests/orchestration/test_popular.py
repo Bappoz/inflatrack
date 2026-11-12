@@ -23,6 +23,7 @@ FONTES = {
     "pib_internacional_job",
     "dieese_job",
     "clima_job",
+    "enso_job",
     "transacional_job",
 }
 

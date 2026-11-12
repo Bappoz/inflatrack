@@ -209,5 +209,28 @@ entra). Nenhuma coluna usa meses futuros: as normais climatológicas são só do
 | `precipitacao_total_mm`, `dias_com_chuva` | Chuva do mês; nulos se faltarem mais de 5 dias do mês ou mais de 3 seguidos, contando os ainda não decorridos (regra 3/5 da OMM) |
 | `precipitacao_anomalia_mm` | Chuva menos a normal do mesmo mês nos anos anteriores |
 | `umidade_relativa_media_pct` | Umidade média (%) |
-| `*_t_menos_1`, `*_t_menos_2`, `*_t_menos_3`, `temp_media_mm3` | Lags de 1 a 3 meses de calendário e média móvel de 3 meses |
+| `precipitacao_3m_mm`, `spi_3` | Chuva dos últimos 3 meses e SPI-3 (seca: < -1 moderada, < -1,5 severa, < -2 extrema), média das estações da praça |
+| `*_t_menos_1`, `*_t_menos_2`, `*_t_menos_3`, `temp_media_mm3` | Lags de 1 a 3 meses de calendário (temperatura, anomalias, chuva e SPI-3) e média móvel de 3 meses |
+
+## Silver: `silver.int_clima__spi_mensal`
+
+Uma linha por estação x mês, calculada por modelo Python do dbt (SciPy).
+
+| Campo | Descrição |
+|---|---|
+| `precipitacao_3m_mm` | Chuva do mês e dos 2 anteriores; nula se algum dos 3 falha na regra 3/5 |
+| `spi_3` | SPI-3, limitado a ±3; nulo com menos de 10 anos anteriores daquele mês |
+| `anos_referencia_spi` | Anos anteriores do mesmo mês usados no ajuste da gama |
+
+## Gold: `gold.fct_clima_polo_mensal`
+
+Uma linha por polo agrícola (estação) x mês, com as mesmas colunas de clima de
+`fct_clima_mensal` (macro `colunas_clima_mensal`), mais:
+
+| Campo | Descrição |
+|---|---|
+| `estacao_id`, `polo`, `uf`, `culturas` | Estação do INMET e o polo do `seed_estacao_polo_agricola` |
+| `mes_fechado` | Verdadeiro se o INMET já publicou o último dia do mês naquela estação |
+
+O ENSO (El Niño / La Niña) está em [`gold.fct_enso_mensal`](enso.md).
 

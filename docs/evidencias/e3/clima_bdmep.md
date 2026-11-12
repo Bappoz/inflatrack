@@ -129,15 +129,40 @@ num banco que já tinha a tabela com as 3 colunas antigas (o dbt reaproveita a t
 `--full-refresh`). O seed passou a ter `full_refresh: true`, e o teste de build cria antes a
 tabela antiga para não deixar o erro voltar.
 
+## Polos agrícolas, SPI-3 e RONI (2026-11-11 e 12)
+
+Depois da pesquisa sobre como se analisa clima para safras (boletim Conab/INMET, ZARC da Embrapa,
+estudos do Banco Central), entraram as três prioridades: estações nos polos produtores, o índice de
+seca SPI-3 e o RONI (El Niño / La Niña). Regras em [fonte do clima](../../fontes/clima.md#6-polos-agricolas-e-seca-de-3-meses-spi-3)
+e [fonte ENSO](../../fontes/enso.md).
+
+| Execução nos dados locais (Dagster) | Resultado |
+|---|---|
+| `clima_job` com as 30 estações | `RUN_SUCCESS`; o manifesto mudou com a lista de estações e os 21 pacotes foram relidos uma vez (11 min): 286 CSVs e 96.375 leituras novas, 207.062 no total; Open-Meteo para as 30 estações; 3 checks passando |
+| `enso_job` | `RUN_SUCCESS`; 921 temporadas (DJF/1950 a ASO/2026); check passando |
+| Gold (`fct_clima_mensal`, `fct_clima_polo_mensal`, `fct_enso_mensal`) | `RUN_SUCCESS`, dbt PASS=92 |
+
+**Polos.** 14 polos de 2006–2008 a out/2026, cobertura média de 0,82 (Sorriso) a 1,00 (Irecê).
+
+**SPI-3.** Começa em ago/2016 (10 anos anteriores). Nos polos, média -0,05 e desvio 1,24 (o
+esperado é 0 e 1; as referências de 10 a 20 anos alargam a distribuição). Sorriso e Dourados têm
+poucos meses com SPI (15 e 18): falhas de chuva frequentes quebram a janela de 3 meses pela regra
+3/5. Conferência: set/2024 marca seca extrema em Unaí (SPI -3,0) e severa em Patrocínio (-1,7) e
+Varginha (-1,6), a seca histórica do Cerrado e do Sul de Minas naquele ano.
+
+**RONI.** `gold.fct_enso_mensal` de jan/1979 a set/2026 (573 meses). O maior valor é jan/1983
+(+2,40, o El Niño de 1982–83); set/2026 está em +1,97 (El Niño, intensidade 1,47 no formato do
+Banco Central), publicado em nov/2026.
+
 ## Limites conhecidos
 
 - **Fortaleza e Recife sem dado recente.** As estações pararam; trocar por outra estação da
   região metropolitana é decisão da Squad (o de-para é o seed
   `dbt/seeds/seed_de_para_estacao_localidade.csv`). Até lá, a Gold mostra o buraco
   (`cobertura_dias = 0`, métricas nulas) e não inventa valor.
-- **Uma estação por praça.** A temperatura de uma capital não é a da lavoura que abastece a
-  praça. Estações em polos agrícolas podem entrar no de-para sem mudar código: a coleta lê o
-  seed e o manifesto muda com a lista.
+- **Uma estação por praça e por polo.** O Paraná, segundo produtor de grãos, ficou sem polo por
+  falta de estação automática com série boa. Para incluir outra estação, basta acrescentá-la ao
+  seed de polos; a coleta lê o seed e o manifesto muda com a lista.
 - **Revisão que volta ao valor anterior.** O `id_medicao` é o hash do conteúdo, então uma leitura
   revisada de A para B e de volta para A fica em B. Corrigir exige tirar a chave primária de
   `bronze.clima_medicao`; ficou registrado em vez de alterado.

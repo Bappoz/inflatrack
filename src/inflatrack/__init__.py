@@ -12,6 +12,7 @@ _CLIENT_NAMES = [
     "dieese",
     "dolar_olinda",
     "inmet",
+    "noaa",
     "open_meteo",
     "pib",
     "selic_sgs",
@@ -28,6 +29,7 @@ _LOADER_NAMES = [
     "load_clima",
     "load_commodities",
     "load_dolar",
+    "load_enso",
     "load_pib",
     "load_pib_internacional",
     "load_salario_minimo",
@@ -43,6 +45,7 @@ for _name in _LOADER_NAMES:
 # `inflatrack.bronze.commodities`.
 _BRONZE_NAMES = [
     "clima",
+    "enso",
     "salario_minimo",
     "dolar",
     "pib_internacional",

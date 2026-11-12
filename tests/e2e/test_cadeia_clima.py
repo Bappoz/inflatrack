@@ -51,7 +51,10 @@ def _pacotes() -> dict[int, dict[str, str]]:
         del abril[date(2023, 4, dia)]
     dias_por_ano[2023] |= marco | abril
     dias_por_ano[2024] |= _mes(2024, 2, 18.0, dias=10)
-    return {ano: {"A001": csv_bdmep("A001", dias)} for ano, dias in dias_por_ano.items()}
+    pacotes = {ano: {"A001": csv_bdmep("A001", dias)} for ano, dias in dias_por_ano.items()}
+    # Sorriso (A904), um polo agrícola: só janeiro de 2024, a 27 °C.
+    pacotes[2024]["A904"] = csv_bdmep("A904", _mes(2024, 1, 27.0))
+    return pacotes
 
 
 @pytest.fixture(scope="module")
@@ -61,7 +64,7 @@ def gold(tmp_path_factory) -> Path:
     delta = pasta / "clima"
 
     resumo = clima.processar_medicoes(
-        ClienteBdmepFalso(_pacotes()), ["A001"], list(TEMPERATURA_JANEIRO), delta
+        ClienteBdmepFalso(_pacotes()), ["A001", "A904"], list(TEMPERATURA_JANEIRO), delta
     )
     assert resumo.falhas == []
     clima.gravar_provisorio(
@@ -80,7 +83,8 @@ def gold(tmp_path_factory) -> Path:
             "--target-path", str(pasta / "dbt_target"),
             "--log-path", str(pasta / "dbt_logs"),
             "--indirect-selection", "cautious",
-            "--select", "+fct_clima_mensal", "assert_clima_valores_plausiveis",
+            "--select", "+fct_clima_mensal", "+fct_clima_polo_mensal",
+            "assert_clima_valores_plausiveis", "assert_fct_clima_polo_mensal_chave_unica",
             "assert_stg_clima__medicao_diaria_chave_unica",
         ],
         env={**os.environ, "DBT_DUCKDB_PATH": str(banco)},
@@ -194,3 +198,17 @@ def test_regra_3_5_aceita_cinco_dias_espalhados_sem_leitura(gold) -> None:
     assert abril["dias_com_registro"] == 25
     assert abril["temp_media"] == Decimal("15.000")
     assert float(abril["precipitacao_total_mm"]) == pytest.approx(25 * 24 * CHUVA_HORA)
+
+
+def test_polo_agricola_vai_para_a_gold_dos_polos_e_nao_para_a_das_pracas(gold) -> None:
+    with duckdb.connect(str(gold), read_only=True) as con:
+        polo = con.execute(
+            "SELECT polo, uf, culturas, mes_fechado, temp_media, spi_3 "
+            "FROM gold.fct_clima_polo_mensal WHERE estacao_id = 'A904'"
+        ).fetchall()
+        pracas = con.execute(
+            "SELECT DISTINCT codigo_localidade FROM gold.fct_clima_mensal"
+        ).fetchall()
+
+    assert polo == [("Sorriso", "MT", "soja; milho", True, Decimal("27.000"), None)]
+    assert pracas == [(BRASILIA,)]

@@ -130,6 +130,7 @@ Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)** (`ADMINER_POR
 | [DIEESE](https://www.dieese.org.br/analisecestabasica/salarioMinimo.html) | Salário Mínimo Nominal e Necessário | 1994 – | Mensal | Paralelo entre poder de compra familiar e inflação de preços |
 | [INMET](https://portal.inmet.gov.br/) | Dados do Clima Diário | 2006 – (BDMEP) | Diária | Variável explicativa de choques climáticos sobre safras e preços agrícolas |
 | [Open-Meteo](https://open-meteo.com/) | Clima provisório (modelo) | Dias que o INMET ainda não publicou | Diária | Cobre o atraso de ~1 mês do BDMEP; sai quando o dado oficial chega. *Weather data by Open-Meteo.com* (CC BY 4.0) |
+| [NOAA](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/) | RONI (El Niño / La Niña) | 1950 – | Mensal | Antecipa chuva e seca regionais que afetam safras; o Banco Central usa o índice desde 2026 |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 

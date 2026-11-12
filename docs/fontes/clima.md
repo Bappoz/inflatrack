@@ -6,7 +6,7 @@ Este documento registra as características arquiteturais e de negócio para a f
 
 O catálogo de estações vem da API REST do INMET (`apitempo.inmet.gov.br/estacoes/T`). As medições vêm dos pacotes anuais do BDMEP (`portal.inmet.gov.br/uploads/dadoshistoricos/{ano}.zip`, um CSV horário por estação), resumidas por dia: a rota diária da API responde 404 e a horária só devolve vazio sem token ([evidência da E2](../evidencias/e2/clima.md#diagnostico-e-validacao-da-api-do-inmet); carga em [BDMEP](../evidencias/e3/clima_bdmep.md)).
 
-Como o INMET publica o pacote do ano corrente cerca de 1×/mês, os dias entre o último publicado e ontem vêm do **Open-Meteo** como clima **provisório** (ver [seção 6](#6-clima-provisorio-open-meteo)): valores de modelo, guardados à parte e trocados pelo oficial quando ele chega.
+Como o INMET publica o pacote do ano corrente cerca de 1×/mês, os dias entre o último publicado e ontem vêm do **Open-Meteo** como clima **provisório** (ver [seção 6](#7-clima-provisorio-open-meteo)): valores de modelo, guardados à parte e trocados pelo oficial quando ele chega.
 
 | Indicador | Descrição | Unidade | Frequência de acesso |
 |---|---|---|---|
@@ -127,7 +127,40 @@ sumiu do pacote de 2025. A cobertura real por estação está na
 
 Vazio, `-9999` e valores fora da faixa física viram `NULL`; zero é leitura válida e fica zero.
 
-## 6. Clima provisório (Open-Meteo)
+## 6. Polos agrícolas e seca de 3 meses (SPI-3)
+
+**Por que polos.** O clima das capitais é o de onde o alimento é consumido. O Banco Central
+(índice de chuva com estações do INMET, Estudo Especial 57) e a Conab (boletim de monitoramento
+agrícola) olham as regiões produtoras. Por isso a coleta também traz 14 estações em polos dos
+alimentos da cesta, escolhidas pela cobertura nos pacotes de 2006, 2019 e 2025
+(`dbt/seeds/seed_estacao_polo_agricola.csv`):
+
+| Grupo | Polos (estação) |
+|---|---|
+| Grãos | Sorriso-MT (A904), Rio Verde-GO (A025), Dourados-MS (A721), Passo Fundo-RS (A839), Barreiras-BA (A402, Matopiba) |
+| Arroz | Alegrete-RS (A826) |
+| Café | Varginha-MG (A515), Patrocínio-MG (A523), Linhares-ES (A614, conilon) |
+| Feijão e hortaliças | Unaí-MG (A542), Itapeva-SP (A714), Irecê-BA (A424), Ituporanga-SC (A863, cebola) |
+| Leite | Juiz de Fora-MG (A518) |
+
+O Paraná ficou sem polo: não há estação automática com série boa em Cascavel, Londrina ou
+Maringá (Maringá teve 39 dias medidos em 2025). Os polos seguem as mesmas regras das praças
+(BDMEP, provisório do Open-Meteo, regra 3/5) e vão para `gold.fct_clima_polo_mensal`.
+
+**SPI-3.** O Índice de Precipitação Padronizado de 3 meses (McKee et al., 1993; guia da OMM
+WMO-No. 1090) diz quão anormal foi a chuva acumulada no trimestre: ajusta uma gama aos totais de
+3 meses daquele mês do calendário e converte a probabilidade em desvios da normal. Abaixo de -1 é
+seca moderada, -1,5 severa, -2 extrema. É o índice de seca que a literatura de previsão de safra
+mais usa, e a escala de 3 meses é a que melhor explica a produtividade.
+
+- **Sem vazamento:** o guia ajusta a gama num período fixo de 30 anos, que incluiria anos
+  futuros. Aqui cada ano usa só os anos anteriores do mesmo mês, com mínimo de 10. Com a série
+  desde 2006, o SPI começa em ago/2016.
+- **Regra 3/5:** o total de 3 meses só existe com os 3 meses de chuva válidos.
+- **Implementação:** `src/inflatrack/common/spi.py` (SciPy), chamado pelo modelo Python do dbt
+  `int_clima__spi_mensal`; vai para as duas Gold com lags de 1 a 3 meses.
+
+## 7. Clima provisório (Open-Meteo)
 
 | Atributo | Resposta |
 | :--- | :--- |
