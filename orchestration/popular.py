@@ -28,6 +28,9 @@ from dagster import (
 from dagster._core.storage.tags import (
     ASSET_PARTITION_RANGE_END_TAG,
     ASSET_PARTITION_RANGE_START_TAG,
+    AUTO_RETRY_RUN_ID_TAG,
+    MAX_RETRIES_TAG,
+    WILL_RETRY_TAG,
 )
 
 from orchestration.partitions import INPC_MENSAL, IPCA_INDICE_MENSAL, IPCA_MENSAL, PIB_ANUAL
@@ -45,6 +48,7 @@ JOBS_DE_FONTE = {
     "pib_internacional_job": None,
     "dieese_job": None,
     "clima_job": None,
+    "enso_job": None,
     "transacional_job": None,
 }
 
@@ -87,6 +91,21 @@ class Disparador(ConfigurableResource):
     def status(self, run_id: str) -> DagsterRunStatus:
         raise NotImplementedError
 
+    def tags(self, run_id: str) -> dict[str, str]:
+        raise NotImplementedError
+
+
+TAGS_DO_RUN = """
+query TagsDoRun($runId: ID!) {
+  runOrError(runId: $runId) {
+    __typename
+    ... on Run { tags { key value } }
+    ... on PythonError { message }
+    ... on RunNotFoundError { message }
+  }
+}
+"""
+
 
 class DisparadorGraphQL(Disparador):
     """Dispara pelo webserver do `dagster dev` (porta DAGSTER_PORT, como em `just orquestrador`)."""
@@ -105,8 +124,34 @@ class DisparadorGraphQL(Disparador):
     def status(self, run_id: str) -> DagsterRunStatus:
         return self._cliente().get_run_status(run_id)
 
+    def tags(self, run_id: str) -> dict[str, str]:
+        from dagster_graphql import DagsterGraphQLClientError
+
+        resposta = self._cliente()._execute(TAGS_DO_RUN, {"runId": run_id})["runOrError"]
+        if resposta["__typename"] != "Run":
+            raise DagsterGraphQLClientError(resposta["__typename"], resposta.get("message"))
+        return {tag["key"]: tag["value"] for tag in resposta["tags"]}
+
 
 INTERVALO_ESPERA_S = 15
+# O daemon cria o run novo poucos segundos depois da falha; passou disso, ele não vem mais.
+ESPERA_MAX_RETRY_S = 300
+
+
+def _run_refeito(disparador: Disparador, run_id: str) -> str | None:
+    """O run que o Dagster lançou para refazer `run_id` (processo morto), ou None se não houver.
+
+    A tag `dagster/will_retry` sai junto com a falha; o id do run novo, quando o daemon o cria.
+    """
+    tags = disparador.tags(run_id)
+    if tags.get(WILL_RETRY_TAG) != "true":
+        return None
+    esperado = 0
+    while AUTO_RETRY_RUN_ID_TAG not in tags and esperado < ESPERA_MAX_RETRY_S:
+        time.sleep(INTERVALO_ESPERA_S)
+        esperado += INTERVALO_ESPERA_S
+        tags = disparador.tags(run_id)
+    return tags.get(AUTO_RETRY_RUN_ID_TAG)
 
 
 def _op_de_fonte(pedido: Pedido):
@@ -124,10 +169,20 @@ def _op_de_fonte(pedido: Pedido):
             context.log.error("%s: não foi possível disparar: %s", pedido.job, erro)
             return "NAO_DISPARADO"
         context.log.info("%s: run %s %s", pedido.job, run_id, pedido.tags or "")
-        status = disparador.status(run_id)
-        while status not in TERMINAIS:
-            time.sleep(INTERVALO_ESPERA_S)
+        while True:
             status = disparador.status(run_id)
+            while status not in TERMINAIS:
+                time.sleep(INTERVALO_ESPERA_S)
+                status = disparador.status(run_id)
+            refeito = None
+            if status == DagsterRunStatus.FAILURE:
+                refeito = _run_refeito(disparador, run_id)
+            if refeito is None:
+                break
+            context.log.warning(
+                "%s: run %s falhou; o Dagster o refaz em %s", pedido.job, run_id, refeito
+            )
+            run_id = refeito
         context.log.info("%s: %s", pedido.job, status.value)
         return status.value
 
@@ -157,6 +212,9 @@ def resumo(context: OpExecutionContext, **status_por_job: str) -> Nothing:
         "(os particionados com o histórico completo) e espera todos. Uma fonte que falha não "
         "impede as outras. Não roda Silver/Gold: rode o analitico_job depois."
     ),
+    # Refazer este run dispararia de novo as fontes que ainda estão rodando; as fontes,
+    # sim, são refeitas pelo run_retries do dagster.yaml, e a op segue o run novo.
+    tags={MAX_RETRIES_TAG: "0"},
 )
 def popular_banco_job():
     status = {}

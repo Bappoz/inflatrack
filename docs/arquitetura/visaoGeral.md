@@ -25,10 +25,11 @@ Dez conjuntos de dados vindos de seis provedores, todos públicos. Só a Alpha V
 | [PIB da Rússia](../fontes/pib_russia.md) | Banco Mundial | Anual | Feature |
 | [Salário Mínimo](../fontes/salario_minimo.md) | DIEESE (HTML) | Mensal | Feature |
 | [Dados do Clima](../fontes/clima.md) | INMET | Diária | Feature |
+| [El Niño / La Niña](../fontes/enso.md) | NOAA (RONI) | Mensal | Feature |
 
 As séries públicas seguem até uma Gold analítica no DuckDB, onde alvo e features se cruzam por `mes_referencia`. Desde a Entrega 3, o dbt produz a Silver e a Gold, uma cópia da Gold vai para o schema `serie` do PostgreSQL e o Metabase lê dali. A camada semântica das métricas e o modelo preditivo são da Entrega 4.
 
-O fluxo tem quatro camadas, detalhadas em [Arquitetura Medallion](arquiteturaMedallion.md): **Raw** (a resposta original de cada coleta, guardada no Delta), **Bronze** em tabelas Delta Lake sobre Parquet, **Silver** com dbt-duckdb e **Gold** no DuckDB. Todas estão em uso; nem toda fonte tem fato na Gold (PIB do Brasil, commodities e clima só chegam à Silver).
+O fluxo tem quatro camadas, detalhadas em [Arquitetura Medallion](arquiteturaMedallion.md): **Raw** (a resposta original de cada coleta, guardada no Delta), **Bronze** em tabelas Delta Lake sobre Parquet, **Silver** com dbt-duckdb e **Gold** no DuckDB. Todas estão em uso; nem toda fonte tem fato na Gold (PIB do Brasil e commodities só chegam à Silver).
 
 ## Stack
 

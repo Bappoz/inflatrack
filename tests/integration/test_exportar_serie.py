@@ -83,6 +83,59 @@ def test_copiar_de_novo_nao_duplica_e_mantem_o_indice(dsn, schema, gold) -> None
     assert indices == [("ix_fato_mes",)]
 
 
+def _persistencia(dsn: str, schema: str, tabela: str) -> str:
+    return _consultar(
+        dsn, f"select relpersistence from pg_class where oid = '{schema}.{tabela}'::regclass"
+    )[0][0]
+
+
+def _wal_atual(dsn: str) -> str:
+    return _consultar(dsn, "select pg_current_wal_lsn()::text")[0][0]
+
+
+def test_copia_cria_a_tabela_unlogged(dsn, schema, gold) -> None:
+    """`serie` é cópia da Gold: sem WAL, a cópia não enche o slot do CDC (perdido em 2026-11-11)."""
+    with exportar_serie.conectar(gold, dsn) as conexao:
+        exportar_serie.exportar(conexao, ("fato",), schema)
+
+    assert _persistencia(dsn, schema, "fato") == "u"
+
+
+def test_tabela_comum_da_migration_vira_unlogged_e_mantem_indice_e_dados(dsn, schema, gold) -> None:
+    with psycopg.connect(dsn, autocommit=True) as pg:
+        pg.execute(f"CREATE SCHEMA {schema}")
+        pg.execute(
+            f"CREATE TABLE {schema}.fato (mes_referencia date, codigo varchar, valor numeric)"
+        )
+        pg.execute(f"CREATE INDEX ix_fato_codigo ON {schema}.fato (codigo)")
+
+    with exportar_serie.conectar(gold, dsn) as conexao:
+        exportar_serie.exportar(conexao, ("fato",), schema)
+
+    assert _persistencia(dsn, schema, "fato") == "u"
+    assert _consultar(dsn, f"select count(*) from {schema}.fato") == [(2,)]
+    assert _consultar(dsn, f"select indexname from pg_indexes where schemaname = '{schema}'") == [
+        ("ix_fato_codigo",)
+    ]
+
+
+def test_copia_numa_tabela_unlogged_quase_nao_gera_wal(dsn, schema, gold) -> None:
+    with duckdb.connect(str(gold)) as conexao:
+        conexao.execute(
+            "INSERT INTO gold.fato SELECT DATE '2026-01-01', 'X' || g, g FROM range(50000) t(g)"
+        )
+    with exportar_serie.conectar(gold, dsn) as conexao:
+        exportar_serie.exportar(conexao, ("fato",), schema)
+
+    antes = _wal_atual(dsn)
+    with exportar_serie.conectar(gold, dsn) as conexao:
+        exportar_serie.exportar(conexao, ("fato",), schema)
+    gerado = _consultar(dsn, f"select pg_wal_lsn_diff(pg_current_wal_lsn(), '{antes}')")[0][0]
+
+    # Apagar e inserir 50 mil linhas numa tabela comum passa de 5 MB de WAL.
+    assert gerado < 1_000_000
+
+
 def test_estrutura_diferente_falha_sem_alterar_o_que_ja_estava_la(dsn, schema, gold) -> None:
     with exportar_serie.conectar(gold, dsn) as conexao:
         exportar_serie.exportar(conexao, ("fato",), schema)

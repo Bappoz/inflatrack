@@ -45,8 +45,8 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `pib` | `pib_parquet` → `pib_duckdb` (a carga roda no `analitico_job`, como a do IPCA) | Delta → DuckDB | `bronze.pib`, `loaders.load_pib` |
 | `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
 | `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `bronze.salario_minimo`, `load_salario_minimo` |
-| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `bronze.clima`, `load_clima` |
-| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `bronze.clima`, `load_clima` |
+| `clima` | `clima_parquet` → `clima_duckdb` (catálogo, API); `clima_medicoes` → `clima_medicoes_duckdb` (medições, BDMEP); `clima_medicoes` → `clima_provisorio` → `clima_provisorio_duckdb` (provisório, Open-Meteo) | Delta → DuckDB | `bronze.clima`, `load_clima --tabela estacao\|medicao\|provisoria` |
+| `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
@@ -83,7 +83,8 @@ Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados. As demais fonte
 | PIB e setores (SIDRA 1846) | Anual (relê o ano corrente e o anterior) | Diário nos meses de divulgação (mar, jun, set, dez) | Contas nacionais trimestrais |
 | Dólar e Selic (BCB) | Diária | Dias úteis, após o fechamento | Publicação do BCB |
 | Commodities (Alpha Vantage) | Diária | 1×/dia, respeitando a cota de 25 req./dia | Cota da API |
-| Clima (INMET) | — | Catálogo 1×/dia; medições só manuais (`clima_medicoes`) | Estações automáticas |
+| Clima (INMET + Open-Meteo) | Anual (pacote BDMEP por ano, desde 2006) | 1×/dia às 7h: catálogo pela API; medições só baixam o pacote que o INMET republicou (HEAD + manifesto); o provisório (Open-Meteo) relê do dia seguinte ao último oficial até ontem | O INMET republica o pacote do ano corrente cerca de 1×/mês; o Open-Meteo tem o dia anterior |
+| El Niño / La Niña (RONI, NOAA) | Mensal | 1×/semana, segunda às 9h (série inteira, detecta revisão) | Publicação do NOAA no começo do mês |
 | Salário mínimo (DIEESE) | Mensal | 1×/mês | Publicação do DIEESE |
 | PIB internacional (Banco Mundial) | — | 1×/mês, dia 1 (detecta revisão) | Revisões fora de calendário |
 | Silver, Gold e vitrine (`analitico_job`) | — | 1×/dia às 20h30, depois das fontes | Dependência do grafo |
@@ -117,7 +118,9 @@ Os jobs rodam em paralelo, com uma exceção: o `transacional_job` espera as tr�
 
 Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
 
-Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos; as medições de clima não entram (o ativo `clima_medicoes` é manual).
+Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos. O `clima_job` sem config traz as medições desde 2006 na primeira execução (~20 pacotes anuais do BDMEP) e, nas seguintes, só os pacotes que mudaram. No mesmo run, depois do BDMEP, o `clima_provisorio` cobre com o Open-Meteo os dias que o INMET ainda não publicou; ver [fonte do clima](../fontes/clima.md#taxa-de-escrita).
+
+O `clima_duckdb` e o `clima_medicoes_duckdb` aplicam o DDL do clima antes de carregar, então as duas tabelas `bronze.clima_*` existem mesmo antes da primeira coleta. Fora do Dagster, `just dbt` roda antes o `just duckdb-init` (os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql`, respeitando `DBT_DUCKDB_PATH`, sem API e sem apagar dados); fontes sem DDL ainda dependem de seus loaders.
 
 Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
 
@@ -125,6 +128,5 @@ Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia. O mê
 
 ## O que falta
 
-1. Medições do clima no agendamento: `clima_medicoes` exige estações e intervalo por config e fica fora do `clima_job` e do `popular_banco_job`.
-2. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
-3. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.
+1. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
+2. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.

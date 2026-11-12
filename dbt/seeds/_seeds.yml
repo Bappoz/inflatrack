@@ -97,10 +97,17 @@ seeds:
     description: >
       Relação manual de estações do INMET a localidades do IPCA. Inclui apenas
       vínculos conferidos pelo nome e pelas coordenadas do catálogo do INMET.
+      É também a lista de estações que a coleta busca (BDMEP e Open-Meteo); a
+      latitude e a longitude vêm do cabeçalho do CSV da estação no BDMEP.
     config:
+      # Recriada a cada build: sem isso, um banco que já tem a tabela com as colunas antigas
+      # (antes das coordenadas) falha no `dbt seed`. São 16 linhas, recriar não custa nada.
+      full_refresh: true
       column_types:
         estacao_id: varchar
         codigo_localidade: integer
+        latitude: double
+        longitude: double
         justificativa: varchar
     columns:
       - name: estacao_id
@@ -112,5 +119,39 @@ seeds:
               arguments:
                 to: ref('seed_localidade_ibge')
                 field: codigo_localidade
+      - name: latitude
+        data_tests: [not_null]
+      - name: longitude
+        data_tests: [not_null]
       - name: justificativa
+        data_tests: [not_null]
+
+  - name: seed_estacao_polo_agricola
+    description: >
+      Estações do INMET em polos produtores dos alimentos da cesta (grãos, arroz, café,
+      feijão e hortaliças, leite), escolhidas pela cobertura nos pacotes do BDMEP. Uma
+      estação por polo. A coleta lê este seed junto com o de-para das praças; a Gold é
+      gold.fct_clima_polo_mensal. Coordenadas do catálogo do INMET.
+    config:
+      full_refresh: true
+      column_types:
+        estacao_id: varchar
+        polo: varchar
+        uf: varchar
+        culturas: varchar
+        latitude: double
+        longitude: double
+        justificativa: varchar
+    columns:
+      - name: estacao_id
+        data_tests: [unique, not_null]
+      - name: polo
+        data_tests: [unique, not_null]
+      - name: uf
+        data_tests: [not_null]
+      - name: culturas
+        data_tests: [not_null]
+      - name: latitude
+        data_tests: [not_null]
+      - name: longitude
         data_tests: [not_null]

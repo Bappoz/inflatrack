@@ -19,6 +19,9 @@ Documentamos nesta evidência as políticas formais de SLA (*Service Level Agree
 | **`pib_duckdb`** (`bronze.pib_valor`) | Ingestão / Carga (Bronze) | Trimestral (IBGE, ~2 meses após o trimestre) | **260 dias** após o início do trimestre | $\ge 920$ linhas | `WARN` com metadados de defasagem |
 | **`pib_internacional_duckdb`** (`bronze.pib_internacional_indicador`) | Ingestão / Carga (Bronze) | Anual (Banco Mundial) | **730 dias** após o fim do ano de referência | $\ge 100$ linhas | `WARN` com metadados de defasagem |
 | **`clima_duckdb`** (`bronze.clima_estacao`) | Ingestão / Carga (Bronze) | Catálogo coletado todo dia | **7 dias** desde a última coleta (`_ingerido_em`) | $\ge 604$ estações | `WARN` no Dagster caso falte coleta recente |
+| **`clima_medicoes_duckdb`** (`bronze.clima_medicao`) | Ingestão / Carga (Bronze) | Pacote anual do BDMEP, republicado ~1×/mês | **60 dias** desde o último dia medido | $\ge 50.000$ leituras | `WARN` com metadados de defasagem |
+| **`clima_provisorio_duckdb`** (`bronze.clima_medicao_provisoria`) | Ingestão / Carga (Bronze) | Open-Meteo, coleta diária até ontem | **5 dias** desde o último dia coberto | $\ge 16$ leituras | `WARN` com metadados de defasagem |
+| **`enso_duckdb`** (`bronze.enso_roni`) | Ingestão / Carga (Bronze) | Mensal (NOAA, começo do 2º mês após o mês central) | **110 dias** após o início do mês central | $\ge 900$ temporadas | `WARN` com metadados de defasagem |
 | **`commodities_duckdb`** (`bronze.commodities_cotacao`) | Ingestão / Carga (Bronze) | Diária ou mensal, por série | Diária: **7 dias**; mensal: **75 dias** após o início do mês | $\ge 100$ linhas | `WARN` listando as séries atrasadas |
 
 ### Justificativa dos Prazos de SLA:
@@ -27,7 +30,7 @@ Documentamos nesta evidência as políticas formais de SLA (*Service Level Agree
 3. **IPCA/INPC e Salário Mínimo:** o IBGE divulga o mês por volta do dia 10 do mês seguinte e o DIEESE atualiza a tabela no começo dele. Antes da divulgação, o último mês da tabela começou há até ~70 dias; 75 cobre o pior caso sem alarme falso. O mínimo de 387 meses do salário mínimo é o `VOLUME_MINIMO_REFERENCIA` da Bronze.
 4. **PIB (SIDRA 1846):** `data_referencia` é o primeiro dia do trimestre e o IBGE divulga o trimestre ~2 meses depois de ele acabar, então logo antes de uma divulgação o último trimestre começou há ~247 dias; 260 dá folga. O mínimo de 920 linhas é 10 anos × 4 trimestres × 23 categorias.
 5. **PIB internacional:** o Banco Mundial só publica o ano fechado, no 2º semestre do ano seguinte; o ano mais recente pode ter 2 anos de defasagem. O guarda é grosseiro de propósito: pega fonte parada há anos, não atraso de semanas.
-6. **Clima:** mede-se a coleta do **catálogo de estações** (`clima_job`, diária), com mínimo de 604 estações (referência da Bronze, 671, menos 10%). As medições diárias (`clima_medicoes`) ficam de fora: a coleta é manual, por estação e intervalo, e não há cadência para declarar.
+6. **Clima:** mede-se a coleta do **catálogo de estações** (`clima_job`, diária), com mínimo de 604 estações (referência da Bronze, 671, menos 10%). As **medições** (`clima_medicoes_duckdb`) vêm do pacote anual do BDMEP, que o INMET republica cerca de 1×/mês com o mês anterior fechado: logo antes de uma republicação o último dia tem até ~40 dias; 60 dá folga. O mínimo de 50 mil leituras equivale a ~10 anos de 14 estações (a carga desde 2006 traz mais de 100 mil; ver [carga do BDMEP](clima_bdmep.md)).
 7. **Commodities:** a Alpha Vantage mistura séries diárias e mensais; cada série é avaliada contra o prazo do `intervalo` dela, e o metadado `series_atrasadas` lista as paradas.
 
 ---
@@ -100,7 +103,8 @@ Durante o desenvolvimento isolado da branch `feat/e3-pedro`, as tabelas da Bronz
 Conforme planejado:
 - **Na Entrega da Trilha:** O SLA foi validado e formalizado para a tabela de consumo de macroeconomia e seus ativos de origem.
 - **Na Revisão Geral Pós-Merge (feita):** Com as branches unificadas, os *Asset Checks* análogos foram estendidos em `orchestration/assets/checks.py` ao PIB setorial, PIB internacional, commodities Alpha Vantage, catálogo de clima INMET, salário mínimo DIEESE e IPCA/INPC (seção 1).
-- **Ainda de fora:** as medições diárias do clima (coleta manual, sem cadência) e um calendário de dias úteis do BCB para tornar exato o prazo de 5 dias de Dólar e Selic.
+- **Depois, com o BDMEP:** as medições diárias do clima ganharam check próprio (`check_clima_medicoes_freshness_e_volume`), o RONI (`check_enso_freshness_e_volume`: o valor do mês central usa o mês seguinte e sai no começo do outro, então logo antes da publicação seguinte o último mês tem até ~95 dias; 110 dá folga), e o clima provisório do Open-Meteo também (`check_clima_provisorio_freshness_e_volume`: 5 dias, porque a coleta vai até ontem e 5 dias cobrem um fim de semana sem coleta; mínimo de 16 leituras, um dia das estações do de-para).
+- **Ainda de fora:** um calendário de dias úteis do BCB para tornar exato o prazo de 5 dias de Dólar e Selic.
 
 ---
 

@@ -124,11 +124,12 @@ def test_metabase_conecta_com_o_leitor_e_nunca_com_o_dono(monkeypatch) -> None:
     assert detalhes["user"] != "inflatrack"
 
 
-def test_toda_pergunta_le_so_a_vitrine_serie() -> None:
+@pytest.mark.parametrize("arquivo", ["painel.toml", "painel_clima.toml"])
+def test_toda_pergunta_le_so_a_vitrine_serie(arquivo: str) -> None:
     """Seção 1.1: o Metabase lê só `serie`. Nada de `public`, DuckDB ou `int_*`."""
     import re
 
-    for pergunta in mp.ler_painel().perguntas:
+    for pergunta in mp.ler_painel(arquivo=arquivo).perguntas:
         sem_comentario = re.sub(r"--[^\n]*", "", pergunta.sql)
         # `extract(month from coluna)` não é leitura de tabela.
         sem_comentario = re.sub(r"extract\s*\([^)]*\)", "", sem_comentario, flags=re.IGNORECASE)
@@ -147,3 +148,19 @@ def test_cria_a_conexao_quando_nao_existe() -> None:
     assert metabase.garantir_banco(POSTGRES) == 99
     assert criados[0]["engine"] == "postgres"
     assert criados[0]["details"]["host"] == "db"
+
+
+def test_painel_do_clima_le_so_tabelas_copiadas_para_a_serie() -> None:
+    import re
+
+    from inflatrack.reverse_etl import exportar_serie
+
+    painel = mp.ler_painel(arquivo="painel_clima.toml")
+    assert painel.nome != mp.ler_painel().nome  # outro dashboard, não mistura com o do lojista
+    lidas = {
+        tabela.removeprefix("serie.")
+        for pergunta in painel.perguntas
+        for tabela in re.findall(r"\bserie\.(\w+)", pergunta.sql)
+    }
+    assert lidas <= set(exportar_serie.TABELAS) | {"dim_localidade"}
+    assert {"fct_clima_mensal", "fct_clima_polo_mensal", "fct_enso_mensal"} <= lidas

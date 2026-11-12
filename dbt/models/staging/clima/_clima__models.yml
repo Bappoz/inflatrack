@@ -9,9 +9,22 @@ models:
       - name: estado
         data_tests: [not_null]
   - name: stg_clima__medicao_diaria
-    description: Uma linha por estação x dia, considerando a última revisão disponível.
+    description: >
+      Uma linha por estação x dia: a última revisão do INMET (BDMEP) e, só depois do último
+      dia oficial, o provisório do Open-Meteo. Grão garantido por
+      assert_stg_clima__medicao_diaria_chave_unica.
     columns:
       - name: estacao_id
         data_tests: [not_null]
       - name: data_referencia
+        data_tests: [not_null]
+      - name: fonte
+        description: inmet_bdmep (medido) ou open_meteo (provisório, modelo em grade).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [inmet_bdmep, open_meteo]
+      - name: observado
+        description: Verdadeiro na medição do INMET; falso no provisório do Open-Meteo.
         data_tests: [not_null]

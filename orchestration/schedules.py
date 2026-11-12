@@ -33,6 +33,7 @@ pib_internacional_job = define_asset_job(
 )
 dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
+enso_job = define_asset_job("enso_job", AssetSelection.groups("enso"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 
 # As cargas do IPCA e do PIB no DuckDB não são particionadas (espelham o Delta inteiro) e
@@ -58,6 +59,7 @@ JOBS = [
     pib_internacional_job,
     dieese_job,
     clima_job,
+    enso_job,
     transacional_job,
     analitico_job,
 ]
@@ -115,6 +117,7 @@ SCHEDULES = [
     ScheduleDefinition(job=macro_job, cron_schedule="0 19 * * 1-5", execution_timezone=FUSO),
     # 1×/dia: 9 requisições cabem na cota de 25/dia.
     ScheduleDefinition(job=commodities_job, cron_schedule="0 8 * * *", execution_timezone=FUSO),
+    # 1×/dia: o catálogo é barato e as medições só baixam o pacote anual que o INMET republicou.
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
     # De hora em hora: cada leitura só traz o que mudou, e o WAL segura o resto entre as leituras.
     ScheduleDefinition(job=transacional_job, cron_schedule="0 * * * *", execution_timezone=FUSO),
@@ -124,5 +127,8 @@ SCHEDULES = [
         job=pib_internacional_job, cron_schedule="0 9 1 * *", execution_timezone=FUSO
     ),
     ScheduleDefinition(job=dieese_job, cron_schedule="0 9 5 * *", execution_timezone=FUSO),
+    # Segundas, 9h: o NOAA publica o RONI do mês no começo do mês seguinte; uma coleta por
+    # semana pega a publicação em até 7 dias e a eventual revisão da série.
+    ScheduleDefinition(job=enso_job, cron_schedule="0 9 * * 1", execution_timezone=FUSO),
     ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
 ]

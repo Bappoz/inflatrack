@@ -8,7 +8,7 @@ Do dado de origem ao consumo pelo lojista. As camadas estão em [Arquitetura Med
 
 ## O percurso, etapa por etapa
 
-1. **Extração** — o cliente de origem (`sidra.py`, `alphavantage.py`, `dolar_olinda.py`, `selic_sgs.py`, `pib.py`, `dieese.py`, `inmet.py`) fala com uma origem só e devolve o payload sem interpretá-lo.
+1. **Extração** — o cliente de origem (`sidra.py`, `alphavantage.py`, `dolar_olinda.py`, `selic_sgs.py`, `pib.py`, `dieese.py`, `inmet.py`, `open_meteo.py`, `noaa.py`) fala com uma origem só e devolve o payload sem interpretá-lo.
 2. **Resposta original** — o ingestor guarda a resposta antes de qualquer transformação, com o SHA-256 do corpo, na tabela `<fonte>_resposta` do Delta (o formato antigo, `.gz` em `data/raw/<fonte>/`, só é lido pelos comandos `importar`).
 3. **Bronze** — o mesmo ingestor parseia e tipa, e grava tabelas Delta Lake sobre Parquet em `data/parquet/<fonte>/`, com data de ingestão e procedência em cada linha. O loader espelha o Delta em `bronze.*` no DuckDB.
 4. **Silver** — os modelos de staging e intermediários do dbt fazem limpeza, deduplicação e resolução de chaves, e agregam cada fonte ao grão mensal. Dólar e Selic entram só com os dias úteis publicados (ver [ADR 0003](../adr/0003-bcb-macro.md)).
@@ -28,7 +28,9 @@ Em paralelo, o **PostgreSQL** atende o lado transacional: cadastro de lojista e 
 | Alpha Vantage | diária / mensal | diária | manual (`just seed-macro`) |
 | Banco Mundial (PIB da China) | anual | anual | manual (`just pib-china`) |
 | DIEESE (salário mínimo) | mensal | mensal | manual (`just salario-minimo`) |
-| INMET (clima e estações) | diária | diária | manual (`just clima`) |
+| INMET (clima e estações) | diária (pacote anual do BDMEP, republicado ~1×/mês) | diária | `clima_job` 1×/dia às 7h (`just clima` fora do Dagster) |
+| Open-Meteo (clima provisório) | diária (modelo, até ontem) | diária | no mesmo `clima_job`, depois do BDMEP |
+| NOAA (RONI, El Niño / La Niña) | mensal | mensal | `enso_job` toda segunda às 9h |
 
 O gatilho manual continua valendo, mas cada linha acima também é um ativo do Dagster, com retry, partições (IPCA, INPC e PIB) e backfill da janela histórica. Os agendamentos existem e nascem desligados; ver [Orquestração](../pipeline/orquestracao.md).
 

@@ -1,0 +1,79 @@
+# Painel de clima (validação), versionado no Git. Sincronize com
+#   uv run python scripts/metabase_painel.py --painel painel_clima.toml
+# Mesmas regras do painel do lojista (painel.toml): lê só o Postgres (`serie`), e o que vale é o
+# que está aqui. Serve para conferir se o clima está chegando e se faz sentido.
+
+[painel]
+nome = "InflaTrack — Clima (validação)"
+colecao = "InflaTrack (versionado)"
+descricao = "Gerado por scripts/metabase_painel.py a partir de scripts/sql/metabase/painel_clima.toml. Não edite na interface."
+
+[bancos.postgres]
+nome = "InflaTrack — Postgres"
+engine = "postgres"
+
+[[perguntas]]
+arquivo = "clima_c1_chegada_por_praca.sql"
+titulo = "Clima: o dado está chegando? (por praça)"
+descricao = "Último mês com dado, último mês fechado pelo INMET, dias do mês atual e cobertura em 12 meses. Lê serie.fct_clima_mensal."
+banco = "postgres"
+grafico = "table"
+posicao = { linha = 0, coluna = 0, largura = 14, altura = 9 }
+
+[[perguntas]]
+arquivo = "clima_c2_oficial_x_provisorio.sql"
+titulo = "Clima no mês atual: INMET (oficial) x Open-Meteo (provisório)"
+descricao = "Dias do mês corrente por praça. O provisório só cobre o que o INMET ainda não publicou. Lê serie.fct_clima_mensal."
+banco = "postgres"
+grafico = "bar"
+eixo_x = "praca"
+eixo_y = ["dias_oficiais_inmet", "dias_provisorios_open_meteo"]
+posicao = { linha = 0, coluna = 14, largura = 10, altura = 9 }
+
+[[perguntas]]
+arquivo = "clima_c3_temperatura_pracas.sql"
+titulo = "Temperatura média mensal: São Paulo, Brasília, Porto Alegre e Belém"
+descricao = "Últimos 5 anos. A sazonalidade tem de aparecer. Lê serie.fct_clima_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["sao_paulo", "brasilia", "porto_alegre", "belem"]
+posicao = { linha = 9, coluna = 0, largura = 24, altura = 8 }
+
+[[perguntas]]
+arquivo = "clima_c4_alimentacao_x_clima_sp.sql"
+titulo = "São Paulo: IPCA de alimentos x anomalia de temperatura e SPI-3"
+descricao = "Desde ago/2016. Variação mensal do grupo Alimentação e bebidas, anomalia de temperatura (°C) e SPI-3. Lê serie.fct_inflacao_mensal e serie.fct_clima_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["ipca_alimentacao_pct", "anomalia_temperatura_c", "spi_3"]
+posicao = { linha = 17, coluna = 0, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "clima_c5_enso.sql"
+titulo = "El Niño e La Niña desde 2006 (RONI)"
+descricao = "RONI do NOAA e intensidade além do limiar de 0,5 °C (La Niña negativa). Lê serie.fct_enso_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["roni", "intensidade_el_nino", "intensidade_la_nina"]
+posicao = { linha = 17, coluna = 12, largura = 12, altura = 8 }
+
+[[perguntas]]
+arquivo = "clima_c6_spi_polos.sql"
+titulo = "Seca nos polos agrícolas: SPI-3"
+descricao = "Desde ago/2016. Abaixo de -1 seca moderada, -1,5 severa, -2 extrema. Lê serie.fct_clima_polo_mensal."
+banco = "postgres"
+grafico = "line"
+eixo_x = "mes_referencia"
+eixo_y = ["unai_feijao", "patrocinio_cafe", "passo_fundo_graos", "alegrete_arroz", "linhares_conilon"]
+posicao = { linha = 25, coluna = 0, largura = 24, altura = 8 }
+
+[[perguntas]]
+arquivo = "clima_c7_polos_ultimo_mes.sql"
+titulo = "Polos agrícolas: último mês fechado"
+descricao = "Temperatura, anomalia, chuva e SPI-3 do último mês que o INMET publicou inteiro. Lê serie.fct_clima_polo_mensal."
+banco = "postgres"
+grafico = "table"
+posicao = { linha = 33, coluna = 0, largura = 24, altura = 8 }

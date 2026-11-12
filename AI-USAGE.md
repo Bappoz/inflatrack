@@ -13,10 +13,10 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 26 | 2026-09-14 a 2026-11-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (13), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
+| Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
 
 
 ## Todas as sessões
@@ -71,6 +71,9 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
 | 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Docs de arquitetura e ADRs desatualizados (dbt, Silver, Gold, Metabase) e primeiro teste E2E |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
+| 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
+| 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
 
 ---
 
@@ -1268,6 +1271,112 @@ de tarefas nessa linha.
 - O asset `serie_postgres` com `AutomationCondition.eager` não foi visto disparando sozinho (o sensor de automação nasce desligado); só a execução manual.
 - A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
 
+### 2026-11-09 — Claude Code (Sonnet 5.5 e Opus 5.5) — comando `just painel-up` para pôr o Metabase no ar
+
+**O que a ferramenta fez**
+- Respondeu, lendo o `justfile` e o `docker-compose.yml`, que não havia comando `just` para subir o contêiner do Metabase (só `just metabase-painel`, que monta o painel) e que a interface fica em `http://localhost:3001` (`METABASE_PORT`).
+- Criou a receita `painel-up` no `justfile`: `just up` (Postgres), `just serie` (cópia da Gold para o schema `serie`), `docker compose --profile bi up -d --wait metabase` e, por último, `just metabase-painel`.
+- Conferiu antes que `just serie` e `just duckdb-ui` abrem o DuckDB só para leitura, então os dois podem rodar juntos.
+
+**O que foi verificado e como**
+- `just --dry-run painel-up` lista os quatro comandos na ordem esperada.
+
+**O que NÃO foi verificado**
+- A receita não foi executada de verdade: não se sabe se os 150 s de espera do `/api/health` no `metabase_painel.py` bastam para a primeira subida do Metabase nesta máquina.
+- Num volume do Postgres criado antes da migration 0005, o script para com erro pedindo a migration; esse caso não foi testado.
+
+**Continuação na mesma data**
+- O primeiro `just painel-up` do integrante falhou: `gold.dim_calendario` não existia. A ferramenta conferiu o DuckDB, abrindo só para leitura: havia só a Bronze, sem `bronze.ipca_*` e sem `bronze.transacional_mudanca`, embora o Delta das duas fontes já existisse.
+- `just materializar transacional_job` falhou na primeira vez porque o `just duckdb-ui` estava aberto e travava a escrita no arquivo. A ferramenta não encerrou o processo, só avisou o integrante. Depois que ele fechou a interface, o job rodou e levou 312 linhas ao DuckDB.
+- `just materializar analitico_job`: cargas do IPCA e do PIB no DuckDB, dbt com 264/264 OK e cópia para `serie`. Em seguida, `just painel-up` montou o dashboard (id 2, 7 perguntas).
+- Nenhum dado foi criado ou editado à mão, e nenhum código mudou além da receita nova: só rodaram receitas e jobs que já existiam. O `simular-cdc` não foi executado.
+
+**O que NÃO foi verificado**
+- Os valores exibidos no painel não foram conferidos contra a fonte nesta sessão.
+
+**Correção: origem das 312 mudanças do CDC**
+- A ferramenta tinha dito que as 312 mudanças "já estavam no Delta". Não estavam. Pelo histórico do Delta, só 13 eram de 2026-11-03. As outras 299 estavam pendentes no slot de CDC e foram gravadas no Delta em 2026-11-09 às 08:16, pela primeira tentativa do `transacional_job` (o passo do CDC funcionou, só o do DuckDB falhou).
+- Os eventos têm duas origens, conferidas no conteúdo de `depois` contra o código:
+  - `inflatrack.cdc.simular_mudancas` (`just simular-cdc`): lojista "Mercadinho Demonstração" (`criado_em` fixo em 2025-09-01), produtos Arroz 5kg, Leite 1L e Feijão 1kg.
+  - `tests/integration/test_cdc_transacional.py`: lojistas e produtos criados com `criado_em` = agora, custo de 700 centavos, apagados no fim do teste. Esses testes rodam no Postgres de desenvolvimento, e o slot de CDC captura tudo, então cada `just test` gera eventos para a Bronze. Os eventos são de 2026-11-03 a 2026-11-05.
+- Nenhum evento veio de dado real de lojista nem foi inventado pela ferramenta.
+- Não foi verificado se os eventos dos testes chegam à `gold.fct_reajuste_lojista` e ao painel.
+
+### 2026-11-11 — Claude Code (Opus 5.5) — revisão do PR #22 (clima): BDMEP até a Gold
+
+**O que a ferramenta fez**
+- Revisou o PR #22 (`feat/ajusteClima`, do Johnnatan) a pedido do integrante. Achou o PR em conflito com a main (que tinha fundido `ingest_clima` e `bronze_clima` em `bronze/clima.py`) e agendando a coleta diária pela rota `estacao/diaria` da API do INMET.
+- Testou a API: a rota diária responde 404 e a horária devolve 204 sem token. Os pacotes anuais do BDMEP, que a evidência da E2 já recomendava, estão no ar. Perguntou ao integrante antes de trocar a fonte, o ano inicial (2006), o formato da Gold e a inclusão de Fortaleza (A305) no de-para; seguiu o que ele escolheu.
+- Resolveu os conflitos, portou as mudanças do PR para `bronze/clima.py` e implementou a coleta pelo BDMEP: o CSV de cada estação vai inteiro para `clima_resposta`, as leituras horárias viram um resumo por dia em `clima_medicao`, e um manifesto por pacote evita baixar de novo o que não mudou.
+- Ajustou a Silver mensal (cobertura, extremos, chuva só com 80% dos dias, anomalia contra a normal só dos anos anteriores) e criou `gold.fct_clima_mensal` (praça do IPCA x mês, lags de 1 a 3 meses, `mes_fechado`). Criou também o check de frescura das medições.
+- Tirou o `init_db` de dentro do ativo dbt do Dagster (orquestração importando `scripts/`): os loaders já aplicam o DDL. Manteve a melhoria do PR no `scripts/init_db.py` e o `just duckdb-init`.
+- Pediu uma revisão independente do diff a um subagente. Corrigiu o que procedia: falha quando o pacote de um ano encerrado some ou não tem nenhuma estação, falha por arquivo sem descartar as outras estações, id repetido no lote, hora repetida no CSV, aviso quando o portal não manda `Last-Modified`, e grade e `mes_fechado` por praça. A revisão que volta ao valor anterior ficou registrada como limite.
+- Copiou o Delta de clima e o DuckDB do integrante para `data/backup-old-lixo/` antes de gravar; nada foi apagado.
+
+**O que foi verificado e como**
+- Coleta real de 2006 a 2026 nos dados locais. A primeira passada falhou em 2019 (acentos do cabeçalho trocados por `?`); o parser foi corrigido com teste de regressão. A segunda passada releu tudo, trouxe 2019 e não mudou nenhum valor dos outros anos: 110.687 leituras de 16 estações.
+- `dagster asset materialize --select '*gold/fct_clima_mensal'`: `RUN_SUCCESS`, check de frescura passando, dbt PASS=40. `dbt build` do projeto inteiro numa cópia do DuckDB: PASS=277.
+- `pytest` com Postgres descartável (projeto compose e porta próprios, para não gerar eventos de CDC no banco de desenvolvimento): todos passaram, nenhum pulado. Inclui um teste E2E novo, do .zip à Gold, com anomalia, lag e cobertura conferidos contra contas feitas fora do SQL.
+- Conferência de sanidade: São Paulo em set/2024 com +3,0 °C e −57 mm de chuva, a seca real daquele mês. Números completos em `docs/evidencias/e3/clima_bdmep.md`.
+
+**O que NÃO foi verificado**
+- O agendamento diário não rodou no `dagster dev`; só a materialização pela linha de comando.
+- Recife (A301) e Fortaleza (A305) não têm dado recente; a troca por outra estação ficou para a Squad.
+- O modelo preditivo ainda não existe: a utilidade das variáveis de clima para ele não foi medida.
+
+**Continuação (2026-11-11): clima provisório pelo Open-Meteo**
+- A pedido do integrante, pesquisou fontes grátis do clima do dia (Open-Meteo, NASA POWER, INMET com token, NOAA GHCN-Daily), testou as APIs ao vivo e comparou o Open-Meteo com o medido em Brasília. A temperatura ficou de 0,1 a 0,7 °C acima; a chuva divergiu muito. O integrante escolheu o Open-Meteo para cobrir os dias que o INMET ainda não publicou.
+- Implementou o provisório no fluxo Medallion: cliente `clients/open_meteo.py` (uma chamada para as 16 estações), JSON no Raw, tabela Delta e DuckDB à parte (`clima_medicao_provisoria`), staging que só usa o provisório depois do último dia oficial (`fonte`, `observado = false`), `dias_provisorios` na Gold com `mes_fechado` só pelo oficial, ativos `clima_provisorio` e `clima_provisorio_duckdb` no `clima_job` e check de frescura de 5 dias.
+- As coordenadas das estações entraram no seed de-para, tiradas do cabeçalho dos CSVs do BDMEP (a A305 não está no catálogo da API).
+- Achou na execução real que o `dbt seed` falhava num banco com o seed antigo, de 3 colunas; passou a usar `full_refresh: true` no seed, com teste que falha sem a correção. Os testes novos da CLI acharam `--provisorio --estacao` recusado pela validação, e a validação foi corrigida.
+- Atualizou a documentação da fonte, o dicionário, a orquestração, a Medallion, o SLA, a evidência e o README (atribuição CC BY 4.0).
+
+**O que foi verificado e como (continuação)**
+- `dagster job execute -j clima_job` com os dados locais: `RUN_SUCCESS`, 160 leituras provisórias (16 estações, 01 a 10/11/2026), os 3 checks de clima passando. A materialização até a Gold deu `RUN_SUCCESS` com dbt PASS=47.
+- Nenhum dia provisório em data já publicada pelo INMET. O E2E cobre a sobreposição (provisório de 8 a 15/02, oficial até 10/02: só 11 a 15 entram).
+
+**O que NÃO foi verificado (continuação)**
+- A troca automática do provisório pelo oficial com um pacote real novo do INMET; só nos testes, com pacote sintético.
+- O uso do Open-Meteo como não comercial foi lido nos termos, não confirmado com o Open-Meteo.
+
+**Continuação (2026-11-11): regra de mês incompleto e pesquisa sobre clima e safras**
+- O integrante questionou o corte de 80% na chuva. A ferramenta pesquisou o padrão da OMM (regra 3/5 para médias; nenhum dia faltando para totais) e mediu nos dados que a temperatura não tinha regra nenhuma (138 meses com média de menos da metade dos dias). Por escolha do integrante, aplicou a regra 3/5 à temperatura, à umidade e à chuva; nas médias só contam os dias já decorridos, no total de chuva também os ainda não decorridos.
+- Pesquisou como se analisa clima para safras (boletim Conab/INMET, ZARC da Embrapa, estudos do Banco Central sobre clima e inflação de alimentos, índices SPI/SPEI, graus-dia, ENSO/RONI) e comparou com o que o projeto já coleta, sem implementar nada novo.
+- Verificado: E2E com mês de 4 dias seguidos faltando (anulado) e de 5 espalhados (válido); `dbt build` completo numa cópia do banco com PASS=294; `pytest` com 413 passando. Não verificado: o efeito da regra nova no desempenho do modelo preditivo, que ainda não existe.
+
+**Continuação (2026-11-11 e 12): polos agrícolas, SPI-3 e RONI**
+- Implementou as três prioridades da pesquisa, com as escolhas do integrante: 14 estações em polos produtores (seed `seed_estacao_polo_agricola`, escolhidas pela cobertura medida em 2006, 2019 e 2025) e a Gold `fct_clima_polo_mensal`; o SPI-3 (McKee/OMM) só com anos anteriores (mínimo 10), em modelo Python do dbt com SciPy, dependência nova documentada na stack; e o RONI do NOAA como fonte nova (Bronze Delta, loader, `enso_job` semanal, check de frescura e `fct_enso_mensal` no formato do Banco Central, com `mes_publicacao` para evitar vazamento).
+- Extraiu as colunas de clima das duas Gold para a macro `colunas_clima_mensal`.
+- Achados no caminho: a grade do RONI cortava 1950–1978 e deixava sem lag o início de 1979 (os lags passaram a sair da série inteira); duas expectativas de teste da ferramenta estavam erradas (lag de 3 meses e valor de 1978) e foram corrigidas contra o arquivo real do NOAA.
+- Verificado com os dados locais pelo Dagster: `clima_job` e `enso_job` com `RUN_SUCCESS` e checks passando, Gold com dbt PASS=92; `dbt build` completo numa cópia do banco com PASS=339; `pytest` com 439 passando (Postgres descartável). Sanidade: SPI-3 de set/2024 marca seca extrema em Unaí e severa em Patrocínio e Varginha; o maior RONI desde 1979 é jan/1983.
+- Não verificado: o ganho das variáveis novas no modelo preditivo (que ainda não existe) e o agendamento semanal do `enso_job` no `dagster dev`.
+
+**Continuação (2026-11-12): revisão da documentação e treino com clima no PLAN**
+- A pedido do integrante, auditou a documentação contra as mudanças do clima e achou lacunas: componentes, fluxo de dados, índice do dicionário (ainda com as tabelas legadas), release notes, README do dbt e três diagramas, sendo que o `esquema-clima.svg` desenhava as tabelas da E1. Atualizou tudo e reescreveu os exemplos do dicionário do clima para a Gold, testando as consultas no banco.
+- Ao regenerar os diagramas, viu que o gerador desfazia uma correção feita à mão nos SVGs ("Metabase" voltava a "Streamlit"). Corrigiu o gerador, e o `medallion.svg` passou a sair idêntico ao commitado.
+- Acrescentou ao `PLAN_E3_E4.md` a Seção 2.4 (como treinar o modelo preditivo com clima: data de corte, só meses fechados, walk-forward sem ajuste na série inteira, defasagens por tipo de alimento, polo x grupo do IPCA, agregação antes de treinar, nulos, comparação com e sem clima) e atualizou a árvore de pastas e a situação do clima na 5.4.
+- Verificado: `mkdocs build --strict` sem aviso; consultas de exemplo rodadas no DuckDB local. Não verificado: as regras da Seção 2.4 na prática, porque o modelo ainda não existe.
+
+**Continuação (2026-11-12): painel de clima no Metabase**
+- Criou a migration `0006_serie_clima.sql` (cópias das três Gold de clima em `serie`, colunas geradas da Gold real, permissões como as da 0005), incluiu as tabelas em `exportar_serie.TABELAS`, deu ao `metabase_painel.py` a opção `--painel` e montou o dashboard "InflaTrack — Clima (validação)" com 7 perguntas (`painel_clima.toml`).
+- Aplicou no ambiente do integrante: migration no Postgres de desenvolvimento, `just serie` e sincronização do painel. A porta 3001 estava ocupada por outro projeto do integrante; em vez de parar o contêiner dele, subiu o Metabase na 3011 só naquela execução.
+- Um teste escrito pelo terminal ficou com um caractere de controle na regex e passava a não testar nada; foi corrigido, e os arquivos alterados foram varridos atrás de caracteres desse tipo.
+- Verificado: as 7 perguntas executadas pela API do Metabase, todas com dados; `pytest` com 444 passando. O painel mostrou estações paradas em Aracaju e Fortaleza (3% de cobertura em 12 meses).
+
+**Continuação (2026-11-12): falhas no `popular_banco_job` e retry quando o processo morre**
+- A pedido do integrante, sem mexer em código, investigou por que `commodities_job`, `enso_job` e `ipca_job` falharam no `popular_banco_job`. Leu os eventos dos runs no SQLite de `.dagster/history`, o código do Dagster instalado (1.13.26), o `target/dbt.log` e o log de eventos do Windows. Os três morreram do mesmo jeito: um processo criado pelo Dagster (do run, no IPCA; de um passo, nos outros dois) saiu com código 1, sem traceback e antes de o código da fonte rodar, quando as 11 fontes subiram juntas. O `pib_china_parquet` morreu igual e só passou na 3ª tentativa. Os três ficaram vermelhos porque o passo que caiu não tinha retry; o erro de gRPC do IPCA é efeito colateral da limpeza do run morto. A hipótese de falta de memória não foi confirmada: o Windows não registrou nada.
+- Depois, a pedido do integrante, ligou o `run_retries` no `.dagster/dagster.yaml` (até 2 vezes, com `retry_on_asset_or_op_failure: false`: só o run cujo processo morreu é refeito, e erro de verdade num passo não gasta a cota das commodities). Fez a op do `popular_banco_job` seguir o run refeito, consultando as tags `dagster/will_retry` e `dagster/auto_retry_run_id` pelo GraphQL, e deu ao próprio job `dagster/max_retries=0`. Os testes vieram antes da implementação.
+- Verificado: 96 testes de `tests/orchestration` passando, ruff limpo, a instância carregando a configuração nova e a query GraphQL validada contra o schema do Dagster. Pelos motivos gravados nos runs de hoje, `RUN_EXCEPTION` ou nenhum nos processos mortos e `STEP_FAILURE` no `transacional_job`, a configuração separa os dois casos.
+- Não verificado: um retry automático de verdade no `dagster dev` (o `popular_banco_job` não foi rodado de novo) e a causa de os processos morrerem.
+
+**Continuação (2026-11-12): por que o `transacional_job` falha**
+- Sem mexer em código nem no banco, investigou o `inflatrack.cdc.transacional terminou com código 1`. Consultou o Postgres só lendo e achou o slot `inflatrack_cdc` com `wal_status = lost`, o que faz o coletor desistir. A ferramenta atribuiu a perda primeiro à carga do IPCA de hoje e depois se corrigiu pelo log do Postgres: o slot foi invalidado em 2026-11-11 às 13:38 UTC, 508 MB acima do limite de 2 GB.
+- Causa, pelos checkpoints do log e pelas estatísticas das tabelas: o slot segura o WAL do servidor inteiro, e o WAL veio da cópia da Gold para `serie` (`DELETE` + `INSERT` de toda a `serie.fct_inflacao_mensal`, 1,66 milhão de linhas, ~1 GB de WAL por cópia), duas vezes em 2026-11-09 e uma em 2026-11-11. O coletor só avança o slot quando chegam mudanças das tabelas do lojista. Isso foi confirmado num Postgres 16 descartável: com escrita só fora da publicação, a leitura devolve 0 mensagens e o slot segura o WAL.
+- Concluiu que o problema se repete numa instalação limpa depois de duas cópias para `serie`, mesmo com o agendamento horário do CDC ligado. Propôs avançar o slot até o LSN lido quando não houver mudanças e tornar `serie` `UNLOGGED` (ou trocar `DELETE` por `TRUNCATE`).
+- Com a autorização do integrante, apagou o slot perdido e implementou as duas medidas, com os testes escritos antes: cada captura lê o slot só até o LSN do início e termina avançando até ele, mesmo sem mensagem; o exportador deixa cada tabela de `serie` `UNLOGGED` e só roda o `ALTER TABLE` quando ela ainda não é, para não travar o Metabase durante a cópia. Atualizou as docstrings e o ADR do CDC.
+- Verificado: testes de integração no Postgres de desenvolvimento (escrita fora da publicação avança o slot; com `avancar=False` não avança; transação aberta durante a captura chega na seguinte; tabela da migration vira `UNLOGGED` com índice e dados; cópia de 50 mil linhas com menos de 1 MB de WAL), `pytest` com 454 passando, ruff limpo e `mkdocs build --strict`. Nos dados reais, `just serie` passou de ~1 GB para 250 kB de WAL por cópia, com as 11 tabelas `UNLOGGED`. O integrante rodou os jobs de novo e confirmou que funcionou.
+- Não verificado: o comportamento das tabelas `UNLOGGED` depois de uma queda do Postgres (pela documentação, voltam vazias até o próximo `just serie`).
+
 ---
 
 ## Artur Fernandes Galdino
@@ -1574,3 +1683,18 @@ de tarefas nessa linha.
 
 ---
 
+### 2026-11-09 — GitHub Copilot — Automação de clima e preparo do DuckDB
+
+**O que a ferramenta fez**
+- Incluiu coleta e carga de medições no `clima_job`, com as 15 estações do mapeamento e janela dos últimos 7 dias completos, conforme escolhas confirmadas pelo usuário. Preservou overrides para histórico e fixou as datas no tick diário.
+- Reutilizou os DDLs existentes antes do dbt no just e no Dagster, respeitando `DBT_DUCKDB_PATH`, sem consultas à API, dados fictícios ou exclusão de cargas anteriores.
+- Acrescentou testes de configuração, datas, grafo, idempotência e build de clima em banco vazio; atualizou a documentação da fonte e da orquestração.
+
+**O que foi verificado e como**
+- Testes automatizados das trilhas de clima e orquestração, incluindo execução real do dbt para modelos e testes de clima em DuckDB temporário sem ingestão.
+- Ruff nos arquivos Python alterados, checagem de whitespace do diff e `just --dry-run dbt`, confirmando que a preparação antecede o build.
+- O build isolado usa seleção indireta `cautious` e inclui os seeds necessários, sem exigir tabelas de fontes fora da trilha.
+
+**O que NÃO foi verificado**
+- Disponibilidade atual do endpoint de medições do INMET, coleta real das 15 estações, execução do agendador em produção ou build completo das demais fontes.
+- A validação final por Pylance ficou indisponível por falha de conexão do servidor; a verificação executável foi feita pelos testes e pelo Ruff.

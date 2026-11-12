@@ -8,6 +8,7 @@ mora nesta pasta** e é recriado por um script:
 |---|---|
 | `painel.toml` | O dashboard: nome, conexões e, para cada pergunta, título, gráfico, eixos e posição |
 | `p<N>_*.sql` | Uma consulta por pergunta. O cabeçalho diz de onde ela lê e o que é provisório |
+| `painel_clima.toml` e `clima_c<N>_*.sql` | Segundo dashboard, **InflaTrack — Clima (validação)**: se o clima está chegando (cobertura por praça, oficial x provisório) e se faz sentido (temperatura, IPCA de alimentos x clima, El Niño, seca nos polos) |
 | `../../metabase_painel.py` | Lê esta pasta e cria ou atualiza tudo no Metabase pela API |
 
 ## Subir o painel do zero
@@ -31,6 +32,19 @@ cada loja. O script cria (ou atualiza a senha de) um login `METABASE_PG_USER`
 (padrão `metabase_painel`, senha `METABASE_PG_PASSWORD`) que só tem o papel
 `metabase_leitor` da migration 0005: `SELECT` em `serie` e nada mais. Quem faz isso é o script,
 e não uma migration, porque a senha vem do `.env` e não pode ir para o Git.
+
+## Painel do clima
+
+```bash
+just migrar 0006_serie_clima.sql      # só num volume do Postgres criado antes da 0006
+just serie                            # copia a Gold (inclui fct_clima_*, fct_enso_mensal)
+uv run python scripts/metabase_painel.py --painel painel_clima.toml
+```
+
+Lê `serie.fct_clima_mensal`, `serie.fct_clima_polo_mensal` e `serie.fct_enso_mensal`, criadas
+pela migration 0006. Se a porta do Metabase (`METABASE_PORT`) estiver ocupada por outro programa,
+suba com outra só naquela execução: `METABASE_PORT=3011 docker compose --profile bi up -d metabase`
+e rode o script com a mesma variável.
 
 ## Mudar ou criar uma pergunta
 

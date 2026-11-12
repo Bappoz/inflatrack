@@ -8,11 +8,19 @@ Ele nunca escreve em `bronze`. Exemplos prontos: `staging/pib/`, `staging/commod
 ```bash
 uv sync                      # instala dbt-core e dbt-duckdb
 uv run python -m inflatrack.loaders.load_<fonte>   # a Bronze precisa existir antes
-just dbt                     # = uv run dbt build (seeds, modelos e testes)
+just dbt                     # prepara DDLs existentes e roda dbt build (seeds, modelos e testes)
+just duckdb-init             # preparo sem coleta, antes de usar dbt diretamente
 uv run dbt build --select +int_<fonte>__mensal     # só a sua trilha
 ```
 
 `dbt_project.yml` e `profiles.yml` ficam na raiz: rode tudo a partir dela.
+
+O preparo aplica os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql` no banco
+selecionado por `DBT_DUCKDB_PATH` (ou no caminho padrão). Cria, entre outras, as tabelas
+vazias `bronze.clima_estacao` e `bronze.clima_medicao`, sem exigir ingestão real e sem
+apagar dados. No Dagster isso não é preciso: os loaders do clima e do salário mínimo
+aplicam o próprio DDL antes de carregar. Fontes sem DDL inicial continuam exigindo seu
+loader; a preparação não coleta dados nem substitui essa carga.
 
 ## O que criar (um arquivo por fonte, para não dar conflito)
 
@@ -47,7 +55,8 @@ sources:
 
 O `asset_key` é o nome do ativo do seu loader em `orchestration/assets/<fonte>.py` (ex.:
 `pib_duckdb`, `clima_duckdb`, `salario_minimo_duckdb`). Com ele, o Dagster roda o seu modelo
-depois do loader. Não é preciso escrever Python: todo modelo novo aparece sozinho no Dagster
+depois do loader. Não é preciso escrever Python (a exceção é `int_clima__spi_mensal.py`, porque o SPI-3 precisa
+da distribuição gama do SciPy, que o SQL do DuckDB não tem): todo modelo novo aparece sozinho no Dagster
 (`orchestration/assets/dbt_assets.py`), e os testes do dbt viram *asset checks*.
 
 ## Regras que valem para todos (PLAN_E3_E4.md, Seções 1 e 6)

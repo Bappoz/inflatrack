@@ -79,6 +79,7 @@ nav:
       - PIB da Rússia (World Bank): fontes/pib_russia.md
       - Salário Mínimo (DIEESE): fontes/salario_minimo.md
       - Dados do Clima (INMET): fontes/clima.md
+      - El Niño / La Niña (RONI, NOAA): fontes/enso.md
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
@@ -99,6 +100,7 @@ nav:
     - PIB da Rússia (World Bank): dicionario/pib_russia.md
     - Salário Mínimo (DIEESE): dicionario/salario_minimo.md
     - Dados do Clima (INMET): dicionario/clima.md
+    - El Niño / La Niña (RONI, NOAA): dicionario/enso.md
   - Evidências:
     - E1 — IPCA/INPC (SIDRA): evidencias/evidencias.md
     - E1 — Macroeconomia: evidencias/evidencias_macro.md
@@ -116,6 +118,7 @@ nav:
     - E3 — IPCA, lojista e Gold: evidencias/e3/ipca_lojista.md
     - E3 — Consulta na vitrine (EXPLAIN): evidencias/e3/explain_serie.md
     - E3 — SLA e frescura (câmbio x juros): evidencias/e3/sla_e_freshness.md
+    - E3 — Clima pelo BDMEP até a Gold: evidencias/e3/clima_bdmep.md
     - E3 — Release Notes: evidencias/e3/release_notes.md
     - Diário de bordo (Lucas): diario/lucas.md
     - Diário de bordo (Artur): diario/artur.md

@@ -1,19 +1,24 @@
 """Testes da camada Bronze em Delta para Dados do Clima (INMET).
 
-Cobre transformação fiel sem valores padrão inventados, checagens de
-integridade geográfica e volume, idempotência em Delta e importação do Raw.
+Cobre o catálogo (transformação fiel sem valores padrão inventados, checagens de integridade
+geográfica e volume, importação do Raw) e as medições do BDMEP (CSV no Raw, idempotência,
+revisão, manifesto do pacote anual e falha parcial), além da carga no DuckDB.
 """
 
 import gzip
 import json
-from datetime import UTC, datetime
+import os
+import subprocess
+import sys
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from deltalake import DeltaTable
-from inflatrack.load_clima import carregar_bronze_medicoes
 
 from inflatrack.bronze import clima as bronze_clima
+from inflatrack.loaders.load_clima import carregar_bronze_medicoes
+from tests.clima_bdmep import ClienteBdmepFalso, ClienteOpenMeteoFalso, csv_bdmep
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "clima"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
@@ -149,111 +154,192 @@ def test_gravar_atualizacao_estacao(tmp_path: Path, payload_estacoes) -> None:
     assert len(versoes) == 2
 
 
-def test_gravar_medicoes_idempotente_e_preserva_revisao(tmp_path: Path) -> None:
-    destino = tmp_path / "clima"
-    payload = [
-        {
-            "CD_ESTACAO": "A001",
-            "DT_MEDICAO": "2026-10-01",
-            "TEM_MIN": "0.0",
-            "TEM_MAX": "20.0",
-            "TEM_MED": "10.0",
-            "CHUVA": "0.0",
+def _pacotes(*anos: int) -> dict[int, dict[str, str]]:
+    """Um pacote por ano com A001 (Brasília) e A002 (Goiânia), dois dias de janeiro cada."""
+    return {
+        ano: {
+            estacao: csv_bdmep(
+                estacao, {date(ano, 1, 1): (20.0 + i, 0.5), date(ano, 1, 2): (21.0 + i, 0.0)}
+            )
+            for i, estacao in enumerate(("A001", "A002"))
         }
+        for ano in anos
+    }
+
+
+def test_gravar_csvs_bdmep_idempotente_e_preserva_revisao(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    texto = csv_bdmep("A001", {date(2026, 10, 1): (10.0, 0.0)})
+    requisicao = "https://portal.inmet.gov.br/uploads/dadoshistoricos/2026.zip#A001.CSV"
+
+    primeira = bronze_clima.gravar_csvs_bdmep(destino, [(requisicao, texto)], QUANDO)
+    repetida = bronze_clima.gravar_csvs_bdmep(destino, [(requisicao, texto)], QUANDO)
+    revisado = csv_bdmep("A001", {date(2026, 10, 1): (11.0, 0.0)})
+    revisao = bronze_clima.gravar_csvs_bdmep(destino, [(requisicao, revisado)], QUANDO)
+
+    assert (primeira.respostas_novas, primeira.linhas_lidas, primeira.linhas_novas) == (1, 1, 1)
+    assert (repetida.respostas_novas, repetida.linhas_novas) == (0, 0)
+    assert (revisao.respostas_novas, revisao.linhas_novas) == (1, 1)
+    medicoes = tabela(destino, "medicao")
+    assert {linha["temp_media"] for linha in medicoes} == {10.0, 11.0}
+    assert all(linha["precipitacao_total_mm"] == 0.0 for linha in medicoes)
+    respostas = tabela(destino, "resposta")
+    assert {r["tipo_conteudo"] for r in respostas} == {bronze_clima.TIPO_CSV_BDMEP}
+    assert {r["corpo"] for r in respostas} == {texto, revisado}
+
+
+def test_csv_sem_dia_valido_nao_entra_no_raw(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    vazio = csv_bdmep("A001", {}) + "2026/10/01;0000 UTC" + ";" * 18 + "\n"
+
+    gravacao = bronze_clima.gravar_csvs_bdmep(destino, [("x#A001.CSV", vazio)], QUANDO)
+
+    assert gravacao == bronze_clima.GravacaoMedicoes(0, 0, 0)
+    assert not DeltaTable.is_deltatable(str(destino / "resposta"))
+
+
+def test_processar_medicoes_grava_estacoes_pedidas_e_pula_pacote_sem_mudanca(
+    tmp_path: Path,
+) -> None:
+    destino = tmp_path / "clima"
+    cliente = ClienteBdmepFalso(_pacotes(2024, 2025))
+
+    primeira = bronze_clima.processar_medicoes(
+        cliente, ["A001"], [2024, 2025, 2026], destino, ano_corrente=2026
+    )
+
+    assert primeira.anos_processados == [2024, 2025]
+    assert primeira.anos_nao_publicados == [2026]
+    assert (primeira.respostas_novas, primeira.medicoes_novas, primeira.falhas) == (2, 4, [])
+    assert {linha["estacao_id"] for linha in tabela(destino, "medicao")} == {"A001"}
+    manifestos = [
+        r for r in tabela(destino, "resposta") if r["tipo_conteudo"] == bronze_clima.TIPO_MANIFESTO
+    ]
+    assert len(manifestos) == 2
+
+    segunda = bronze_clima.processar_medicoes(cliente, ["A001"], [2024, 2025], destino)
+
+    assert segunda.anos_inalterados == [2024, 2025]
+    assert cliente.baixados == [2024, 2025]  # nada foi baixado de novo
+
+
+def test_processar_medicoes_baixa_de_novo_quando_o_inmet_republica_ou_o_de_para_muda(
+    tmp_path: Path,
+) -> None:
+    destino = tmp_path / "clima"
+    cliente = ClienteBdmepFalso(_pacotes(2025))
+    bronze_clima.processar_medicoes(cliente, ["A001"], [2025], destino)
+
+    # Estação nova no de-para: o mesmo pacote é relido só para trazê-la.
+    novo_de_para = bronze_clima.processar_medicoes(cliente, ["A001", "A002"], [2025], destino)
+    # O INMET republica o pacote: baixa, mas leituras idênticas não duplicam.
+    cliente.versao = "v2"
+    republicado = bronze_clima.processar_medicoes(cliente, ["A001", "A002"], [2025], destino)
+
+    assert cliente.baixados == [2025, 2025, 2025]
+    assert (novo_de_para.respostas_novas, novo_de_para.medicoes_novas) == (1, 2)
+    assert (republicado.respostas_novas, republicado.medicoes_novas) == (0, 0)
+    assert len(tabela(destino, "medicao")) == 4
+
+
+def test_falha_num_ano_nao_impede_os_outros_e_e_retentada(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    cliente = ClienteBdmepFalso(_pacotes(2024, 2025))
+    cliente.falhar_em = {2024}
+
+    com_falha = bronze_clima.processar_medicoes(cliente, ["A001"], [2024, 2025], destino)
+    cliente.falhar_em = set()
+    retentativa = bronze_clima.processar_medicoes(cliente, ["A001"], [2024, 2025], destino)
+
+    assert com_falha.anos_processados == [2025]
+    assert com_falha.falhas and com_falha.falhas[0].startswith("2024:")
+    assert retentativa.anos_processados == [2024]
+    assert retentativa.anos_inalterados == [2025]
+
+
+def _manifestos(destino: Path) -> list[dict]:
+    if not DeltaTable.is_deltatable(str(destino / "resposta")):
+        return []
+    return [
+        r for r in tabela(destino, "resposta") if r["tipo_conteudo"] == bronze_clima.TIPO_MANIFESTO
     ]
 
-    primeira = bronze_clima.gravar_medicoes(
-        destino,
-        payload,
-        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
-        ingerido_em=QUANDO,
-    )
-    repetida = bronze_clima.gravar_medicoes(
-        destino,
-        payload,
-        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
-        ingerido_em=datetime(2026, 10, 12, 10, 0, tzinfo=UTC),
-    )
-    payload_revisado = [dict(payload[0], TEM_MED="11.0")]
-    revisao = bronze_clima.gravar_medicoes(
-        destino,
-        payload_revisado,
-        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
-        ingerido_em=datetime(2026, 10, 12, 10, 0, tzinfo=UTC),
+
+def test_ano_encerrado_sem_pacote_e_falha_nao_ano_nao_publicado(tmp_path: Path) -> None:
+    cliente = ClienteBdmepFalso(_pacotes(2025))
+
+    resumo = bronze_clima.processar_medicoes(
+        cliente, ["A001"], [2024, 2025], tmp_path / "clima", ano_corrente=2026
     )
 
-    assert primeira.linhas_lidas == 1
-    assert primeira.linhas_novas == 1
-    assert repetida.linhas_novas == 0
-    assert revisao.linhas_novas == 1
-    medicoes = tabela(destino, "medicao")
-    assert len(medicoes) == 2
-    assert {linha["temp_media"] for linha in medicoes} == {10.0, 11.0}
-    assert all(linha["temp_min"] == 0.0 for linha in medicoes)
+    assert resumo.anos_nao_publicados == []
+    assert resumo.falhas and resumo.falhas[0].startswith("2024:")
+    assert resumo.anos_processados == [2025]
 
 
-def test_gravar_medicoes_guarda_sentinela_como_null_delta(tmp_path: Path) -> None:
-    gravacao = bronze_clima.gravar_medicoes(
-        tmp_path / "clima",
-        [
-            {
-                "CD_ESTACAO": "A001",
-                "DT_MEDICAO": "2026-10-01",
-                "TEM_MIN": "-9999",
-                "TEM_MAX": "0.0",
-                "CHUVA": "0.0",
-            }
-        ],
-        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
-        ingerido_em=QUANDO,
-    )
+def test_pacote_sem_nenhuma_estacao_pedida_falha_e_nao_grava_manifesto(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    cliente = ClienteBdmepFalso(_pacotes(2025))
+
+    resumo = bronze_clima.processar_medicoes(cliente, ["A999"], [2025], destino)
+
+    assert resumo.falhas and "nenhuma das estações" in resumo.falhas[0]
+    assert _manifestos(destino) == []
+
+
+def test_csv_recusado_nao_derruba_as_outras_estacoes_e_o_ano_e_retentado(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    pacotes = _pacotes(2025)
+    pacotes[2025]["A002"] = pacotes[2025]["A002"].replace("PRECIPITAÇÃO TOTAL", "CHUVA")
+    cliente = ClienteBdmepFalso(pacotes)
+
+    resumo = bronze_clima.processar_medicoes(cliente, ["A001", "A002"], [2025], destino)
+
+    assert resumo.anos_processados == []
+    assert len(resumo.falhas) == 1 and "A002" in resumo.falhas[0]
+    assert {linha["estacao_id"] for linha in tabela(destino, "medicao")} == {"A001"}
+    assert _manifestos(destino) == []  # a próxima coleta baixa de novo
+
+
+def test_codigo_do_cabecalho_diferente_do_nome_do_arquivo_e_recusado(tmp_path: Path) -> None:
+    texto = csv_bdmep("A002", {date(2025, 1, 1): (20.0, 0.0)})
+    requisicao = "https://x/2025.zip#2025/INMET_CO_DF_A001_BRASILIA_01-01-2025_A_31-12-2025.CSV"
+
+    gravacao = bronze_clima.gravar_csvs_bdmep(tmp_path / "clima", [(requisicao, texto)], QUANDO)
+
+    assert gravacao.linhas_lidas == 0
+    assert gravacao.falhas and "A002" in gravacao.falhas[0]
+
+
+def test_mesma_leitura_em_dois_arquivos_do_lote_entra_uma_vez(tmp_path: Path) -> None:
+    import duckdb
+
+    destino = tmp_path / "clima"
+    texto = csv_bdmep("A001", {date(2025, 1, 1): (20.0, 0.0)})
+    arquivos = [("x#parte1.CSV", texto), ("x#parte2.CSV", texto + "\n")]
+
+    gravacao = bronze_clima.gravar_csvs_bdmep(destino, arquivos, QUANDO)
 
     assert gravacao.linhas_novas == 1
-    medicao = tabela(tmp_path / "clima", "medicao")[0]
-    assert medicao["temp_min"] is None
-    assert medicao["temp_max"] == 0.0
-    assert medicao["precipitacao_total_mm"] == 0.0
+    with duckdb.connect(":memory:") as conexao:
+        assert carregar_bronze_medicoes(conexao, destino) == 1
 
 
-def test_processar_medicoes_busca_estacao_e_persiste_delta(tmp_path: Path) -> None:
-    class ClienteFake:
-        def buscar_dados_estacao(self, estacao_id, data_inicio, data_fim):
-            assert (estacao_id, data_inicio, data_fim) == ("A001", "2026-10-01", "2026-10-02")
-            return [
-                {
-                    "CD_ESTACAO": "A001",
-                    "DT_MEDICAO": "2026-10-01",
-                    "TEM_MIN": "0.0",
-                    "TEM_MAX": "20.0",
-                    "CHUVA": "0.0",
-                }
-            ]
+def test_mudar_a_versao_da_leitura_rele_o_pacote(tmp_path: Path, monkeypatch) -> None:
+    destino = tmp_path / "clima"
+    cliente = ClienteBdmepFalso(_pacotes(2025))
+    bronze_clima.processar_medicoes(cliente, ["A001"], [2025], destino)
 
-    respostas, medicoes = bronze_clima.processar_medicoes(
-        ClienteFake(), ["A001"], "2026-10-01", "2026-10-02", tmp_path / "clima"
-    )
+    monkeypatch.setattr(bronze_clima, "VERSAO_LEITURA", bronze_clima.VERSAO_LEITURA + 1)
+    bronze_clima.processar_medicoes(cliente, ["A001"], [2025], destino)
 
-    assert respostas == 1
-    assert medicoes == 1
-    assert tabela(tmp_path / "clima", "medicao")[0]["temp_min"] == 0.0
+    assert cliente.baixados == [2025, 2025]
 
 
 def test_loader_medicoes_delta_idempotente(tmp_path: Path) -> None:
     destino = tmp_path / "clima"
-    bronze_clima.gravar_medicoes(
-        destino,
-        [
-            {
-                "CD_ESTACAO": "A001",
-                "DT_MEDICAO": "2026-10-01",
-                "TEM_MIN": "0.0",
-                "TEM_MAX": "20.0",
-                "CHUVA": "0.0",
-            }
-        ],
-        requisicao="/estacao/diaria/2026-10-01/2026-10-01/A001",
-        ingerido_em=QUANDO,
-    )
+    texto = csv_bdmep("A001", {date(2026, 10, 1): (0.0, 0.0)})
+    bronze_clima.gravar_csvs_bdmep(destino, [("x#A001.CSV", texto)], QUANDO)
 
     import duckdb
 
@@ -261,10 +347,32 @@ def test_loader_medicoes_delta_idempotente(tmp_path: Path) -> None:
         assert carregar_bronze_medicoes(conexao, destino) == 1
         assert carregar_bronze_medicoes(conexao, destino) == 1
         leitura = conexao.execute(
-            "select temp_min, precipitacao_total_mm from bronze.clima_medicao"
+            "select temp_min, precipitacao_total_mm, horas_com_registro from bronze.clima_medicao"
         ).fetchone()
 
-    assert leitura == (0.0, 0.0)
+    assert leitura == (-0.5, 0.0, 24)
+
+
+def test_ddl_acrescenta_horas_em_banco_criado_antes_do_bdmep(tmp_path: Path) -> None:
+    import duckdb
+
+    from inflatrack.loaders.load_clima import SCHEMA_SQL
+
+    db = tmp_path / "antigo.duckdb"
+    with duckdb.connect(str(db)) as conexao:
+        conexao.execute("create schema bronze")
+        conexao.execute(
+            "create table bronze.clima_medicao (id_medicao varchar primary key, "
+            "estacao_id varchar not null, data_referencia date not null, temp_min double, "
+            "temp_max double, temp_media double, precipitacao_total_mm double, "
+            "umidade_relativa_media_pct double, umidade_relativa_min_pct double, "
+            "observado boolean not null, _id_resposta varchar not null, _fonte varchar not null, "
+            "_requisicao varchar not null, _ingerido_em timestamptz not null)"
+        )
+        conexao.execute(SCHEMA_SQL.read_text(encoding="utf-8"))
+        colunas = {c[0] for c in conexao.execute("describe bronze.clima_medicao").fetchall()}
+
+    assert "horas_com_registro" in colunas
 
 
 def test_importar_raw(tmp_path: Path, payload_estacoes) -> None:
@@ -314,3 +422,207 @@ def test_carregar_duckdb_modos(tmp_path: Path, payload_estacoes) -> None:
     # Modo 2: so_acrescenta (sem novas estações, total permanece 671)
     total2 = bronze_clima.carregar_duckdb(destino, db_path, modo="so_acrescenta")
     assert total2 == 671
+
+
+def test_inicializacao_sem_delta_cria_bronze_e_preserva_dados(
+    tmp_path, monkeypatch, payload_estacoes
+) -> None:
+    import duckdb
+
+    from inflatrack.loaders.load_clima import carregar_bronze_estacoes
+    from scripts.init_db import init_db
+
+    db = tmp_path / "banco" / "teste.duckdb"
+    monkeypatch.setenv("DBT_DUCKDB_PATH", str(db))
+    init_db()
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (0,)
+        assert conexao.execute("select count(*) from bronze.clima_medicao").fetchone() == (0,)
+        destino = tmp_path / "delta"
+        bronze_clima.gravar(destino, payload_estacoes, ingerido_em=QUANDO)
+        assert carregar_bronze_estacoes(conexao, destino) == 671
+    init_db()
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (671,)
+
+
+def test_loader_sem_delta_prepara_tabelas_mas_nao_reporta_carga_com_sucesso(tmp_path):
+    import duckdb
+
+    from inflatrack import load_clima
+
+    db = tmp_path / "teste.duckdb"
+    assert (
+        load_clima.main(
+            [
+                "--db",
+                str(db),
+                "--delta-dir",
+                str(tmp_path / "ausente"),
+                "--parquet-estacoes",
+                str(tmp_path / "ausente.parquet"),
+                "--parquet-clima",
+                str(tmp_path / "ausente_diario.parquet"),
+            ]
+        )
+        == 1
+    )
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute("select count(*) from bronze.clima_estacao").fetchone() == (0,)
+        assert conexao.execute("select count(*) from bronze.clima_medicao").fetchone() == (0,)
+
+
+def test_dbt_clima_build_em_banco_vazio_sem_ingestao(tmp_path, monkeypatch):
+    import duckdb
+
+    from scripts.init_db import init_db
+
+    db = tmp_path / "vazio.duckdb"
+    monkeypatch.setenv("DBT_DUCKDB_PATH", str(db))
+    init_db()
+    # Banco de quem já rodou o dbt antes das coordenadas: o seed existia com 3 colunas, e o
+    # `dbt seed` sem full refresh tentava reaproveitar essa tabela e falhava.
+    with duckdb.connect(str(db)) as conexao:
+        conexao.execute("create schema if not exists silver")
+        conexao.execute(
+            "create table silver.seed_de_para_estacao_localidade "
+            "(estacao_id varchar, codigo_localidade integer, justificativa varchar)"
+        )
+    raiz = Path(__file__).resolve().parents[2]
+    resultado = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dbt.cli.main",
+            "build",
+            "--project-dir",
+            str(raiz),
+            "--profiles-dir",
+            str(raiz),
+            "--target-path",
+            str(tmp_path / "target"),
+            "--log-path",
+            str(tmp_path / "logs"),
+            "--indirect-selection",
+            "cautious",
+            "--select",
+            "+fct_clima_mensal",
+            "stg_clima__estacao",
+        ],
+        cwd=raiz,
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    with duckdb.connect(str(db)) as conexao:
+        assert conexao.execute(
+            "select count(*) from silver.int_clima__anomalia_mensal"
+        ).fetchone() == (0,)
+        assert conexao.execute("select count(*) from silver.stg_clima__estacao").fetchone() == (0,)
+        assert conexao.execute("select count(*) from gold.fct_clima_mensal").fetchone() == (0,)
+
+
+# --- Clima provisório (Open-Meteo) -------------------------------------------------------------
+
+
+def _oficial_ate(destino: Path, ultimo: date) -> None:
+    texto = csv_bdmep("A001", {ultimo - timedelta(days=1): (20.0, 0.0), ultimo: (20.0, 0.0)})
+    bronze_clima.gravar_csvs_bdmep(destino, [("x#A001.CSV", texto)], QUANDO)
+
+
+def test_provisorio_cobre_do_dia_seguinte_ao_ultimo_oficial_ate_ontem(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    _oficial_ate(destino, date(2026, 10, 31))
+    dias = {date(2026, 10, 30) + timedelta(days=i): (25.0, 1.0) for i in range(14)}
+    cliente = ClienteOpenMeteoFalso({"A001": dias})
+
+    grav = bronze_clima.processar_provisorio(
+        cliente, {"A001": (-15.8, -47.9)}, destino, hoje=date(2026, 11, 12)
+    )
+
+    assert cliente.janelas == [(date(2026, 11, 1), date(2026, 11, 11))]
+    assert (grav.inicio, grav.fim, grav.linhas_novas) == (date(2026, 11, 1), date(2026, 11, 11), 11)
+    provisorias = tabela(destino, "medicao_provisoria")
+    assert {linha["fonte"] for linha in provisorias} == {"open_meteo"}
+    assert min(linha["data_referencia"] for linha in provisorias) == date(2026, 11, 1)
+    # O JSON original fica no Raw, ao lado dos CSVs do BDMEP.
+    assert any(
+        r["_requisicao"].startswith("https://archive-api") for r in tabela(destino, "resposta")
+    )
+
+
+def test_provisorio_relido_nao_duplica_e_guarda_a_revisao_do_modelo(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    _oficial_ate(destino, date(2026, 10, 31))
+    dias = {date(2026, 11, 1): (25.0, 1.0), date(2026, 11, 2): (26.0, 0.0)}
+    coordenadas = {"A001": (-15.8, -47.9)}
+    hoje = date(2026, 11, 3)
+
+    bronze_clima.processar_provisorio(
+        ClienteOpenMeteoFalso({"A001": dias}), coordenadas, destino, hoje
+    )
+    repetida = bronze_clima.processar_provisorio(
+        ClienteOpenMeteoFalso({"A001": dias}), coordenadas, destino, hoje
+    )
+    dias[date(2026, 11, 2)] = (24.0, 3.0)  # a reanálise ERA5 substituiu a previsão
+    revisada = bronze_clima.processar_provisorio(
+        ClienteOpenMeteoFalso({"A001": dias}), coordenadas, destino, hoje
+    )
+
+    assert (repetida.resposta_nova, repetida.linhas_novas) == (False, 0)
+    assert revisada.linhas_novas == 1
+    assert len(tabela(destino, "medicao_provisoria")) == 3
+
+
+def test_sem_dado_oficial_o_provisorio_nao_e_coletado(tmp_path: Path) -> None:
+    cliente = ClienteOpenMeteoFalso({"A001": {date(2026, 11, 1): (25.0, 1.0)}})
+
+    grav = bronze_clima.processar_provisorio(
+        cliente, {"A001": (-15.8, -47.9)}, tmp_path / "clima", hoje=date(2026, 11, 12)
+    )
+
+    assert cliente.janelas == []
+    assert grav.linhas_lidas == 0
+
+
+def test_inmet_em_dia_dispensa_o_provisorio(tmp_path: Path) -> None:
+    destino = tmp_path / "clima"
+    _oficial_ate(destino, date(2026, 11, 11))
+    cliente = ClienteOpenMeteoFalso({"A001": {}})
+
+    bronze_clima.processar_provisorio(
+        cliente, {"A001": (-15.8, -47.9)}, destino, date(2026, 11, 12)
+    )
+
+    assert cliente.janelas == []
+
+
+def test_loader_espelha_o_provisorio_em_tabela_separada(tmp_path: Path) -> None:
+    import duckdb
+
+    from inflatrack.loaders.load_clima import carregar_bronze_provisorias
+
+    destino = tmp_path / "clima"
+    _oficial_ate(destino, date(2026, 10, 31))
+    bronze_clima.processar_provisorio(
+        ClienteOpenMeteoFalso({"A001": {date(2026, 11, 1): (25.0, 1.0)}}),
+        {"A001": (-15.8, -47.9)},
+        destino,
+        hoje=date(2026, 11, 2),
+    )
+
+    with duckdb.connect(":memory:") as conexao:
+        assert carregar_bronze_provisorias(conexao, destino) == 1
+        assert carregar_bronze_provisorias(conexao, destino, modo="so_acrescenta") == 1
+        assert carregar_bronze_medicoes(conexao, destino) == 2  # o oficial fica onde estava
+        fonte = conexao.execute("select fonte from bronze.clima_medicao_provisoria").fetchone()
+    assert fonte == ("open_meteo",)
+
+
+def test_coordenadas_do_de_para_estao_no_brasil() -> None:
+    coordenadas = bronze_clima.coordenadas_mapeadas()
+
+    assert set(coordenadas) == set(bronze_clima.estacoes_mapeadas())
+    assert all(-34 <= lat <= 6 and -74 <= lon <= -34 for lat, lon in coordenadas.values())

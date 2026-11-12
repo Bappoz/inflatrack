@@ -175,9 +175,14 @@ test:
 # O gate antes de dizer "pronto".
 check: fmt lint test
 
+# Aplica os DDLs idempotentes de scripts/sql/setup_duckdb*.sql no banco de DBT_DUCKDB_PATH:
+# sem consultar APIs e sem apagar dados. Fontes sem DDL (PIB, commodities...) exigem o loader.
+duckdb-init:
+    uv run python scripts/init_db.py
+
 # Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
-# Os loaders precisam ter rodado antes: o dbt só lê bronze.*.
-dbt:
+# O dbt só lê bronze.*: os loaders precisam ter rodado (o duckdb-init cobre as tabelas com DDL).
+dbt: duckdb-init
     uv run dbt build
 
 # Só os testes analíticos (Nível 3 da pirâmide).
@@ -195,6 +200,11 @@ explain-serie:
 # Recria o painel do Metabase a partir de scripts/sql/metabase/ (Metabase no ar: profile bi).
 metabase-painel:
     uv run python scripts/metabase_painel.py
+
+# Põe o painel no ar em http://localhost:3001 (METABASE_PORT no .env): Postgres, vitrine `serie`,
+# contêiner do Metabase e o painel. A Gold precisa existir no DuckDB (dbt ou Dagster antes).
+painel-up: up serie && metabase-painel
+    docker compose --profile bi up -d --wait metabase
 
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
@@ -307,16 +317,25 @@ bronze-salario-minimo-checar:
 bronze-salario-minimo-load modo="substitui":
     uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
-# INMET: Dados de Clima e Estações
+# INMET: catálogo de estações (API) e medições diárias (BDMEP, desde 2006). A primeira
+# coleta baixa ~20 pacotes anuais; as seguintes só o que o INMET republicou. Depois, o clima
+# provisório (Open-Meteo) cobre do dia seguinte ao último publicado pelo INMET até ontem.
 clima-ingest:
     uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --medicoes
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+
+# Só o clima provisório (Open-Meteo), sem baixar o BDMEP.
+clima-provisorio:
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+    uv run python -m inflatrack.loaders.load_clima --tabela provisoria
 
 clima-load:
     uv run python -m inflatrack.loaders.load_clima
 
 clima: clima-ingest clima-load
 
-# Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
+# Bronze do Clima em Delta (data/parquet/clima/): só o cadastro de estações.
 bronze-clima:
     uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
 
