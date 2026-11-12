@@ -11,6 +11,10 @@ Regras:
 * Na primeira vez, a tabela é criada com as colunas da Gold. Depois, cada cópia apaga as
   linhas e insere de novo, **sem recriar a tabela**: índices, permissões e RLS criados por
   migration em ``serie`` continuam valendo.
+* As tabelas de ``serie`` são UNLOGGED (a cópia converte as que vieram de migration): a cópia
+  não gera WAL e não enche o slot do CDC. O custo: se o Postgres cair sem desligar direito,
+  elas voltam vazias e o painel fica sem dado até a próxima cópia (``just serie``). Nada se
+  perde, porque tudo sai da Gold.
 * Todas as tabelas vão numa transação só do Postgres: o painel nunca vê metade de uma carga.
   Se a estrutura de uma tabela da Gold mudar, a cópia falha e nada é alterado; ajuste a
   migration (ou apague a tabela em ``serie`` para ela ser recriada).
@@ -63,6 +67,23 @@ def _colunas(conexao: duckdb.DuckDBPyConnection, catalogo: str, schema: str, tab
     ).fetchall()
 
 
+def _sem_wal(conexao: duckdb.DuckDBPyConnection, schema: str, tabela: str) -> None:
+    """Deixa ``pg.<schema>.<tabela>`` UNLOGGED: apagar e inserir tudo não gera WAL.
+
+    O slot do CDC segura o WAL do servidor inteiro. Com ``fct_inflacao_mensal`` gerando ~1 GB
+    a cada cópia, três cópias levaram o slot além de max_slot_wal_keep_size (2026-11-11). Só
+    altera quem ainda não é UNLOGGED: o ALTER trava a tabela até o fim da transação, e o
+    Metabase ficaria esperando a cópia inteira.
+    """
+    nome = f'"{schema}"."{tabela}"'
+    (persistencia,) = conexao.execute(
+        "SELECT * FROM postgres_query('pg', ?)",
+        [f"SELECT relpersistence::text FROM pg_class WHERE oid = '{nome}'::regclass"],
+    ).fetchone()
+    if persistencia != "u":
+        conexao.execute("CALL postgres_execute('pg', ?)", [f"ALTER TABLE {nome} SET UNLOGGED"])
+
+
 def exportar(
     conexao: duckdb.DuckDBPyConnection,
     tabelas: tuple[str, ...] = TABELAS,
@@ -84,15 +105,15 @@ def exportar(
             origem, destino = f"dk.gold.{tabela}", f"pg.{schema}.{tabela}"
             existente = _colunas(conexao, "pg", schema, tabela)
             if not existente:
-                conexao.execute(f"CREATE TABLE {destino} AS SELECT * FROM {origem}")
+                conexao.execute(f"CREATE TABLE {destino} AS SELECT * FROM {origem} LIMIT 0")
             elif existente != _colunas(conexao, "dk", "gold", tabela):
                 raise ValueError(
                     f"{schema}.{tabela} tem colunas diferentes de gold.{tabela}: ajuste a "
                     f"migration ou apague a tabela no Postgres para ela ser recriada"
                 )
-            else:
-                conexao.execute(f"DELETE FROM {destino}")
-                conexao.execute(f"INSERT INTO {destino} SELECT * FROM {origem}")
+            _sem_wal(conexao, schema, tabela)
+            conexao.execute(f"DELETE FROM {destino}")
+            conexao.execute(f"INSERT INTO {destino} SELECT * FROM {origem}")
             copiadas[tabela] = conexao.execute(f"SELECT count(*) FROM {origem}").fetchone()[0]
         conexao.execute("COMMIT")
     except Exception:
