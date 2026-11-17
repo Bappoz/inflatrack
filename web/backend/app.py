@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
+from uuid import UUID
 
 import httpx
 import psycopg
@@ -11,9 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, EmailStr, SecretStr, field_validator, model_validator
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
 from inflatrack.common.db import dsn_do_ambiente
+
+if __package__:
+    from .database import DatabaseConfigurationError, check_user_store, save_user
+else:
+    from database import DatabaseConfigurationError, check_user_store, save_user
 
 load_dotenv(Path(__file__).with_name(".env"))
 
@@ -33,12 +40,43 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+BrazilianState = Literal[
+    "AC",
+    "AL",
+    "AP",
+    "AM",
+    "BA",
+    "CE",
+    "DF",
+    "ES",
+    "GO",
+    "MA",
+    "MT",
+    "MS",
+    "MG",
+    "PA",
+    "PB",
+    "PR",
+    "PE",
+    "PI",
+    "RJ",
+    "RN",
+    "RS",
+    "RO",
+    "RR",
+    "SC",
+    "SP",
+    "SE",
+    "TO",
+]
+
 
 class RegistrationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
     email: EmailStr
+    state: BrazilianState
     password: SecretStr
     confirm_password: SecretStr
 
@@ -526,6 +564,17 @@ async def register_user(payload: RegistrationRequest) -> RegistrationResponse:
         raise HTTPException(status_code=503, detail="O serviço de cadastro não está configurado.")
 
     try:
+        await run_in_threadpool(check_user_store)
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "O banco de usuários está indisponível. Confira DATABASE_URL "
+                "e aplique o esquema do backend."
+            ),
+        ) from error
+
+    try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
                 f"{supabase_url}/auth/v1/signup",
@@ -533,7 +582,7 @@ async def register_user(payload: RegistrationRequest) -> RegistrationResponse:
                 json={
                     "email": str(payload.email),
                     "password": payload.password.get_secret_value(),
-                    "data": {"full_name": payload.name},
+                    "data": {"full_name": payload.name, "state": payload.state},
                 },
             )
     except httpx.TimeoutException as error:
@@ -589,8 +638,36 @@ async def register_user(payload: RegistrationRequest) -> RegistrationResponse:
     if isinstance(identities, list) and not identities:
         raise HTTPException(status_code=409, detail="Este e-mail já está cadastrado.")
 
+    try:
+        parsed_user_id = UUID(user_id) if isinstance(user_id, str) else None
+    except ValueError as error:
+        raise HTTPException(
+            status_code=502, detail="O serviço de autenticação retornou usuário inválido."
+        ) from error
+    if parsed_user_id is None:
+        raise HTTPException(
+            status_code=502, detail="O serviço de autenticação retornou usuário inválido."
+        )
+
+    try:
+        await run_in_threadpool(
+            save_user,
+            user_id=parsed_user_id,
+            email=str(payload.email),
+            name=payload.name,
+            state=payload.state,
+        )
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "A conta foi criada no Supabase Auth, mas não foi possível confirmar "
+                "os dados na tabela de usuários. Contate o suporte antes de tentar novamente."
+            ),
+        ) from error
+
     return RegistrationResponse(
-        user_id=user_id if isinstance(user_id, str) else None,
+        user_id=str(parsed_user_id),
         email=payload.email,
         confirmation_required=not bool(result.get("session")),
     )

@@ -1,8 +1,20 @@
+from uuid import UUID
+
 import httpx
 import psycopg
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
 
 from web.backend import app as auth_app
+
+
+@pytest.fixture(autouse=True)
+def user_store(monkeypatch):
+    saved = []
+    monkeypatch.setattr(auth_app, "check_user_store", lambda: None)
+    monkeypatch.setattr(auth_app, "save_user", lambda **values: saved.append(values))
+    return saved
 
 
 def mock_authenticated_user(monkeypatch) -> None:
@@ -32,7 +44,9 @@ def mock_authenticated_user(monkeypatch) -> None:
     monkeypatch.setattr(auth_app.httpx, "AsyncClient", AuthenticatedUserClient)
 
 
-def test_register_creates_user_with_publishable_key_and_hides_tokens(monkeypatch) -> None:
+def test_register_creates_user_with_publishable_key_and_hides_tokens(
+    monkeypatch, user_store
+) -> None:
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
     captured: dict[str, object] = {}
@@ -53,7 +67,10 @@ def test_register_creates_user_with_publishable_key_and_hides_tokens(monkeypatch
             return httpx.Response(
                 200,
                 json={
-                    "user": {"id": "user-123", "email": "ana@example.com"},
+                    "user": {
+                        "id": "adfb6a89-3f53-4c72-9b10-ff65dd8b1eea",
+                        "email": "ana@example.com",
+                    },
                     "session": None,
                     "access_token": "must-not-be-returned",
                 },
@@ -66,6 +83,7 @@ def test_register_creates_user_with_publishable_key_and_hides_tokens(monkeypatch
         json={
             "name": " Ana Silva ",
             "email": "ana@example.com",
+            "state": "DF",
             "password": long_password,
             "confirm_password": long_password,
         },
@@ -73,14 +91,72 @@ def test_register_creates_user_with_publishable_key_and_hides_tokens(monkeypatch
 
     assert response.status_code == 201
     assert response.json() == {
-        "user_id": "user-123",
+        "user_id": "adfb6a89-3f53-4c72-9b10-ff65dd8b1eea",
         "email": "ana@example.com",
         "confirmation_required": True,
     }
     assert captured["url"] == "https://example.supabase.co/auth/v1/signup"
     assert captured["headers"] == {"apikey": "sb_publishable_test"}
-    assert captured["body"]["data"] == {"full_name": "Ana Silva"}
+    assert captured["body"]["data"] == {"full_name": "Ana Silva", "state": "DF"}
     assert captured["body"]["password"] == long_password
+    assert user_store == [
+        {
+            "user_id": UUID("adfb6a89-3f53-4c72-9b10-ff65dd8b1eea"),
+            "email": "ana@example.com",
+            "name": "Ana Silva",
+            "state": "DF",
+        }
+    ]
+
+
+@pytest.mark.parametrize("phase", ["check_user_store", "save_user"])
+def test_register_reports_database_failure(monkeypatch, user_store, phase) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test")
+    requests = []
+
+    def fail_database(**kwargs):
+        raise OperationalError("private query", {}, Exception("private database password"))
+
+    class SignupClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, **kwargs):
+            requests.append(url)
+            return httpx.Response(
+                200,
+                json={
+                    "user": {"id": "adfb6a89-3f53-4c72-9b10-ff65dd8b1eea"},
+                    "session": None,
+                },
+            )
+
+    monkeypatch.setattr(auth_app, phase, fail_database)
+    monkeypatch.setattr(auth_app.httpx, "AsyncClient", SignupClient)
+    response = TestClient(auth_app.app).post(
+        "/auth/register",
+        json={
+            "name": "Ana Silva",
+            "email": "ana@example.com",
+            "state": "DF",
+            "password": "senha-segura-123",
+            "confirm_password": "senha-segura-123",
+        },
+    )
+
+    assert response.status_code == 503
+    assert bool(requests) == (phase == "save_user")
+    assert "private" not in response.text
+    assert user_store == []
+    if phase == "save_user":
+        assert "A conta foi criada no Supabase Auth" in response.json()["detail"]
 
 
 def test_register_rejects_mismatched_passwords_without_echoing_them() -> None:
@@ -91,6 +167,7 @@ def test_register_rejects_mismatched_passwords_without_echoing_them() -> None:
         json={
             "name": "Ana Silva",
             "email": "ana@example.com",
+            "state": "BA",
             "password": password,
             "confirm_password": confirmation,
         },
@@ -100,6 +177,21 @@ def test_register_rejects_mismatched_passwords_without_echoing_them() -> None:
     assert "As senhas não coincidem." in response.text
     assert password not in response.text
     assert confirmation not in response.text
+
+
+def test_register_rejects_invalid_state() -> None:
+    response = TestClient(auth_app.app).post(
+        "/auth/register",
+        json={
+            "name": "Ana Silva",
+            "email": "ana@example.com",
+            "state": "XX",
+            "password": "senha-segura-123",
+            "confirm_password": "senha-segura-123",
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_login_sets_http_only_cookies_and_does_not_return_tokens(monkeypatch) -> None:
@@ -240,6 +332,7 @@ def test_register_requires_supabase_configuration(monkeypatch) -> None:
         json={
             "name": "Ana Silva",
             "email": "ana@example.com",
+            "state": "MG",
             "password": "senha-segura-123",
             "confirm_password": "senha-segura-123",
         },
@@ -276,6 +369,7 @@ def test_register_rejects_email_reported_as_already_registered(monkeypatch) -> N
         json={
             "name": "Ana Silva",
             "email": "ana@example.com",
+            "state": "SP",
             "password": "senha-segura-123",
             "confirm_password": "senha-segura-123",
         },
@@ -312,6 +406,7 @@ def test_register_rejects_supabase_obfuscated_duplicate(monkeypatch) -> None:
         json={
             "name": "Ana Silva",
             "email": "ana@example.com",
+            "state": "RJ",
             "password": "senha-segura-123",
             "confirm_password": "senha-segura-123",
         },

@@ -7,6 +7,15 @@ create table if not exists public.users (
     created_at timestamptz not null default now()
 );
 
+alter table public.users
+    add column if not exists state text check (
+        state in (
+            'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
+            'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
+            'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+        )
+    );
+
 create unique index if not exists users_email_lower_unique_idx
     on public.users (lower(email));
 
@@ -41,11 +50,12 @@ begin
         split_part(normalized_email, '@', 1)
     );
 
-    insert into public.users (user_id, email, name)
-    values (new.id, normalized_email, display_name)
+    insert into public.users (user_id, email, name, state)
+    values (new.id, normalized_email, display_name, new.raw_user_meta_data ->> 'state')
     on conflict (user_id) do update
         set email = excluded.email,
-            name = excluded.name;
+            name = excluded.name,
+            state = excluded.state;
 
     return new;
 end;
@@ -61,18 +71,20 @@ create trigger on_auth_user_updated_public_user
     after update of email, raw_user_meta_data on auth.users
     for each row execute function public.sync_auth_user_to_public_users();
 
-insert into public.users (user_id, email, name)
+insert into public.users (user_id, email, name, state)
 select
     id,
     lower(email),
     coalesce(
         nullif(btrim(raw_user_meta_data ->> 'full_name'), ''),
         split_part(lower(email), '@', 1)
-    )
+    ),
+    raw_user_meta_data ->> 'state'
 from auth.users
 where email is not null
 on conflict (user_id) do update
     set email = excluded.email,
-        name = excluded.name;
+        name = excluded.name,
+        state = excluded.state;
 
 commit;

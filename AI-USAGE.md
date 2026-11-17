@@ -1605,5 +1605,62 @@ de tarefas nessa linha.
 - A sessão autenticada real do usuário não foi reutilizada no navegador; o payload foi verificado diretamente na função de consulta e em testes simulados de UI.
 - Outras fontes econômicas que não são necessárias aos gráficos atuais não foram coletadas.
 
+### 2026-11-17 — GitHub Copilot — Estado de residência no cadastro
+
+**O que a ferramenta fez**
+- Adicionou ao formulário de cadastro um dropdown obrigatório com as 27 UFs e enviou a sigla escolhida à API.
+- Validou a UF no backend e salvou a seleção nos metadados do usuário no Supabase Auth; atualizou a documentação do endpoint.
+
+**O que foi verificado e como**
+- 13 testes do backend passaram, incluindo envio da UF aos metadados e rejeição de sigla inválida.
+- Lint direcionado e build de produção do frontend passaram.
+
+**O que NÃO foi verificado**
+- O cadastro não foi testado contra um projeto Supabase real; os testes de API simulam a chamada de autenticação.
+
+### 2026-11-17 — GitHub Copilot — Instalação local do backend
+
+**O que a ferramenta fez**
+- Orientou a execução do frontend na subpasta correta e investigou a falha de importação de `pyarrow` no backend.
+- Instalou o pacote local e suas dependências no ambiente virtual do backend e corrigiu o guia de instalação para incluir `pip install -e .`.
+
+**O que foi verificado e como**
+- A instalação no ambiente virtual do backend concluiu com sucesso.
+- A importação de `web.backend.app` nesse ambiente retornou o título `Inflatrack Auth API`.
+
+**O que NÃO foi verificado**
+- O servidor HTTP e a autenticação real no Supabase não foram testados nesta correção de instalação.
+
+### 2026-11-17 — GitHub Copilot — Liberação da porta do backend
+
+**O que a ferramenta fez**
+- Diagnosticou processos suspensos do Uvicorn que mantinham a porta 8000 ocupada e retomou os processos para concluir seu encerramento.
+- Orientou a inicialização da API diretamente em `web/backend`.
+
+**O que foi verificado e como**
+- Uma execução temporária do backend a partir dessa pasta respondeu em `/openapi.json` com o título `Inflatrack Auth API`.
+- O servidor temporário foi encerrado e a porta 8000 ficou livre para o usuário.
+
+**O que NÃO foi verificado**
+- O modo de recarga automática e a autenticação real não foram testados nesta verificação.
+
+### 2026-11-17 — GitHub Copilot — Persistência de usuários com SQLAlchemy
+
+**O que a ferramenta fez**
+- Manteve Python/FastAPI e Supabase Auth, integrando SQLAlchemy ao cadastro para gravar nome, e-mail e UF em `public.users`.
+- Adicionou conexão por `DATABASE_URL`, aplicação explícita do esquema por `DIRECT_URL` e compatibilidade com o parâmetro `pgbouncer` de URLs vindas do Prisma.
+- Aplicou o esquema no Supabase e sincronizou os usuários existentes, preservando a política de acesso restrito ao próprio usuário.
+- Atualizou o guia de execução e os exemplos de configuração sem registrar credenciais.
+
+**O que foi verificado e como**
+- 19 testes do backend passaram, incluindo upsert, indisponibilidade do banco e configuração das conexões; Ruff e verificação de whitespace passaram.
+- A aplicação do esquema pela conexão direta e a consulta da tabela pela conexão da API funcionaram.
+- Não restaram usuários do Auth sem registro correspondente em `public.users`; a conexão da API tem permissões de inserção e atualização.
+- A importação da API a partir de `web/backend` funcionou.
+
+**O que NÃO foi verificado**
+- Não foi criada uma conta real de teste nem enviado e-mail de confirmação.
+- O teste automatizado de upsert usa SQLite; a configuração do esquema e a conectividade foram verificadas no PostgreSQL real.
+
 ---
 

@@ -584,7 +584,8 @@ button {
   box-shadow: 0 0 0 3px rgba(142, 91, 214, 0.16);
 }
 
-.input-wrap input {
+.input-wrap input,
+.input-wrap select {
   width: 100%;
   min-width: 0;
   padding: 0 11px;
@@ -593,6 +594,10 @@ button {
   background: transparent;
   color: var(--ink);
   font-size: 13px;
+}
+
+.input-wrap select {
+  cursor: pointer;
 }
 
 .input-wrap input::placeholder {
