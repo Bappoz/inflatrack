@@ -1,9 +1,13 @@
 """Os modelos comparados na avaliação.
 
 As regressões linear e logarítmica são as linhas de tendência clássicas, ajustadas sobre o índice
-de preços do subitem ao longo do tempo (`índice = a + b·t` e `índice = a + b·ln(t)`). Elas projetam
-o índice do mês seguinte, e a previsão é a variação desse índice em %. O XGBoost prevê a variação
-direto, a partir das variáveis da base (`serie.py`).
+de preços do subitem ao longo do tempo (`índice = a + b·t` e `índice = a + b·ln(t)`), em duas
+leituras:
+- **pelo nível:** índice projetado em n+1 contra o índice real de n. Inclui a "volta para a reta":
+  um mês muito acima da tendência vira previsão de queda;
+- **pela tendência:** projeção em n+1 contra a própria reta em n, ou seja, a taxa de crescimento
+  da tendência.
+O XGBoost prevê a variação direto, a partir das variáveis da base (`serie.py`).
 """
 
 from __future__ import annotations
@@ -29,23 +33,37 @@ def indice_encadeado(variacoes_pct: np.ndarray) -> np.ndarray:
     return 100 * np.cumprod(1 + np.asarray(variacoes_pct, dtype=float) / 100)
 
 
+def _identidade(t: np.ndarray) -> np.ndarray:
+    return t
+
+
 def prever_linear(indice: np.ndarray) -> float:
-    return _projetar(indice, lambda t: t)
+    return _projetar(indice, _identidade, pela_tendencia=False)
 
 
 def prever_logaritmica(indice: np.ndarray) -> float:
-    return _projetar(indice, np.log)
+    return _projetar(indice, np.log, pela_tendencia=False)
 
 
-def _projetar(indice: np.ndarray, transformar) -> float:
+def prever_linear_tendencia(indice: np.ndarray) -> float:
+    return _projetar(indice, _identidade, pela_tendencia=True)
+
+
+def prever_logaritmica_tendencia(indice: np.ndarray) -> float:
+    return _projetar(indice, np.log, pela_tendencia=True)
+
+
+def _projetar(indice: np.ndarray, transformar, pela_tendencia: bool) -> float:
     """Ajusta `índice = a + b·f(t)` com t = 1..n e devolve a variação prevista para t = n+1."""
     indice = np.asarray(indice, dtype=float)
     if indice.size < 2 or np.isnan(indice).any():
         return float("nan")
-    t = np.arange(1, indice.size + 1, dtype=float)
+    n = indice.size
+    t = np.arange(1, n + 1, dtype=float)
     b, a = np.polyfit(transformar(t), indice, 1)
-    previsto = a + b * transformar(np.array(indice.size + 1, dtype=float))
-    return float((previsto / indice[-1] - 1) * 100)
+    previsto = a + b * transformar(np.array(n + 1, dtype=float))
+    atual = a + b * transformar(np.array(n, dtype=float)) if pela_tendencia else indice[-1]
+    return float((previsto / atual - 1) * 100)
 
 
 def treinar_xgboost(treino: pd.DataFrame, colunas: list[str]) -> xgb.Booster:

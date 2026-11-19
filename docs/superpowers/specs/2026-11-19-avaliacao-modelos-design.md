@@ -22,6 +22,12 @@ professora recomendou comparar o XGBoost com modelos básicos: **regressão line
   3. regressão linear: `índice = a + b·t`;
   4. regressão logarítmica: `índice = a + b·ln(t)`;
   5. XGBoost com as variáveis da Gold.
+
+  *Acrescentado na implementação:* cada regressão aparece em duas leituras. **Pelo nível**
+  (projeção em n+1 contra o índice real de n, a definição original) embute uma "volta para a
+  reta" que, nos dados reais, triplica o erro. **Pela tendência** (projeção em n+1 contra a própria
+  reta em n) é a taxa de crescimento da tendência. As duas ficam na comparação para ela ser justa
+  com os modelos básicos.
 - Um notebook Jupyter visual que mostra o resultado: tabela de MAE e RMSE por modelo, por
   grupo do IPCA e no geral, e gráficos de previsto contra real.
 - Funções de modelo reaproveitáveis no PR seguinte, com testes.

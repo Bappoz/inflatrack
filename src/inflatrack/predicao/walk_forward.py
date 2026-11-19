@@ -14,7 +14,9 @@ import pandas as pd
 from inflatrack.predicao.modelos import (
     indice_encadeado,
     prever_linear,
+    prever_linear_tendencia,
     prever_logaritmica,
+    prever_logaritmica_tendencia,
     prever_xgboost,
     treinar_xgboost,
 )
@@ -25,6 +27,8 @@ MODELOS = (
     "ingenua_sazonal",
     "linear",
     "logaritmica",
+    "linear_tendencia",
+    "logaritmica_tendencia",
     "xgboost_sem_clima",
     "xgboost_com_clima",
 )
@@ -86,17 +90,19 @@ def _regressoes(
 ) -> dict[str, np.ndarray]:
     inicio = origem - pd.DateOffset(months=janela - 1)
     recorte = base[(base["mes"] >= inicio) & (base["mes"] <= origem)]
-    linear, logaritmica = [], []
+    funcoes = {
+        "linear": prever_linear,
+        "logaritmica": prever_logaritmica,
+        "linear_tendencia": prever_linear_tendencia,
+        "logaritmica_tendencia": prever_logaritmica_tendencia,
+    }
+    resultado: dict[str, list[float]] = {nome: [] for nome in funcoes}
     for codigo in alvo["codigo_subitem"]:
         variacoes = recorte.loc[recorte["codigo_subitem"] == codigo, "y"].to_numpy(dtype=float)
-        if variacoes.size < janela:
-            linear.append(np.nan)
-            logaritmica.append(np.nan)
-            continue
-        indice = indice_encadeado(variacoes)
-        linear.append(prever_linear(indice))
-        logaritmica.append(prever_logaritmica(indice))
-    return {"linear": np.array(linear), "logaritmica": np.array(logaritmica)}
+        indice = indice_encadeado(variacoes) if variacoes.size == janela else None
+        for nome, prever in funcoes.items():
+            resultado[nome].append(prever(indice) if indice is not None else np.nan)
+    return {nome: np.array(valores) for nome, valores in resultado.items()}
 
 
 def metricas(previsoes: pd.DataFrame, por: list[str] | None = None) -> pd.DataFrame:

@@ -75,12 +75,12 @@ def test_xgboost_so_treina_com_alvos_ja_conhecidos(monkeypatch) -> None:
     assert vistos == esperados
 
 
-def test_avaliar_gera_os_seis_modelos_por_linha() -> None:
+def test_avaliar_gera_todos_os_modelos_por_linha() -> None:
     base = _base()
     previsoes = avaliar(base, origens_de_teste(base, meses=2))
 
     assert set(previsoes["modelo"]) == set(MODELOS)
-    assert len(previsoes) == 2 * 2 * len(MODELOS)  # 2 origens x 2 subitens x 6 modelos
+    assert len(previsoes) == 2 * 2 * len(MODELOS)  # 2 origens x 2 subitens x 8 modelos
     assert {"codigo_subitem", "grupo", "mes", "mes_alvo", "previsto", "real"} <= set(previsoes)
 
 

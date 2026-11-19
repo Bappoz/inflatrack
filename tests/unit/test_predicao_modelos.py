@@ -7,7 +7,9 @@ import pytest
 from inflatrack.predicao.modelos import (
     indice_encadeado,
     prever_linear,
+    prever_linear_tendencia,
     prever_logaritmica,
+    prever_logaritmica_tendencia,
     prever_xgboost,
     treinar_xgboost,
 )
@@ -37,7 +39,27 @@ def test_regressao_logaritmica_acerta_a_curva() -> None:
     assert prever_logaritmica(indice) == pytest.approx(esperado)
 
 
-@pytest.mark.parametrize("prever", [prever_linear, prever_logaritmica])
+def test_tendencia_usa_a_inclinacao_da_reta_e_nao_o_ultimo_ponto() -> None:
+    """Último mês 10 acima da reta: pelo nível a reta prevê uma queda; pela tendência, não."""
+    indice = 10 + 2 * T
+    indice[-1] += 10
+
+    assert prever_linear(indice) < 0
+    b, a = np.polyfit(T, indice, 1)
+    assert prever_linear_tendencia(indice) == pytest.approx(((a + 25 * b) / (a + 24 * b) - 1) * 100)
+
+
+def test_tendencia_logaritmica_acerta_a_curva() -> None:
+    indice = 5 + 3 * np.log(T)
+
+    esperado = ((5 + 3 * np.log(25)) / (5 + 3 * np.log(24)) - 1) * 100
+    assert prever_logaritmica_tendencia(indice) == pytest.approx(esperado)
+
+
+@pytest.mark.parametrize(
+    "prever",
+    [prever_linear, prever_logaritmica, prever_linear_tendencia, prever_logaritmica_tendencia],
+)
 def test_regressao_com_buraco_na_janela_nao_preve(prever) -> None:
     indice = 10 + 2 * T
     indice[5] = np.nan
