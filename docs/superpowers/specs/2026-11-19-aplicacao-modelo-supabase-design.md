@@ -17,7 +17,7 @@ a conta `preço × (1 + variação prevista)`. O preço digitado não é gravado
 
 - Previsão para **todos os subitens de todas as praças**, e não só os 45 do atacadista: o usuário
   pode perguntar por qualquer produto.
-- **Um modelo por subitem**: a cada execução, usa-se o que errou menos.
+- ~~Um modelo por subitem~~: substituído pelo **XGBoost fixo** depois do ponto de parada (abaixo).
 - Antes de adotar, **refazer a avaliação com todos os subitens e todas as praças**.
 - Treino e aplicação locais; o Supabase guarda só o resultado.
 - Caminho **misto**:
@@ -30,7 +30,7 @@ a conta `preço × (1 + variação prevista)`. O preço digitado não é gravado
 1. Avaliação ampliada: o walk-forward de 36 meses com todos os subitens do IPCA em todas as
    praças.
 2. `gold.fct_previsao_subitem`: a variação prevista para o mês seguinte ao último IPCA, por praça
-   e subitem, com o modelo escolhido e o erro típico.
+   e subitem, com o erro típico do XGBoost.
 3. Publicação no Supabase de seis tabelas pequenas, com leitura pública e escrita só a partir do
    ambiente local.
 4. Orquestração no Dagster, uma vez por mês, depois do IPCA.
@@ -81,6 +81,15 @@ este design é atualizado antes.
   
   Pode levar dezenas de minutos, mas roda uma vez só.
 
+## Resultado do ponto de parada (2026-11-19)
+
+A avaliação ampliada (`docs/evidencias/e4/avaliacao_todas_pracas.md`) mostrou:
+- o XGBoost único ganha da ingênua em todas as 17 localidades (+29% no geral);
+- a escolha por subitem melhora só cerca de 1% sobre ele, nos meses que ela não viu.
+
+**Decisão do integrante: XGBoost fixo.** A escolha por subitem e a regra de reserva saem do
+design.
+
 ## Parte 2 — Previsão na Gold
 
 - Modelo Python do dbt `gold.fct_previsao_subitem`, com uma linha por `(codigo_localidade,
@@ -88,34 +97,31 @@ este design é atualizado antes.
   - `mes_base`: último IPCA divulgado;
   - `mes_previsto`: `mes_base` + 1;
   - `variacao_prevista_pct`;
-  - `modelo` (o nome do vencedor);
-  - `erro_tipico_pct`: MAE do vencedor naquele subitem, na janela de escolha;
+  - `erro_tipico_pct`;
   - `gerado_em`.
-- **Escolha por subitem:** um walk-forward dos **últimos 12 meses** com todos os candidatos. Para
-  cada subitem, juntando as praças, vence o de menor MAE. *Decisão da ferramenta:* 12 meses por
-  subitem e praça seria pouco dado; juntar as praças dá cerca de 12 × 17 pontos.
-- **Previsão final:** o vencedor retreinado com todo o histórico até `mes_base`. Um par
-  `(praça, subitem)` sem IPCA em `mes_base` não recebe previsão.
-- **Par que o vencedor não consegue prever.** Acontece, por exemplo, quando uma regressão vence
-  mas a praça não tem 24 meses seguidos. *Decisão da ferramenta:* o par usa a **ingênua**, que
-  sempre prevê quando há IPCA em `mes_base`. A linha grava `modelo = 'ingenua'` e o
-  `erro_tipico_pct` da ingênua naquele subitem. Assim, todo par com dado em `mes_base` tem
-  resposta no site, e o erro mostrado é sempre o do modelo que de fato previu.
-- Fica fora do `analitico_job` diário, porque pesa: são cerca de 13 treinos do XGBoost por
-  execução. Entra num grupo próprio do Dagster, `predicao`.
-- Testes do dbt: chave única, `variacao_prevista_pct` e `erro_tipico_pct` não nulos e
+- **Previsão:** o XGBoost sem clima (variáveis `FEATURES_BASE`, praça como categoria), treinado
+  com todas as linhas de mês <= `mes_base` − 1 que têm alvo, prevê a linha de `mes_base` de cada
+  série. Uma série sem IPCA em `mes_base` não recebe previsão.
+- **Erro típico:** o MAE do XGBoost por subitem, juntando as praças, num walk-forward dos
+  **últimos 12 meses** (12 treinos). Sem nenhuma previsão nessa janela, usa-se o MAE do grupo do
+  IPCA (primeiro dígito).
+- Fica fora do `analitico_job` diário (são 13 treinos, alguns minutos). Entra no grupo `predicao`.
+- Testes do dbt: chave única; `variacao_prevista_pct` e `erro_tipico_pct` não nulos;
   `erro_tipico_pct >= 0`.
-- Cópia para `serie.fct_previsao_subitem` pelo exportador existente, com a migration `0008`.
+- *Decisão da ferramenta:* **não há cópia para a `serie`.** Quem lê a previsão é o site e o
+  agente, pelo Supabase, e não o Metabase. A publicação lê a Gold direto, só para leitura e
+  dentro do pool `duckdb_writer`. Com isso, a migration `0008` sai do design.
 
 ## Parte 3 — Publicação no Supabase
 
-Módulo `inflatrack.reverse_etl.publicar_site`. Ele lê o Postgres **local** (`serie`) e grava no
+Módulo `inflatrack.reverse_etl.publicar_site`. Ele lê a previsão na Gold (DuckDB, só leitura) e
+os gráficos e o resumo no Postgres **local** (`serie`), e grava no
 Supabase pela URL de Postgres do projeto, na variável `SUPABASE_DB_URL`. Tudo acontece numa
 transação: apaga e insere cada tabela, então ou a publicação inteira entra, ou nada muda.
 
 | Tabela no Supabase | Conteúdo | Linhas |
 |---|---|---|
-| `previsao_subitem` | a `serie.fct_previsao_subitem` inteira | ~4.000 |
+| `previsao_subitem` | a `gold.fct_previsao_subitem` inteira | ~4.000 |
 | `subitem` | código, nome (versão atual da cesta), código e nome do grupo | ~478 |
 | `uf_praca` | UF → `codigo_localidade` e nome da praça (UF sem praça → Brasil, `1`) | 27 |
 | `resumo_subitem` | último mês, por praça e subitem: variação do mês e de 12 meses | ~4.000 |
@@ -141,8 +147,7 @@ transação: apaga e insere cada tabela, então ou a publicação inteira entra,
 
 - `predicao_job` (mensal, dia 14 às 11h, depois da janela do IPCA nos dias 9 a 13) roda:
   1. `fct_previsao_subitem` (dbt);
-  2. `serie_postgres`;
-  3. `site_supabase`.
+  2. `site_supabase`.
 - `site_supabase` não tem dependentes. Sem `SUPABASE_DB_URL`, ele falha com uma mensagem clara e
   sem retry.
 - `just publicar-site` faz o mesmo pelo terminal.
@@ -150,9 +155,10 @@ transação: apaga e insere cada tabela, então ou a publicação inteira entra,
 ## Testes
 
 - `montar_base` com duas praças: as defasagens não atravessam praças, e a chave inclui a praça.
-- Escolha por subitem: com uma série sintética em que a ingênua acerta sempre, ela vence. A
-  escolha só usa meses <= `mes_base`.
-- Previsão final: o mês previsto é `mes_base + 1`, e um par sem dado em `mes_base` fica fora.
+- Previsão: o mês previsto é `mes_base + 1`; uma série sem dado em `mes_base` fica fora; o
+  treino só usa linhas de mês <= `mes_base` − 1.
+- Erro típico: vem só da janela de 12 meses até `mes_base`; um subitem sem previsão na janela
+  recebe o MAE do grupo.
 - Publicação contra um Postgres descartável, que faz o papel do Supabase:
   - cria as tabelas pela migration `003`;
   - publica duas vezes, e o número de linhas não dobra (retenção);
