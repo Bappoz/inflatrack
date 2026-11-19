@@ -46,7 +46,11 @@ GRUPO_CLIMA: dict[str, tuple[str, ...]] = {
     "1110009": _GRAOS_CARNES,  # frango inteiro
 }
 
+# Uma série é um subitem numa praça: defasagens e médias nunca atravessam praças.
+CHAVE_SERIE = ["codigo_localidade", "codigo_subitem"]
+
 FEATURES_BASE = [
+    "codigo_localidade",
     "y",
     "y_lag1",
     "y_lag2",
@@ -74,9 +78,12 @@ FEATURES_CLIMA = [
 def montar_base(
     inflacao: pd.DataFrame, enso: pd.DataFrame, polos: pd.DataFrame, macro: pd.DataFrame
 ) -> pd.DataFrame:
-    """`inflacao`: codigo_categoria, mes_referencia, variacao_mensal_pct (uma praça só)."""
+    """`inflacao`: codigo_localidade (opcional; sem ela, Brasil), codigo_categoria,
+    mes_referencia e variacao_mensal_pct."""
+    if "codigo_localidade" not in inflacao:
+        inflacao = inflacao.assign(codigo_localidade=1)
     base = _serie_completa(inflacao)
-    por_subitem = base.groupby("codigo_subitem", observed=True)["y"]
+    por_subitem = base.groupby(CHAVE_SERIE, observed=True)["y"]
     base["y_lag1"] = por_subitem.shift(1)
     base["y_lag2"] = por_subitem.shift(2)
     for janela in (3, 6, 12):
@@ -92,16 +99,16 @@ def montar_base(
     base = _juntar_macro(base, macro)
     base = _juntar_enso(base, enso)
     base = _juntar_polos(base, polos)
-    for coluna in ("codigo_subitem", "grupo"):
+    for coluna in ("codigo_localidade", "codigo_subitem", "grupo"):
         base[coluna] = base[coluna].astype("category")
-    return base.sort_values(["codigo_subitem", "mes"]).reset_index(drop=True)
+    return base.sort_values([*CHAVE_SERIE, "mes"]).reset_index(drop=True)
 
 
 def _serie_completa(inflacao: pd.DataFrame) -> pd.DataFrame:
-    """Reindexa cada subitem para todos os meses entre o primeiro e o último: um mês que falta
-    vira nulo em vez de encostar o vizinho e desalinhar as defasagens."""
+    """Reindexa cada série (praça x subitem) para todos os meses entre o primeiro e o último: um
+    mês que falta vira nulo em vez de encostar o vizinho e desalinhar as defasagens."""
     partes = []
-    for codigo, grupo in inflacao.groupby("codigo_categoria"):
+    for (praca, codigo), grupo in inflacao.groupby(["codigo_localidade", "codigo_categoria"]):
         serie = (
             grupo.assign(mes=pd.to_datetime(grupo["mes_referencia"]))
             .set_index("mes")["variacao_mensal_pct"]
@@ -109,7 +116,14 @@ def _serie_completa(inflacao: pd.DataFrame) -> pd.DataFrame:
         )
         meses = pd.date_range(serie.index.min(), serie.index.max(), freq="MS")
         partes.append(
-            pd.DataFrame({"codigo_subitem": codigo, "mes": meses, "y": serie.reindex(meses).values})
+            pd.DataFrame(
+                {
+                    "codigo_localidade": int(praca),
+                    "codigo_subitem": codigo,
+                    "mes": meses,
+                    "y": serie.reindex(meses).values,
+                }
+            )
         )
     return pd.concat(partes, ignore_index=True)
 
@@ -159,15 +173,19 @@ def _juntar_polos(base: pd.DataFrame, polos: pd.DataFrame) -> pd.DataFrame:
     return base.merge(por_subitem, on=["codigo_subitem", "mes"], how="left")
 
 
-def carregar_gold(caminho_duckdb: Path, codigos: list[str], codigo_localidade: int) -> pd.DataFrame:
-    """Lê as fatos da Gold (só leitura) e monta a base de uma praça."""
+def carregar_gold(
+    caminho_duckdb: Path, codigos: list[str] | None, codigo_localidade: int | None
+) -> pd.DataFrame:
+    """Lê as fatos da Gold (só leitura) e monta a base. `None` em `codigos` ou em
+    `codigo_localidade` quer dizer todos os subitens ou todas as praças."""
     with duckdb.connect(str(caminho_duckdb), read_only=True) as conexao:
         inflacao = conexao.execute(
-            "select codigo_categoria, mes_referencia, variacao_mensal_pct"
+            "select codigo_localidade, codigo_categoria, mes_referencia, variacao_mensal_pct"
             " from gold.fct_inflacao_mensal"
-            " where indice = 'IPCA' and codigo_localidade = ? and codigo_categoria in"
-            " (select unnest(?::varchar[]))",
-            [codigo_localidade, codigos],
+            " where indice = 'IPCA' and nivel_categoria = 'subitem'"
+            " and (?::integer is null or codigo_localidade = ?)"
+            " and (?::varchar[] is null or codigo_categoria in (select unnest(?::varchar[])))",
+            [codigo_localidade, codigo_localidade, codigos, codigos],
         ).df()
         enso = conexao.execute("select * from gold.fct_enso_mensal").df()
         polos = conexao.execute(

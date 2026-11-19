@@ -10,10 +10,16 @@ MESES = pd.date_range("2018-01-01", "2022-12-01", freq="MS")  # 60 meses
 ARROZ, CAFE = "1101002", "1114022"
 
 
-def _base(inicio_cafe: str = "2018-01-01") -> pd.DataFrame:
+def _base(inicio_cafe: str = "2018-01-01", pracas: tuple[int, ...] = (1,)) -> pd.DataFrame:
     gerador = np.random.default_rng(1)
     linhas = [
-        {"codigo_categoria": c, "mes_referencia": m, "variacao_mensal_pct": gerador.normal(0.5, 1)}
+        {
+            "codigo_localidade": praca,
+            "codigo_categoria": c,
+            "mes_referencia": m,
+            "variacao_mensal_pct": gerador.normal(0.5, 1),
+        }
+        for praca in pracas
         for c in (ARROZ, CAFE)
         for m in MESES
         if not (c == CAFE and m < pd.Timestamp(inicio_cafe))
@@ -150,3 +156,28 @@ def test_metricas_por_grupo() -> None:
     tabela = metricas(previsoes, por=["grupo"])
 
     assert list(tabela.columns[:2]) == ["grupo", "modelo"]
+
+
+def test_avaliar_com_duas_pracas_tem_linha_por_praca() -> None:
+    base = _base(pracas=(1, 3501))
+    origens = origens_de_teste(base, meses=2)
+    previsoes = avaliar(base, origens, modelos=("ingenua", "linear_tendencia"))
+
+    assert set(previsoes["codigo_localidade"]) == {1, 3501}
+    assert len(previsoes) == 2 * 2 * 2 * 2  # 2 origens x 2 praças x 2 subitens x 2 modelos
+    ingenua = previsoes[previsoes.modelo == "ingenua"].pivot_table(
+        index=["codigo_subitem", "mes_alvo"], columns="codigo_localidade", values="previsto"
+    )
+    assert (ingenua[1] != ingenua[3501]).all()  # cada praça é uma série própria
+
+
+def test_avaliar_so_roda_os_modelos_pedidos(monkeypatch) -> None:
+    def proibido(*args, **kwargs):
+        raise AssertionError("o XGBoost não foi pedido")
+
+    monkeypatch.setattr(walk_forward, "treinar_xgboost", proibido)
+    base = _base()
+
+    previsoes = avaliar(base, origens_de_teste(base, meses=1), modelos=("ingenua",))
+
+    assert set(previsoes["modelo"]) == {"ingenua"}

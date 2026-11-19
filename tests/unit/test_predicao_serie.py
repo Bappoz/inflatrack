@@ -161,3 +161,40 @@ def test_subitens_caem_para_o_csv_sem_postgres() -> None:
 
     assert len(codigos) == 45
     assert ARROZ in codigos
+
+
+def _duas_pracas() -> pd.DataFrame:
+    partes = []
+    for praca, base in ((1, 1.0), (3501, 5.0)):
+        partes.append(
+            pd.DataFrame(
+                {
+                    "codigo_localidade": praca,
+                    "codigo_categoria": ARROZ,
+                    "mes_referencia": MESES,
+                    "variacao_mensal_pct": [base + i for i in range(12)],
+                }
+            )
+        )
+    return pd.concat(partes, ignore_index=True)
+
+
+def test_lags_nao_atravessam_pracas() -> None:
+    base = _base(inflacao=_duas_pracas())
+
+    primeiros = base[base.mes == MESES[0]]
+    assert len(primeiros) == 2
+    assert primeiros.y_lag1.isna().all()
+    sp = base[(base.codigo_localidade == 3501) & (base.mes == pd.Timestamp("2020-02-01"))].iloc[0]
+    assert (sp.y, sp.y_lag1) == (6.0, 5.0)
+
+
+def test_praca_e_variavel_categorica() -> None:
+    base = _base(inflacao=_duas_pracas())
+
+    assert "codigo_localidade" in FEATURES_BASE
+    assert isinstance(base["codigo_localidade"].dtype, pd.CategoricalDtype)
+
+
+def test_sem_coluna_de_praca_assume_brasil() -> None:
+    assert set(_base()["codigo_localidade"].astype(int)) == {1}
