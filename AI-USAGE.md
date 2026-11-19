@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 26 | 2026-09-14 a 2026-11-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (13), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 27 | 2026-09-14 a 2026-11-19 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (14), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
@@ -74,6 +74,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
 | 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
 | 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
+| 2026-11-19 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #21 (PROCON), pesquisa de fontes de preço de produto e nova abordagem com preços de atacadista no Postgres |
 
 ---
 
@@ -1376,6 +1377,23 @@ de tarefas nessa linha.
 - Com a autorização do integrante, apagou o slot perdido e implementou as duas medidas, com os testes escritos antes: cada captura lê o slot só até o LSN do início e termina avançando até ele, mesmo sem mensagem; o exportador deixa cada tabela de `serie` `UNLOGGED` e só roda o `ALTER TABLE` quando ela ainda não é, para não travar o Metabase durante a cópia. Atualizou as docstrings e o ADR do CDC.
 - Verificado: testes de integração no Postgres de desenvolvimento (escrita fora da publicação avança o slot; com `avancar=False` não avança; transação aberta durante a captura chega na seguinte; tabela da migration vira `UNLOGGED` com índice e dados; cópia de 50 mil linhas com menos de 1 MB de WAL), `pytest` com 454 passando, ruff limpo e `mkdocs build --strict`. Nos dados reais, `just serie` passou de ~1 GB para 250 kB de WAL por cópia, com as 11 tabelas `UNLOGGED`. O integrante rodou os jobs de novo e confirmou que funcionou.
 - Não verificado: o comportamento das tabelas `UNLOGGED` depois de uma queda do Postgres (pela documentação, voltam vazias até o próximo `just serie`).
+
+### 2026-11-19 — Claude Code (Opus 5.5) — revisão do PR #21 (PROCON) e nova abordagem para preços de produto
+
+**O que a ferramenta fez**
+- Revisou o PR #21 (Cesta Básica PROCON, autor Artur Fernandes Galdino) contra a regra do integrante de que preço de produto fica só no banco relacional, sem passar por Bronze, Silver e Gold. O PR faz exatamente esse caminho (Delta, DuckDB, `stg`/`int`/`fct_cesta_basica_mensal`) e foi considerado não apto para a main.
+- Apontou também: os ativos do Dagster chamam `main(list(argv))` em funções `main()` sem parâmetro (todo run falharia com `TypeError`); sem arquivo, a ingestão carrega a fixture de testes, com preços inventados; o cliente HTTP não tem URL nem é chamado; `coalesce(codigo_localidade, 1)` joga praças não casadas no Brasil; e o PR tem conflitos com a main em 3 arquivos.
+- Pesquisou na web se o PROCON publica preços de produtos como dados: só encontrou relatórios em PDF/DOCX (Procon-SP com DIEESE, Goiás, Anápolis, Rio Verde, Campina Grande), sem CSV, API ou conjunto no dados.gov.br. Abriu o PDF de outubro/2026 do Procon-SP: o preço aparece só para alguns dos 39 produtos, em gráficos e texto.
+- Analisou o que do PR se aproveita (só os conversores de número e data em formato brasileiro) e recomendou uma branch nova a partir da main.
+- Com o integrante, começou a desenhar a nova abordagem: base relacional de preços de um atacadista, que servirá de alvo para o modelo preditivo de reajuste da E4.
+
+**O que foi verificado e como**
+- Assinaturas de `main()` do PR lidas com `ast` na branch do PR; conflitos pela simulação `git merge-tree` contra a `origin/main`.
+- Conteúdo do PDF do Procon-SP lido página a página.
+
+**O que NÃO foi verificado**
+- Nenhum teste do PR foi executado localmente.
+- As fontes alternativas citadas (loja online do Atacadão, programas estaduais de preço por nota fiscal) não foram conferidas.
 
 ---
 
