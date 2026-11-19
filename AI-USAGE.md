@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 26 | 2026-09-14 a 2026-11-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (13), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 27 | 2026-09-14 a 2026-11-19 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (14), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
@@ -74,6 +74,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
 | 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
 | 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
+| 2026-11-19 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #21 (PROCON), pesquisa de fontes de preço de produto e nova abordagem com preços de atacadista no Postgres |
 
 ---
 
@@ -1376,6 +1377,29 @@ de tarefas nessa linha.
 - Com a autorização do integrante, apagou o slot perdido e implementou as duas medidas, com os testes escritos antes: cada captura lê o slot só até o LSN do início e termina avançando até ele, mesmo sem mensagem; o exportador deixa cada tabela de `serie` `UNLOGGED` e só roda o `ALTER TABLE` quando ela ainda não é, para não travar o Metabase durante a cópia. Atualizou as docstrings e o ADR do CDC.
 - Verificado: testes de integração no Postgres de desenvolvimento (escrita fora da publicação avança o slot; com `avancar=False` não avança; transação aberta durante a captura chega na seguinte; tabela da migration vira `UNLOGGED` com índice e dados; cópia de 50 mil linhas com menos de 1 MB de WAL), `pytest` com 454 passando, ruff limpo e `mkdocs build --strict`. Nos dados reais, `just serie` passou de ~1 GB para 250 kB de WAL por cópia, com as 11 tabelas `UNLOGGED`. O integrante rodou os jobs de novo e confirmou que funcionou.
 - Não verificado: o comportamento das tabelas `UNLOGGED` depois de uma queda do Postgres (pela documentação, voltam vazias até o próximo `just serie`).
+
+### 2026-11-19 — Claude Code (Opus 5.5) — revisão do PR #21 (PROCON) e nova abordagem para preços de produto
+
+**O que a ferramenta fez**
+- Revisou o PR #21 (Cesta Básica PROCON, autor Artur Fernandes Galdino) contra a regra do integrante de que preço de produto fica só no banco relacional, sem passar por Bronze, Silver e Gold. O PR faz exatamente esse caminho (Delta, DuckDB, `stg`/`int`/`fct_cesta_basica_mensal`) e foi considerado não apto para a main.
+- Apontou também: os ativos do Dagster chamam `main(list(argv))` em funções `main()` sem parâmetro (todo run falharia com `TypeError`); sem arquivo, a ingestão carrega a fixture de testes, com preços inventados; o cliente HTTP não tem URL nem é chamado; `coalesce(codigo_localidade, 1)` joga praças não casadas no Brasil; e o PR tem conflitos com a main em 3 arquivos.
+- Pesquisou na web se o PROCON publica preços de produtos como dados: só encontrou relatórios em PDF/DOCX (Procon-SP com DIEESE, Goiás, Anápolis, Rio Verde, Campina Grande), sem CSV, API ou conjunto no dados.gov.br. Abriu o PDF de outubro/2026 do Procon-SP: o preço aparece só para alguns dos 39 produtos, em gráficos e texto.
+- Analisou o que do PR se aproveita (só os conversores de número e data em formato brasileiro) e recomendou uma branch nova a partir da main.
+- Com o integrante, desenhou a nova abordagem: o modelo da E4 aprende a variação do subitem do IPCA (real, desde 2006) e uma base relacional de preços de atacadista traduz o percentual em R$. Escreveu design e plano em `docs/superpowers/` e o integrante aprovou.
+- Implementou na branch `feat/precos-atacadista`: migration `0007` (schema `atacado` fora da publicação do CDC, `preco` insert-only, visão `preco_atual`), conversores de formato brasileiro com `Decimal` (vindos do PR #21), importador `just atacado-importar` direto no Postgres, atacadista fictício com 45 produtos de subitens reais, ADR 0004, dicionário e Seção 2.5 do `PLAN_E3_E4.md`. Os testes vieram antes do código.
+- Um revisor independente (subagente) leu a branch inteira e apontou casos que gravariam dado errado numa tabela insert-only: `1.250` virando R$ 1,25, coluna a mais derrubando o importador com traceback, troca de embalagem ou subitem e rótulo `ficticio` ignorados em silêncio, preço com data futura como atual e `.gitignore` liberando qualquer CSV de `data/atacado/`. Cada um ganhou um teste que falhou antes da correção.
+- A pedido do integrante, pôs a carga no Dagster: ativo `atacado_postgres` (grupo `atacado`, só Postgres), `atacado_job` diário às 6h e entrada no `popular_banco_job`, esperando o `ipca_job` (o importador exige os subitens em `classificacao`). A guarda que proibia `orchestration/` de citar `atacado` foi trocada por testes do grafo: o ativo não tem dependentes e não entra no `analitico_job`. Verificado: `atacado_job` executado contra o Postgres local com sucesso e `just check` com 507 testes passando.
+
+**O que foi verificado e como**
+- Assinaturas de `main()` do PR lidas com `ast` na branch do PR; conflitos pela simulação `git merge-tree` contra a `origin/main`.
+- Conteúdo do PDF do Procon-SP lido página a página.
+- Migration aplicada duas vezes no Postgres de desenvolvimento; importação real do exemplo (45 produtos; a segunda importação grava 0); `just check` com 501 testes passando; `mkdocs build --strict`; códigos dos 45 subitens conferidos na `classificacao`.
+
+**O que NÃO foi verificado**
+- Nenhum teste do PR #21 foi executado localmente.
+- As fontes alternativas citadas (loja online do Atacadão, programas estaduais de preço por nota fiscal) não foram conferidas.
+- Os preços do atacadista de exemplo são inventados; a migration não foi testada num `just reset` do zero.
+- Pendências menores do revisor, não corrigidas: arquivo cp1252 dá erro pouco claro, nome de produto diferencia maiúsculas, a FK aceita código que não é subitem.
 
 ---
 

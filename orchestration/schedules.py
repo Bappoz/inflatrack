@@ -35,6 +35,8 @@ dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 enso_job = define_asset_job("enso_job", AssetSelection.groups("enso"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
+# Preços do atacadista: só o Postgres, sem Bronze nem dbt (ADR 0004).
+atacado_job = define_asset_job("atacado_job", AssetSelection.groups("atacado"))
 
 # As cargas do IPCA e do PIB no DuckDB não são particionadas (espelham o Delta inteiro) e
 # dependem de coletas particionadas que só materializam o que a fonte publicou, sem `Output`
@@ -61,6 +63,7 @@ JOBS = [
     clima_job,
     enso_job,
     transacional_job,
+    atacado_job,
     analitico_job,
 ]
 
@@ -107,8 +110,8 @@ def agendamento_pib(context: ScheduleEvaluationContext):
 
 # Ordem do dia (fuso de São Paulo): clima 7h, commodities 8h, 9h para PIB (meses de
 # divulgação), PIB internacional (dia 1) e DIEESE (dia 5), IPCA 10h (dias 9 a 13),
-# Dólar/Selic 19h (dias úteis), transacional de hora em hora; o analitico_job fecha o dia
-# às 20h30. Um escritor por vez no DuckDB (pool).
+# Dólar/Selic 19h (dias úteis), transacional de hora em hora, atacadista 6h; o analitico_job
+# fecha o dia às 20h30. Um escritor por vez no DuckDB (pool).
 SCHEDULES = [
     _agendamento_sidra(ipca_job, "ipca"),
     _agendamento_sidra(inpc_job, "inpc"),
@@ -121,6 +124,8 @@ SCHEDULES = [
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
     # De hora em hora: cada leitura só traz o que mudou, e o WAL segura o resto entre as leituras.
     ScheduleDefinition(job=transacional_job, cron_schedule="0 * * * *", execution_timezone=FUSO),
+    # 1×/dia: reimportar não duplica nada, então só entra o que mudou na tabela de preços.
+    ScheduleDefinition(job=atacado_job, cron_schedule="0 6 * * *", execution_timezone=FUSO),
     agendamento_pib,
     # 1×/mês: o Banco Mundial revisa fora de calendário.
     ScheduleDefinition(

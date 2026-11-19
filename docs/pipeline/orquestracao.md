@@ -48,6 +48,7 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `clima` | `clima_parquet` → `clima_duckdb` (catálogo, API); `clima_medicoes` → `clima_medicoes_duckdb` (medições, BDMEP); `clima_medicoes` → `clima_provisorio` → `clima_provisorio_duckdb` (provisório, Open-Meteo) | Delta → DuckDB | `bronze.clima`, `load_clima --tabela estacao\|medicao\|provisoria` |
 | `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
+| `atacado` | `atacado_postgres` (sem dependentes: o preço não vai para a Bronze, ADR 0004) | Postgres (`atacado`) | `atacado.importar_tabela` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
@@ -62,6 +63,7 @@ orchestration/
 │   ├── commodities.py, dolar.py, selic.py, salario_minimo.py, clima.py, pib_internacional.py
 │   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
 │   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
+│   ├── atacado.py          # preços do atacadista direto no Postgres (nunca na Bronze)
 │   ├── dbt_assets.py       # @dbt_assets: Silver e Gold, ligados às cargas pelo meta.dagster.asset_key
 │   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
 │   └── checks.py           # asset checks de frescura e volume
@@ -114,7 +116,7 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 
 `popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
 
-Os jobs rodam em paralelo, com uma exceção: o `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
+Os jobs rodam em paralelo, com duas exceções. O `atacado_job` espera o `ipca_job`, porque o importador exige os subitens em `classificacao`, que a carga do IPCA grava no Postgres. O `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
 
 Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
 

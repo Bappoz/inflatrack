@@ -28,6 +28,7 @@ FONTES = {
     "clima_job",
     "enso_job",
     "transacional_job",
+    "atacado_job",
 }
 
 
@@ -181,3 +182,19 @@ def test_cdc_so_e_disparado_depois_das_coletas_do_sidra() -> None:
         "popular_transacional_job"
     )
     assert {saida.node_name for saida in upstream} == {f"popular_{job}" for job in SIDRA}
+
+
+def test_atacado_so_e_disparado_depois_do_ipca() -> None:
+    """O importador do atacadista exige os subitens em `classificacao`, que a carga do IPCA
+    grava no Postgres. Num banco novo, disparado junto, ele falharia por subitem ausente."""
+    SUBMETIDOS.clear()
+    popular_banco_job.execute_in_process(
+        resources={"disparador": DisparadorFalso()}, raise_on_error=False
+    )
+
+    ordem = [job for job, _ in SUBMETIDOS]
+    assert ordem.index("ipca_job") < ordem.index("atacado_job")
+    upstream = popular_banco_job.graph.dependency_structure.all_upstream_outputs_from_node(
+        "popular_atacado_job"
+    )
+    assert {saida.node_name for saida in upstream} == {"popular_ipca_job"}
