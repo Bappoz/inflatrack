@@ -287,6 +287,11 @@ simular-cdc:
 atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadista Exemplo" ficticio="--ficticio":
     uv run python -m inflatrack.atacado.importar_tabela --arquivo "{{arquivo}}" --fornecedor "{{fornecedor}}" {{ficticio}}
 
+# E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
+# notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco).
+modelo-notebook:
+    uv run jupyter nbconvert --to notebook --execute --inplace notebooks/avaliacao_modelos.ipynb
+
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
 e3-lojista: ipca-load simular-cdc transacional-load
     uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario
