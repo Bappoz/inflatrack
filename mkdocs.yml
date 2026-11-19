@@ -83,6 +83,7 @@ nav:
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
+    - ADR 0004 (Preço de produto só no relacional): adr/0004-preco-produto-so-relacional.md
     - ADR (a numerar) CDC x lote: adr/cdc-vs-lote.md
   - Pipeline de Dados:
     - Orquestração (Dagster): pipeline/orquestracao.md
@@ -92,6 +93,7 @@ nav:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
+    - Preços de Atacadista: dicionario/atacado.md
     - Commodities e Energia (Alpha Vantage): dicionario/commodities.md
     - Macroeconomia (Dólar e Selic): dicionario/macroeconomia.md
     - PIB e Setores (SIDRA 1846): dicionario/pib.md
