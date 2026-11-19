@@ -37,6 +37,8 @@ enso_job = define_asset_job("enso_job", AssetSelection.groups("enso"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
 # Preços do atacadista: só o Postgres, sem Bronze nem dbt (ADR 0004).
 atacado_job = define_asset_job("atacado_job", AssetSelection.groups("atacado"))
+# Previsão do mês seguinte (dbt, ~5 min) e publicação no Supabase para o site e o agente.
+predicao_job = define_asset_job("predicao_job", AssetSelection.groups("predicao", "site"))
 
 # As cargas do IPCA e do PIB no DuckDB não são particionadas (espelham o Delta inteiro) e
 # dependem de coletas particionadas que só materializam o que a fonte publicou, sem `Output`
@@ -64,6 +66,7 @@ JOBS = [
     enso_job,
     transacional_job,
     atacado_job,
+    predicao_job,
     analitico_job,
 ]
 
@@ -136,4 +139,6 @@ SCHEDULES = [
     # semana pega a publicação em até 7 dias e a eventual revisão da série.
     ScheduleDefinition(job=enso_job, cron_schedule="0 9 * * 1", execution_timezone=FUSO),
     ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
+    # Dia 14, 11h: depois da janela do IPCA (dias 9 a 13), prevê o mês seguinte e publica.
+    ScheduleDefinition(job=predicao_job, cron_schedule="0 11 14 * *", execution_timezone=FUSO),
 ]

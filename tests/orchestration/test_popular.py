@@ -35,8 +35,10 @@ FONTES = {
 def test_pedidos_cobrem_todas_as_fontes_e_nada_mais() -> None:
     pedidos = pedidos_de_populacao(datetime(2026, 11, 5, tzinfo=UTC))
     assert {pedido.job for pedido in pedidos} == FONTES
-    # Todo job de fonte registrado no Dagster entra; o analítico e o próprio popular ficam fora.
-    assert {job.name for job in JOBS} - {"analitico_job", "popular_banco_job"} == FONTES
+    # Todo job de fonte registrado no Dagster entra; o analítico, a previsão (que precisa da Gold
+    # pronta) e o próprio popular ficam fora.
+    fora = {"analitico_job", "predicao_job", "popular_banco_job"}
+    assert {job.name for job in JOBS} - fora == FONTES
 
 
 def test_particionados_pedem_o_intervalo_completo_e_os_demais_nao_levam_tags() -> None:

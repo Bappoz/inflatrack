@@ -287,6 +287,15 @@ simular-cdc:
 atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadista Exemplo" ficticio="--ficticio":
     uv run python -m inflatrack.atacado.importar_tabela --arquivo "{{arquivo}}" --fornecedor "{{fornecedor}}" {{ficticio}}
 
+# E4: prevê o mês seguinte para cada praça e subitem (dbt, ~5 min) e publica no Supabase o que o
+# site e o agente leem. Exige SUPABASE_DB_URL no .env e a migration
+# web/backend/migrations/003_publicacao_inflatrack.sql aplicada no Supabase.
+previsao:
+    uv run dbt build --select fct_previsao_subitem
+
+publicar-site:
+    uv run python -m inflatrack.reverse_etl.publicar_site
+
 # E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
 # notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco). Os
 # gráficos vão também para docs/assets/e4/, que a página da evidência E4 mostra no mkdocs.

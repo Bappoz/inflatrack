@@ -1427,7 +1427,19 @@ de tarefas nessa linha.
   - a escolha por subitem erra 1,64 contra 1,66 do XGBoost sozinho nos meses que não viu.
 
   A ferramenta parou aqui para o integrante revisar, como combinado.
-- Não verificado: as Partes 2 a 4 (previsão na Gold, publicação no Supabase e Dagster), que só começam depois da revisão.
+- Depois do ponto de parada, o integrante escolheu o XGBoost fixo. A ferramenta simplificou o design (a previsão vai da Gold direto ao Supabase, sem cópia na `serie`) e implementou, com os testes antes:
+  - `aplicacao.py` (previsão do mês seguinte e erro típico de 12 meses, com reserva pelo grupo);
+  - o modelo Python do dbt `gold.fct_previsao_subitem`, num grupo próprio, sem automação e fora do `analitico_job`;
+  - a migration do Supabase `web/backend/migrations/003_publicacao_inflatrack.sql` (5 tabelas, RLS com leitura pública);
+  - `reverse_etl/publicar_site.py` (apaga e reescreve tudo numa transação);
+  - o ativo `site_supabase`, o `predicao_job` mensal e as receitas `just previsao` e `just publicar-site`.
+
+  Dois testes antigos foram ajustados para tratar a previsão como exceção explícita.
+- Verificado:
+  - `dbt build` real em 4m45s, com 4.045 previsões (17 praças, 377 subitens, mês previsto nov/2026) e os testes do dbt passando;
+  - a coleta e a gravação dos dados reais num schema temporário desfeito no fim (cerca de 1,5 MB);
+  - `anon` lê e não escreve.
+- Não verificado: a publicação num Supabase de verdade (a URL fica para o integrante preencher), o site e o agente.
 
 ---
 

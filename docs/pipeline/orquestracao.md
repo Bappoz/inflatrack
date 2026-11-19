@@ -49,6 +49,8 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
 | `atacado` | `atacado_postgres` (sem dependentes: o preço não vai para a Bronze, ADR 0004) | Postgres (`atacado`) | `atacado.importar_tabela` |
+| `predicao` | `fct_previsao_subitem` (modelo Python do dbt; XGBoost único, mês seguinte por praça e subitem) | DuckDB (`gold`) | `predicao.aplicacao` |
+| `site` | `site_supabase` (sem dependentes) | Supabase do site | `reverse_etl.publicar_site` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
@@ -115,6 +117,8 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 ### Primeira execução numa máquina nova
 
 `popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
+
+O `predicao_job` (dia 14, 11h) roda os grupos `predicao` e `site`: prevê o mês seguinte ao último IPCA e publica no Supabase, para o site e o agente. Fica fora do `analitico_job` diário porque a previsão leva uns 5 minutos, e fora do `popular_banco_job` porque precisa da Gold pronta.
 
 Os jobs rodam em paralelo, com duas exceções. O `atacado_job` espera o `ipca_job`, porque o importador exige os subitens em `classificacao`, que a carga do IPCA grava no Postgres. O `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
 
