@@ -139,3 +139,20 @@ def test_anon_le_e_nao_escreve(supabase) -> None:
     assert _contar(supabase, "previsao_subitem") == 2
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         supabase.execute("delete from previsao_subitem")
+
+
+@pytest.mark.parametrize("esvaziar", ["previsao", "painel"], ids=["sem-previsao", "grafico-vazio"])
+def test_publicacao_vazia_e_recusada_antes_de_apagar(supabase, esvaziar: str) -> None:
+    """Gold ou serie vazias (clone novo antes do analitico_job) não podem apagar o site."""
+    gravar(supabase, _publicacao())
+    vazia = _publicacao()
+    if esvaziar == "previsao":
+        vazia.previsao = vazia.previsao.iloc[0:0]
+    else:
+        vazia.painel[0]["linhas"] = []
+
+    with pytest.raises(ValueError, match="vazi"):
+        gravar(supabase, vazia)
+
+    assert _contar(supabase, "previsao_subitem") == 2
+    assert _contar(supabase, "painel_grafico") == 1

@@ -42,8 +42,8 @@ conexão do passo 2 escreve.
 2. Escolha a aba **Connection string > URI** e o modo **Session pooler**.
    - **Use o Session pooler, não a "Direct connection"**: no plano gratuito, a conexão direta só
      funciona por IPv6, e a maioria das redes domésticas não tem.
-   - **Não use o "Transaction pooler"** (porta `6543`): ele não aceita os comandos preparados que
-     a publicação usa.
+   - O "Transaction pooler" (porta `6543`) também funciona, porque a publicação não usa comandos
+     preparados. O Session pooler é o mais simples.
 3. A URL tem este formato:
 
    ```
@@ -117,7 +117,8 @@ ligado nesse horário.
 | `SUPABASE_DB_URL vazio` | O passo 3 não foi feito, ou a linha está em branco. |
 | `connection timed out` / `Network is unreachable` | Foi usada a "Direct connection" (só IPv6). Troque pela URL do **Session pooler** (passo 2). |
 | `password authentication failed` | A senha está errada ou tem caractere especial sem codificar (passo 2, item 4). |
-| `prepared statement ... does not exist` / `already exists` | Foi usado o Transaction pooler (porta `6543`). Use o Session pooler (porta `5432`). |
+| `publicação recusada, tabelas vazias: ...` | A Gold ou a `serie` local estão sem dado (por exemplo, num clone novo). Rode o `analitico_job` e `just previsao`. Nada foi apagado no Supabase. |
+| `o gráfico ... tem coluna de preço` | Alguém pôs no painel uma pergunta com preço ou custo. Preço não vai para o Supabase (ADR 0004): tire a coluna ou a pergunta. |
 | `relation "previsao_subitem" does not exist` | O passo 1 não foi feito no Supabase. |
 | `Table with name fct_previsao_subitem does not exist` | Falta gerar a previsão local: `just previsao`. |
 | `Could not set lock on file ... inflatrack.duckdb` | Outro processo está escrevendo no DuckDB (dbt ou uma carga). Espere ele terminar e rode de novo. |

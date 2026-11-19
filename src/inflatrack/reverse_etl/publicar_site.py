@@ -25,6 +25,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -46,8 +47,19 @@ logger = logging.getLogger("inflatrack.publicar_site")
 RAIZ = Path(__file__).resolve().parents[3]
 PAINEL = RAIZ / "scripts" / "sql" / "metabase" / "painel.toml"
 VARIAVEL_DSN = "SUPABASE_DB_URL"
-# O reajuste por produto do lojista vira o formulário do chat do site: não vai como gráfico.
-FORA_DO_SITE = {"p5_reajuste_minimo_por_produto.sql"}
+# Lista do que PODE ir (e não do que não pode): uma pergunta nova no painel, talvez com preço, só
+# chega ao Supabase público se alguém a acrescentar aqui de propósito. O p5 (reajuste por produto
+# do lojista) fica de fora: vira o formulário do chat do site.
+PAINEL_DO_SITE = (
+    "p1_inflacao_12m_por_setor",
+    "p4_brasil_x_regiao",
+    "p4_brasil_ipca_x_inpc_5_anos",
+    "p2_sazonalidade_por_mes",
+    "p3_poder_de_compra_desde_2006",
+    "p3_salario_minimo_real",
+)
+# Coluna com cara de preço ou custo nunca vai para o Supabase (ADR 0004).
+_COLUNA_DE_PRECO = re.compile(r"pre[cç]o|custo", re.IGNORECASE)
 
 BRASIL = 1
 PRACAS_IPCA = {
@@ -81,8 +93,19 @@ def perguntas_do_painel(caminho: Path = PAINEL) -> list[dict[str, Any]]:
     return [
         {**p, "id": p["arquivo"].removesuffix(".sql")}
         for p in perguntas
-        if p["arquivo"] not in FORA_DO_SITE
+        if p["arquivo"].removesuffix(".sql") in PAINEL_DO_SITE
     ]
+
+
+def conferir_sem_preco(id_grafico: str, linhas: list[dict[str, Any]]) -> None:
+    """Segunda trava do ADR 0004: recusa gráfico com coluna de preço ou custo."""
+    colunas = {coluna for linha in linhas for coluna in linha}
+    suspeitas = sorted(c for c in colunas if _COLUNA_DE_PRECO.search(c))
+    if suspeitas:
+        raise ValueError(
+            f"o gráfico {id_grafico} tem coluna de preço ({', '.join(suspeitas)}):"
+            " preço não vai para o Supabase (ADR 0004)"
+        )
 
 
 def linhas_json(linhas: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -153,6 +176,7 @@ def _painel(dsn_local: str) -> list[dict[str, Any]]:
         for pergunta in perguntas_do_painel():
             sql = (PAINEL.parent / pergunta["arquivo"]).read_text(encoding="utf-8")
             linhas = linhas_json(conexao.execute(sql).fetchall())
+            conferir_sem_preco(pergunta["id"], linhas)
             ate_o_mes = next((linha["ate_o_mes"] for linha in linhas if "ate_o_mes" in linha), None)
             graficos.append(
                 {
@@ -169,7 +193,12 @@ def _painel(dsn_local: str) -> list[dict[str, Any]]:
 
 
 def gravar(conexao: psycopg.Connection, publicacao: Publicacao) -> dict[str, int]:
-    """Apaga e reescreve as cinco tabelas numa transação. Devolve as linhas por tabela."""
+    """Apaga e reescreve as cinco tabelas numa transação. Devolve as linhas por tabela.
+
+    Recusa, antes de apagar qualquer coisa, uma publicação vazia: a Gold ou a `serie` sem dado
+    (clone novo antes do `analitico_job`) deixariam o site em branco com uma execução "de sucesso".
+    """
+    _conferir_nao_vazia(publicacao)
     with conexao.transaction():
         for tabela in _TABELAS:
             conexao.execute(f"delete from {tabela}")  # noqa: S608 (nome fixo, não vem de fora)
@@ -199,6 +228,26 @@ def gravar(conexao: psycopg.Connection, publicacao: Publicacao) -> dict[str, int
             tabela: conexao.execute(f"select count(*) from {tabela}").fetchone()[0]  # noqa: S608
             for tabela in _TABELAS
         }
+
+
+def _conferir_nao_vazia(publicacao: Publicacao) -> None:
+    vazias = [
+        nome
+        for nome, dados in (
+            ("previsao_subitem", publicacao.previsao),
+            ("subitem", publicacao.subitem),
+            ("resumo_subitem", publicacao.resumo),
+        )
+        if dados.empty
+    ]
+    vazias += [f"painel_grafico/{g['id']}" for g in publicacao.painel if g["linhas"] == []]
+    if not publicacao.painel:
+        vazias.append("painel_grafico")
+    if vazias:
+        raise ValueError(
+            f"publicação recusada, tabelas vazias: {', '.join(vazias)}."
+            " Rode o analitico_job e `just previsao` antes de publicar"
+        )
 
 
 def _inserir(conexao: psycopg.Connection, tabela: str, dados: pd.DataFrame) -> None:
@@ -234,9 +283,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         publicacao = coletar(args.duckdb, args.dsn_local or dsn_do_ambiente())
-        with psycopg.connect(destino, connect_timeout=10) as conexao:
+        # Sem comando preparado: o Transaction pooler do Supabase (porta 6543) troca de backend a
+        # cada transação, e o comando preparado da execução anterior colidiria com o desta.
+        with psycopg.connect(destino, connect_timeout=10, prepare_threshold=None) as conexao:
             contagem = gravar(conexao, publicacao)
-    except (duckdb.Error, psycopg.Error, OSError) as erro:
+    except (duckdb.Error, psycopg.Error, OSError, ValueError) as erro:
         logger.error("publicação interrompida: %s", erro)
         return 1
     for tabela, linhas in contagem.items():

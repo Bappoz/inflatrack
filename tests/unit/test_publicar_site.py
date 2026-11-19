@@ -61,3 +61,45 @@ def test_painel_traz_so_o_painel_do_lojista_sem_o_reajuste_por_produto() -> None
     assert "p5_reajuste_minimo_por_produto.sql" not in arquivos
     assert not any(a.startswith("clima_") for a in arquivos)
     assert all({"id", "titulo", "grafico", "eixo_x", "eixo_y"} <= set(p) for p in perguntas)
+
+
+def test_so_vao_para_o_site_os_graficos_permitidos() -> None:
+    from inflatrack.reverse_etl.publicar_site import PAINEL_DO_SITE
+
+    assert {p["id"] for p in perguntas_do_painel()} == set(PAINEL_DO_SITE)
+
+
+def test_grafico_com_coluna_de_preco_e_barrado() -> None:
+    import pytest
+
+    from inflatrack.reverse_etl.publicar_site import conferir_sem_preco
+
+    with pytest.raises(ValueError, match="preco_novo"):
+        conferir_sem_preco("p9", [{"produto": "Arroz", "preco_novo": 25.0}])
+    conferir_sem_preco("p1", [{"setor": "Alimentação", "inflacao_12m_pct": 4.5}])
+
+
+def test_conexao_com_o_supabase_desliga_comandos_preparados(monkeypatch) -> None:
+    """O Transaction pooler do Supabase não aguenta comando preparado entre conexões."""
+    from inflatrack.reverse_etl import publicar_site
+
+    vistos = {}
+
+    class Parar(Exception):
+        pass
+
+    def conectar(dsn, **kwargs):
+        vistos.update(kwargs)
+        raise Parar
+
+    monkeypatch.setenv("SUPABASE_DB_URL", "postgresql://x@y:6543/z")
+    monkeypatch.setattr(publicar_site, "load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr(publicar_site, "coletar", lambda *a, **k: None)
+    monkeypatch.setattr(publicar_site.psycopg, "connect", conectar)
+
+    import pytest
+
+    with pytest.raises(Parar):
+        publicar_site.main([])
+    assert "prepare_threshold" in vistos
+    assert vistos["prepare_threshold"] is None
