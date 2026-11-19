@@ -1405,7 +1405,8 @@ de tarefas nessa linha.
 - Com o integrante, desenhou a avaliação: a pedido da professora, regressão linear e logarítmica (linhas de tendência sobre o índice do subitem) comparadas ao XGBoost, mais as duas previsões ingênuas da Regra 8. A avaliação fica num notebook, sem Dagster (escolha do integrante), e a praça é o Brasil (escolha do integrante, depois que um revisor-subagente mostrou que Brasília só tinha 39 dos 45 subitens no período de teste).
 - Implementou, com os testes antes, `src/inflatrack/predicao/` (base sem vazamento, com o ENSO pela data de publicação e o clima só de mês fechado; os modelos; o walk-forward e as métricas nas mesmas linhas) e o notebook `notebooks/avaliacao_modelos.ipynb` (`just modelo-notebook`). Trocou o `XGBRegressor` pela API nativa do xgboost, para não trazer o scikit-learn.
 - Achado no caminho: a regressão "pelo nível" (reta contra o último índice real) errava 6 p.p. por embutir uma volta para a reta. A ferramenta acrescentou a leitura "pela tendência" (2,26 p.p.) para a comparação ser justa, e registrou isso no design.
-- Resultado: o XGBoost sem clima erra 1,73 p.p. contra 2,21 p.p. da ingênua (ganho de cerca de 21%), mas perde no arroz, no café e no feijão; o clima não melhorou o erro. Evidência em `docs/evidencias/e4/avaliacao_modelos.md`.
+- Resultado: o XGBoost sem clima erra 1,73 p.p. contra 2,21 p.p. da ingênua (ganho de cerca de 21%), mas perde em 6 dos 45 subitens (arroz, café, feijão, os dois açúcares e margarina); o clima piorou o erro.
+- Um revisor-subagente reproduziu os números e não achou vazamento nos modelos, mas apontou que o clima dos polos usava o `mes_fechado` de hoje (corrigido para o mês anterior, com teste que falhou antes) e que a conclusão subcontava os produtos em que o XGBoost perde (corrigida). Evidência em `docs/evidencias/e4/avaliacao_modelos.md`.
 - Não verificado: o desempenho em outras praças, ajuste de hiperparâmetros e as defasagens longas de clima da Regra 4.
 
 ---

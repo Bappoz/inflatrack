@@ -114,6 +114,16 @@ def test_clima_de_mes_nao_fechado_fica_nulo() -> None:
     assert math.isnan(linha.spi3_polos)
 
 
+def test_clima_de_polo_e_do_mes_anterior() -> None:
+    """Em t (IPCA de t sai ~dia 10 de t+1) o clima de t muitas vezes ainda não fechou: usa t-1."""
+    polos = _polos()
+    polos["temp_media_anomalia"] = [float(m.month) for m in MESES]
+
+    linha = _linha(_base(polos=polos), "2020-06-01")
+
+    assert linha.temp_anomalia_polos == 5.0
+
+
 def test_subitem_fora_da_regra_5_nao_tem_clima_de_polo() -> None:
     base = _base(inflacao=_inflacao((ARROZ, ACUCAR)))
 

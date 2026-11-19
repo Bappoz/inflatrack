@@ -3,7 +3,7 @@
 Regras da Seção 2.4 do PLAN aplicadas aqui:
 - Regra 1: só entra o que estava publicado em t. O ENSO entra pela data de publicação
   (`mes_publicacao <= t`), não pela de referência.
-- Regra 2: clima de polo só de mês fechado; mês aberto fica nulo.
+- Regra 2: clima de polo só de mês fechado, e o de t-1 (o de t pode não ter fechado na origem).
 - Regra 5: o índice de clima dos polos só vai para os subitens que a tabela cobre.
 - Regra 7: nada é imputado; nulo fica nulo (o XGBoost lida com ele).
 Médias, desvio e defasagens são calculados aqui só com meses <= t, não lidos da Gold.
@@ -145,8 +145,11 @@ def _juntar_polos(base: pd.DataFrame, polos: pd.DataFrame) -> pd.DataFrame:
         [(codigo, polo) for codigo, lista in GRUPO_CLIMA.items() for polo in lista],
         columns=["codigo_subitem", "polo"],
     )
+    # O clima de t entra na linha de t+1: na origem t (IPCA de t sai ~dia 10 de t+1) o pacote do
+    # BDMEP de t muitas vezes ainda não fechou. O `mes_fechado` é o de hoje, não o daquela data,
+    # então usar t daria ao backtest um clima que a previsão real não teria.
     fechado = polos[polos["mes_fechado"].astype(bool)].assign(
-        mes=lambda d: pd.to_datetime(d["mes_referencia"])
+        mes=lambda d: pd.to_datetime(d["mes_referencia"]) + pd.DateOffset(months=1)
     )
     por_subitem = (
         mapa.merge(fechado, on="polo")
