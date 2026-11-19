@@ -280,6 +280,12 @@ transacional-load:
 simular-cdc:
     uv run python -m inflatrack.cdc.simular_mudancas
 
+# Tabela de preços de um atacadista direto no Postgres (schema atacado; nunca na Bronze, ADR 0004).
+# Exige a migration 0007 e a carga do IPCA (os subitens precisam existir em classificacao).
+# O padrão importa o atacadista fictício de exemplo.
+atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadista Exemplo" *flags="--ficticio":
+    uv run python -m inflatrack.atacado.importar_tabela --arquivo {{arquivo}} --fornecedor "{{fornecedor}}" {{flags}}
+
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
 e3-lojista: ipca-load simular-cdc transacional-load
     uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario

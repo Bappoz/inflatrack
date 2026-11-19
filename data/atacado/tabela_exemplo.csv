@@ -1,0 +1,46 @@
+produto;unidade;preco;codigo_subitem_ipca;vigente_desde
+Arroz Tipo 1;fardo 6 x 5 kg;129,90;1101002;2026-11-01
+Feijão Carioca Tipo 1;fardo 10 x 1 kg;69,90;1101073;2026-11-01
+Feijão Preto Tipo 1;fardo 10 x 1 kg;74,90;1101052;2026-11-01
+Macarrão Espaguete;fardo 20 x 500 g;62,90;1102006;2026-11-01
+Macarrão Instantâneo;caixa 50 x 80 g;54,90;1102061;2026-11-01
+Farinha de Trigo;fardo 10 x 1 kg;44,90;1102012;2026-11-01
+Farinha de Mandioca;fardo 10 x 1 kg;59,90;1102023;2026-11-01
+Fubá de Milho;fardo 10 x 1 kg;32,90;1102008;2026-11-01
+Batata-inglesa;saco 25 kg;99,90;1103003;2026-11-01
+Cebola;saco 20 kg;139,90;1103043;2026-11-01
+Tomate;caixa 20 kg;119,90;1103028;2026-11-01
+Cenoura;caixa 20 kg;79,90;1103044;2026-11-01
+Açúcar Refinado;fardo 10 x 1 kg;46,90;1104003;2026-11-01
+Açúcar Cristal;fardo 5 x 5 kg;99,90;1104004;2026-11-01
+Achocolatado em Pó;caixa 12 x 400 g;119,90;1104052;2026-11-01
+Banana Prata;caixa 20 kg;79,90;1106008;2026-11-01
+Laranja Pera;saco 20 kg;59,90;1106039;2026-11-01
+Maçã;caixa 18 kg;139,90;1106017;2026-11-01
+Acém;peça kg;32,90;1107095;2026-11-01
+Carne de Porco;peça kg;21,90;1107018;2026-11-01
+Frango Inteiro Congelado;caixa 18 kg;179,90;1110009;2026-11-01
+Ovos Brancos;caixa 30 dúzias;249,90;1110044;2026-11-01
+Linguiça Toscana;caixa 5 kg;89,90;1109008;2026-11-01
+Salsicha;caixa 5 kg;54,90;1109007;2026-11-01
+Leite Longa Vida Integral;caixa 12 x 1 L;64,90;1111004;2026-11-01
+Leite em Pó Integral;caixa 12 x 400 g;239,90;1111009;2026-11-01
+Queijo Muçarela;peça kg;39,90;1111011;2026-11-01
+Manteiga com Sal;caixa 12 x 200 g;179,90;1111031;2026-11-01
+Pão de Forma;fardo 10 x 500 g;79,90;1112018;2026-11-01
+Biscoito Cream Cracker;caixa 20 x 350 g;119,90;1112003;2026-11-01
+Óleo de Soja;caixa 20 x 900 ml;149,90;1113013;2026-11-01
+Margarina;caixa 12 x 500 g;99,90;1113040;2026-11-01
+Café Torrado e Moído;fardo 10 x 500 g;279,90;1114022;2026-11-01
+Refrigerante Cola;fardo 6 x 2 L;49,90;1114083;2026-11-01
+Sardinha em Conserva;caixa 24 x 125 g;119,90;1115039;2026-11-01
+Molho de Tomate;caixa 24 x 300 g;59,90;1116005;2026-11-01
+Detergente Líquido;caixa 24 x 500 ml;54,90;2104008;2026-11-01
+Sabão em Pó;caixa 10 x 800 g;129,90;2104009;2026-11-01
+Água Sanitária;caixa 12 x 1 L;42,90;2104005;2026-11-01
+Sabão em Barra;fardo 10 x 5 un;69,90;2104015;2026-11-01
+Desinfetante;caixa 12 x 2 L;89,90;2104012;2026-11-01
+Papel Higiênico Folha Dupla;fardo 16 x 4 rolos;139,90;6301017;2026-11-01
+Sabonete;caixa 12 x 6 un;109,90;6301016;2026-11-01
+Creme Dental;caixa 12 x 90 g;59,90;6301007;2026-11-01
+Desodorante Aerosol;caixa 12 x 150 ml;179,90;6301014;2026-11-01

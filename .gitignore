@@ -15,7 +15,8 @@ venv/
 .tmp_dagster_home_*/
 
 # Dados brutos e derivados — nunca versionar (ver docs/carga.md)
-data/
+data/*
+!data/atacado/
 *.json.gz
 
 # Material de trabalho da planilha de acompanhamento
