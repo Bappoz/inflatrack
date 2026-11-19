@@ -36,11 +36,14 @@ Raw, Bronze em Delta, DuckDB, `stg`/`int` no dbt e uma fato na Gold. Dois proble
    insert-only e a visão `preco_atual`), ligados ao subitem do IPCA pela mesma FK de
    `public.produto`.
 2. Nenhuma tabela de `atacado` entra na publicação `inflatrack_cdc`, e nenhum código de `dbt/`,
-   `src/inflatrack/bronze/`, `src/inflatrack/loaders/` ou `orchestration/` cita o schema.
+   `src/inflatrack/bronze/`, `src/inflatrack/loaders/`, `src/inflatrack/cdc/` ou
+   `src/inflatrack/reverse_etl/` cita o schema.
    `tests/unit/test_regra_preco_relacional.py` e `tests/integration/test_atacado_schema.py`
    guardam as duas regras.
-3. A carga é `inflatrack.atacado.importar_tabela` (`just atacado-importar`): lê o CSV e grava
-   direto no Postgres, sem Raw nem Delta.
+3. A carga é `inflatrack.atacado.importar_tabela`: lê o CSV e grava direto no Postgres, sem Raw
+   nem Delta. Roda pelo `atacado_job` do Dagster (diário, e dentro do `popular_banco_job`, depois
+   do `ipca_job`) ou por `just atacado-importar`. O ativo `atacado_postgres` não tem dependentes
+   nem entra no `analitico_job`; `tests/orchestration/test_atacado.py` guarda isso.
 4. Enquanto não houver coleta real, a base tem um atacadista **fictício** (`ficticio = true`),
    como o lojista de demonstração.
 

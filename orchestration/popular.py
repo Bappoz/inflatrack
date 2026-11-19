@@ -50,13 +50,19 @@ JOBS_DE_FONTE = {
     "clima_job": None,
     "enso_job": None,
     "transacional_job": None,
+    "atacado_job": None,
 }
 
 # Quem espera quem. O CDC cria o slot lógico na primeira leitura; disparado junto com a carga
 # completa do IPCA (~6 mi de linhas em public.observacao, mais de 2 GB de WAL), o slot fica sem
 # leitura além de max_slot_wal_keep_size e o Postgres o invalida (visto num clone limpo em
 # 2026-11-08). Esperar não é condicionar: o CDC roda mesmo se uma coleta do SIDRA falhar.
-ESPERA = {"transacional_job": ("ipca_job", "inpc_job", "ipca_indice_job")}
+# O atacadista espera o IPCA porque o importador exige os subitens em `classificacao`, que a
+# carga do IPCA grava no Postgres.
+ESPERA = {
+    "transacional_job": ("ipca_job", "inpc_job", "ipca_indice_job"),
+    "atacado_job": ("ipca_job",),
+}
 
 TERMINAIS = {DagsterRunStatus.SUCCESS, DagsterRunStatus.FAILURE, DagsterRunStatus.CANCELED}
 

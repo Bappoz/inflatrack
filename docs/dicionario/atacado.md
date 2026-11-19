@@ -51,10 +51,13 @@ preço é uma linha nova.
 
 ### atacado.preco_atual (visão)
 
-O último preço (`vigente_desde` mais recente) de cada produto, com `produto`, `unidade`,
-`codigo_subitem_ipca` e `id_fornecedor`.
+O preço que vale hoje para cada produto (o `vigente_desde` mais recente até a data atual), com
+`produto`, `unidade`, `codigo_subitem_ipca` e `id_fornecedor`.
 
 ## Carga
+
+No Dagster, o `atacado_job` (grupo `atacado`, diário às 6h e dentro do `popular_banco_job`)
+importa a tabela de exemplo. Pelo terminal:
 
 ```bash
 just migrar 0007_preco_atacadista.sql   # só num volume que já existia

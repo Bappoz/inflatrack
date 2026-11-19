@@ -12,8 +12,9 @@ PIPELINE_ANALITICO = (
     "src/inflatrack/loaders",
     "src/inflatrack/cdc",
     "src/inflatrack/reverse_etl",
-    "orchestration",
 )
+# orchestration/ pode citar atacado: o Dagster só dispara o importador, que grava no Postgres.
+# tests/orchestration/test_atacado.py garante que nenhum ativo depende dele.
 
 
 def test_tabela_exemplo_e_valida() -> None:
