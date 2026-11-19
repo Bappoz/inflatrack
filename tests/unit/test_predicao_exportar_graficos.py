@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from inflatrack.predicao.exportar_graficos import NOMES, exportar
+from inflatrack.predicao.exportar_graficos import NOMES, NOTEBOOKS, exportar
 
 NOTEBOOK = Path(__file__).resolve().parents[2] / "notebooks" / "avaliacao_modelos.ipynb"
 PNG = b"\x89PNG\r\n\x1a\n"
@@ -20,9 +20,10 @@ def test_numero_de_graficos_diferente_dos_nomes_falha(tmp_path: Path) -> None:
         exportar(NOTEBOOK, tmp_path, nomes=["so_um"])
 
 
-def test_imagens_da_documentacao_batem_com_o_notebook(tmp_path: Path) -> None:
+@pytest.mark.parametrize("notebook", list(NOTEBOOKS), ids=lambda p: p.stem)
+def test_imagens_da_documentacao_batem_com_o_notebook(notebook: Path, tmp_path: Path) -> None:
     """Se o notebook foi refeito e as imagens do mkdocs não, a página mostra gráfico velho."""
     documentacao = NOTEBOOK.parents[1] / "docs" / "assets" / "e4"
 
-    for novo in exportar(NOTEBOOK, tmp_path):
+    for novo in exportar(notebook, tmp_path, NOTEBOOKS[notebook]):
         assert (documentacao / novo.name).read_bytes() == novo.read_bytes()

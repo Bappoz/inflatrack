@@ -1410,6 +1410,25 @@ de tarefas nessa linha.
 - A pedido do integrante, pôs os gráficos do notebook na página da evidência E4 do mkdocs, como PNG em `docs/assets/e4/`, mantendo o link para o `.ipynb`. O `just modelo-notebook` regrava as imagens junto, e um teste falha se elas divergirem do notebook.
 - Não verificado: o desempenho em outras praças, ajuste de hiperparâmetros e as defasagens longas de clima da Regra 4.
 
+**Continuação (2026-11-19): planejamento da fase de aplicação e avaliação em todas as praças (`feat/aplicacao-modelo`)**
+- Com o integrante, planejou a fase de aplicação em três trabalhos: previsão e publicação, site e agente Google ADK. Leu o site existente na branch `feat/site` (Next.js + FastAPI + Supabase, de Johnnatan Salles) e o exemplo de agente ADK com LiteLLM enviado pelo integrante.
+- Decisões do integrante:
+  - treino local e publicação do mínimo no Supabase (plano gratuito);
+  - o site faz `preço × (1 + variação)` com o preço digitado, sem gravá-lo;
+  - caminho misto (gráficos do painel do lojista prontos, mais previsão e resumo para o agente);
+  - retenção por substituição;
+  - escolha de modelo por subitem;
+  - avaliação ampliada como ponto de parada.
+
+  Um revisor-subagente leu o design; a ferramenta decidiu a reserva (ingênua) para pares que o vencedor não prevê.
+- Implementou, com os testes antes: base e walk-forward com várias praças (a praça na chave e como variável; regressões por `groupby`), a escolha por subitem com medição em meses que ela não viu (`escolha.py`) e o notebook `avaliacao_todas_pracas.ipynb`. Conferiu que a avaliação anterior, com uma praça, dá os mesmos números.
+- Resultado:
+  - o XGBoost único erra 1,70 p.p. contra 2,39 da ingênua (+29%) e ganha em todas as 17 localidades;
+  - a escolha por subitem erra 1,64 contra 1,66 do XGBoost sozinho nos meses que não viu.
+
+  A ferramenta parou aqui para o integrante revisar, como combinado.
+- Não verificado: as Partes 2 a 4 (previsão na Gold, publicação no Supabase e Dagster), que só começam depois da revisão.
+
 ---
 
 ## Artur Fernandes Galdino

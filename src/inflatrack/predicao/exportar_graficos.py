@@ -1,7 +1,7 @@
-"""Copia os gráficos do notebook da avaliação para `docs/assets/e4/`, para o mkdocs mostrá-los.
+"""Copia os gráficos dos notebooks da avaliação para `docs/assets/e4/`, para o mkdocs mostrá-los.
 
-Roda no fim de `just modelo-notebook`, então as imagens da documentação saem da mesma execução do
-notebook. `tests/unit/test_predicao_exportar_graficos.py` falha se as duas divergirem.
+Roda no fim de `just modelo-notebook`, então as imagens da documentação saem da mesma execução dos
+notebooks. `tests/unit/test_predicao_exportar_graficos.py` falha se elas divergirem.
 
 Uso::
 
@@ -21,6 +21,13 @@ DESTINO = RAIZ / "docs" / "assets" / "e4"
 
 # Na ordem em que os gráficos aparecem no notebook.
 NOMES = ("mae_por_modelo", "previsto_contra_real")
+NOTEBOOKS = {
+    NOTEBOOK: NOMES,
+    RAIZ / "notebooks" / "avaliacao_todas_pracas.ipynb": (
+        "ganho_xgboost_por_praca",
+        "escolha_por_subitem",
+    ),
+}
 
 
 def exportar(
@@ -48,8 +55,9 @@ def exportar(
 
 
 def main() -> int:
-    for arquivo in exportar():
-        print(arquivo.relative_to(RAIZ))
+    for notebook, nomes in NOTEBOOKS.items():
+        for arquivo in exportar(notebook, DESTINO, nomes):
+            print(arquivo.relative_to(RAIZ))
     return 0
 
 

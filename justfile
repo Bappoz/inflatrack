@@ -290,8 +290,10 @@ atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadist
 # E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
 # notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco). Os
 # gráficos vão também para docs/assets/e4/, que a página da evidência E4 mostra no mkdocs.
+# O de todas as praças leva dezenas de minutos (36 treinos do XGBoost com ~880 mil linhas).
 modelo-notebook:
     uv run jupyter nbconvert --to notebook --execute --inplace notebooks/avaliacao_modelos.ipynb
+    uv run jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 notebooks/avaliacao_todas_pracas.ipynb
     uv run python -m inflatrack.predicao.exportar_graficos
 
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
