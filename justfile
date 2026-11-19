@@ -288,9 +288,11 @@ atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadist
     uv run python -m inflatrack.atacado.importar_tabela --arquivo "{{arquivo}}" --fornecedor "{{fornecedor}}" {{ficticio}}
 
 # E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
-# notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco).
+# notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco). Os
+# gráficos vão também para docs/assets/e4/, que a página da evidência E4 mostra no mkdocs.
 modelo-notebook:
     uv run jupyter nbconvert --to notebook --execute --inplace notebooks/avaliacao_modelos.ipynb
+    uv run python -m inflatrack.predicao.exportar_graficos
 
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
 e3-lojista: ipca-load simular-cdc transacional-load

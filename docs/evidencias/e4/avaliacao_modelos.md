@@ -3,9 +3,9 @@
 Resposta à pergunta: o modelo prevê a variação de preço do mês seguinte melhor do que regras
 simples? Se não prever, não adianta usá-lo para recomendar reajuste ao lojista.
 
-O notebook completo, com gráficos, é o
+O notebook completo, com o código e todas as tabelas, é o
 [`notebooks/avaliacao_modelos.ipynb`](https://github.com/Bappoz/inflatrack/blob/feat/modelo-reajuste/notebooks/avaliacao_modelos.ipynb).
-Para refazer: `just modelo-notebook`.
+Para refazer: `just modelo-notebook`. Ele regrava o notebook e os gráficos desta página.
 
 ## Como foi medido
 
@@ -31,6 +31,8 @@ Para refazer: `just modelo-notebook`.
 | Regressão linear (nível) | 6,036 | 10,900 | −173% |
 | Regressão logarítmica (nível) | 6,261 | 10,958 | −183% |
 
+![Erro médio absoluto por modelo: as barras verdes são o XGBoost, e a linha vermelha tracejada é a ingênua](../../assets/e4/mae_por_modelo.png)
+
 MAE por grupo:
 
 | Modelo | Alimentação | Limpeza | Higiene |
@@ -38,6 +40,14 @@ MAE por grupo:
 | XGBoost sem clima | 2,027 | 0,600 | 0,518 |
 | Ingênua | 2,586 | 0,731 | 0,670 |
 | Regressão logarítmica (tendência) | 2,488 | 0,629 | 0,547 |
+
+## Previsto contra real
+
+A linha preta é a variação real de cada mês. A previsão ingênua (azul) repete a curva real com um
+mês de atraso. A regressão linear pela tendência (laranja) só acompanha o ritmo médio. O XGBoost
+(verde) fica mais perto da linha preta, mas no arroz e no café chega atrasado nas viradas.
+
+![Variação mensal real e prevista de arroz, feijão carioca, café moído e tomate, de nov/2023 a out/2026](../../assets/e4/previsto_contra_real.png)
 
 ## Conclusão
 
