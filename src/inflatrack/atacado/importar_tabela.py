@@ -66,8 +66,16 @@ def ler_csv(conteudo: str) -> list[LinhaPreco]:
         raise ValueError(f"colunas ausentes no CSV: {', '.join(faltando)}")
 
     linhas: list[LinhaPreco] = []
-    vistos: dict[tuple[str, date], int] = {}
+    vistos: dict[tuple[str, date], LinhaPreco] = {}
     for numero, bruta in enumerate(leitor, start=2):
+        # Colunas além do cabeçalho caem na chave None. Vazias (";" no fim, comum no Excel) são
+        # ignoradas; preenchidas indicam um preço com vírgula decimal num arquivo separado por ",".
+        sobra = [valor for valor in bruta.pop(None, None) or [] if valor.strip()]
+        if sobra:
+            raise ValueError(
+                f"linha {numero}: mais colunas que o cabeçalho ({', '.join(sobra)}); num arquivo"
+                " separado por vírgula, ponha o preço entre aspas"
+            )
         campos = {(k or "").strip().lower(): (v or "").strip() for k, v in bruta.items()}
         try:
             linha = LinhaPreco(
@@ -82,12 +90,13 @@ def ler_csv(conteudo: str) -> list[LinhaPreco]:
         if linha.preco_centavos == 0:
             raise ValueError(f"linha {numero}: preço zero")
         chave = (linha.produto, linha.vigente_desde)
-        if chave in vistos and vistos[chave] != linha.preco_centavos:
+        if chave in vistos and vistos[chave] != linha:
             raise ValueError(
-                f"linha {numero}: {linha.produto} aparece com dois preços em {linha.vigente_desde}"
+                f"linha {numero}: {linha.produto} aparece duas vezes em {linha.vigente_desde}"
+                " com preço, unidade ou subitem diferentes"
             )
         if chave not in vistos:
-            vistos[chave] = linha.preco_centavos
+            vistos[chave] = linha
             linhas.append(linha)
     if not linhas:
         raise ValueError("o CSV não tem nenhuma linha de preço")
@@ -115,9 +124,15 @@ def importar(
             " values (%s, %s, %s) on conflict (nome) do nothing",
             (fornecedor, codigo_localidade, ficticio),
         )
-        (id_fornecedor,) = conexao.execute(
-            "select id from atacado.fornecedor where nome = %s", (fornecedor,)
+        id_fornecedor, localidade_gravada, ficticio_gravado = conexao.execute(
+            "select id, codigo_localidade, ficticio from atacado.fornecedor where nome = %s",
+            (fornecedor,),
         ).fetchone()
+        if (localidade_gravada, ficticio_gravado) != (codigo_localidade, ficticio):
+            raise ValueError(
+                f"{fornecedor} já existe com codigo_localidade={localidade_gravada} e"
+                f" ficticio={ficticio_gravado}; use outro nome de fornecedor para outros dados"
+            )
 
         produtos_novos = precos_novos = 0
         for linha in linhas:
@@ -150,10 +165,18 @@ def _produto(conexao: psycopg.Connection, id_fornecedor: int, linha: LinhaPreco)
     ).fetchone()
     if criado:
         return criado[0], 1
-    (id_produto,) = conexao.execute(
-        "select id from atacado.produto where id_fornecedor = %s and nome = %s",
+    id_produto, unidade, subitem = conexao.execute(
+        "select id, unidade, codigo_subitem_ipca from atacado.produto"
+        " where id_fornecedor = %s and nome = %s",
         (id_fornecedor, linha.produto),
     ).fetchone()
+    if (unidade, subitem) != (linha.unidade, linha.codigo_subitem_ipca):
+        # Sem isto, trocar o fardo de 5 kg pelo de 1 kg viraria uma queda de preço no histórico.
+        raise ValueError(
+            f"{linha.produto} já existe com unidade {unidade!r} e subitem {subitem};"
+            f" o arquivo traz {linha.unidade!r} e {linha.codigo_subitem_ipca}."
+            " Cadastre a embalagem nova com outro nome de produto"
+        )
     return id_produto, 0
 
 

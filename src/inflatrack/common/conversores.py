@@ -15,7 +15,11 @@ FORMATOS_DATA = ("%Y-%m-%d", "%d/%m/%Y")
 def converter_centavos(valor: str) -> int:
     """`R$ 1.234,56` -> 123456. Recusa vazio, negativo e mais de duas casas decimais."""
     texto = str(valor).strip().replace("R$", "").replace(" ", "")
-    if "," in texto:
+    separador = "," if "," in texto else "."
+    if separador in texto and len(texto.rsplit(separador, 1)[1]) > 2:
+        # Conta os dígitos digitados: "7,950" e "1.250" (mil e duzentos?) não viram centavos.
+        raise ValueError(f"valor com mais de duas casas decimais: {valor!r}")
+    if separador == ",":
         # Com vírgula decimal, o ponto só pode ser separador de milhar.
         texto = texto.replace(".", "").replace(",", ".")
     try:

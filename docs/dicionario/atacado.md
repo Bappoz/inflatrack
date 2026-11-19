@@ -62,10 +62,18 @@ just atacado-importar                   # atacadista fictício de exemplo
 just atacado-importar tabela.csv "Atacadista Real" ""   # real: sem --ficticio
 ```
 
-O CSV tem o cabeçalho `produto;unidade;preco;codigo_subitem_ipca;vigente_desde`. Aceita `;` ou `,`,
-preço em formato brasileiro (`R$ 1.234,56`) e data `AAAA-MM-DD` ou `DD/MM/AAAA`. O arquivo é
-validado inteiro antes de gravar; reimportar não duplica nada; corrigir um preço exige uma data
-nova. Os subitens precisam existir em `classificacao` (carga do IPCA).
+O CSV tem o cabeçalho `produto;unidade;preco;codigo_subitem_ipca;vigente_desde`, em UTF-8 (no
+Excel: "CSV UTF-8"). Aceita `;` ou `,`; separado por `,`, o preço com vírgula decimal precisa estar
+entre aspas. Preço em formato brasileiro (`R$ 1.234,56`), com no máximo duas casas decimais, e data
+`AAAA-MM-DD` ou `DD/MM/AAAA`. Regras:
+
+- o arquivo é validado inteiro antes de gravar, e um erro em qualquer linha não grava nada;
+- reimportar não duplica nada, e corrigir um preço exige uma data nova;
+- um produto já cadastrado não muda de unidade nem de subitem: embalagem nova é produto novo;
+- um fornecedor já cadastrado não muda de praça nem de rótulo `ficticio`;
+- os subitens precisam existir em `classificacao` (carga do IPCA);
+- `preco_atual` só mostra preços com `vigente_desde` até hoje: uma tabela anunciada com data futura
+  entra na data.
 
 ## Exemplo de consulta
 

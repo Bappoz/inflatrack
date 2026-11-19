@@ -34,7 +34,7 @@ def pg():
         conexao.rollback()
 
 
-def _linhas(preco_arroz: int = 2490, data: date = date(2026, 11, 1)) -> list[LinhaPreco]:
+def _linhas(preco_arroz: int = 2490, data: date = date(2026, 10, 1)) -> list[LinhaPreco]:
     return [
         LinhaPreco("Arroz", "5 kg", preco_arroz, SUBITENS[0], data),
         LinhaPreco("Feijão", "1 kg", 795, SUBITENS[1], data),
@@ -68,7 +68,7 @@ def test_reimportar_o_mesmo_arquivo_nao_grava_nada(pg) -> None:
 def test_preco_novo_em_data_nova_vira_o_atual(pg) -> None:
     _importar(pg, _linhas())
 
-    resultado = _importar(pg, _linhas(preco_arroz=2690, data=date(2026, 12, 1)))
+    resultado = _importar(pg, _linhas(preco_arroz=2690, data=date(2026, 11, 1)))
 
     assert resultado == Resultado(produtos_novos=0, precos_novos=1)
     assert _preco_atual(pg, "Arroz") == 2690
@@ -86,6 +86,29 @@ def test_mudar_preco_na_mesma_data_e_recusado(pg) -> None:
 
     with pytest.raises(ValueError, match="Arroz"):
         _importar(pg, _linhas(preco_arroz=2590))
+
+
+def test_unidade_diferente_de_produto_existente_e_recusada(pg) -> None:
+    _importar(pg, _linhas())
+    linhas = [LinhaPreco("Arroz", "1 kg", 590, SUBITENS[0], date(2026, 12, 1))]
+
+    with pytest.raises(ValueError, match="Arroz"):
+        _importar(pg, linhas)
+
+
+def test_subitem_diferente_de_produto_existente_e_recusado(pg) -> None:
+    _importar(pg, _linhas())
+    linhas = [LinhaPreco("Arroz", "5 kg", 2490, SUBITENS[1], date(2026, 12, 1))]
+
+    with pytest.raises(ValueError, match="Arroz"):
+        _importar(pg, linhas)
+
+
+def test_fornecedor_existente_com_outro_rotulo_de_ficticio_e_recusado(pg) -> None:
+    _importar(pg, _linhas())
+
+    with pytest.raises(ValueError, match="ficticio"):
+        importar(pg, _linhas(), fornecedor=FORNECEDOR, codigo_localidade=5300108, ficticio=False)
 
 
 def test_subitem_ausente_falha_antes_de_gravar(pg) -> None:

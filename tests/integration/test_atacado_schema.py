@@ -85,6 +85,17 @@ def test_preco_atual_devolve_o_mais_recente(pg) -> None:
     assert centavos == 1100
 
 
+def test_preco_futuro_ainda_nao_e_o_atual(pg) -> None:
+    id_produto = _produto(pg)
+    _preco(pg, id_produto, 1000, "2026-01-01")
+    _preco(pg, id_produto, 9999, "2999-01-01")
+
+    (centavos,) = pg.execute(
+        "select preco_centavos from atacado.preco_atual where id_produto = %s", (id_produto,)
+    ).fetchone()
+    assert centavos == 1000
+
+
 def test_atacado_fora_da_publicacao_do_cdc(pg) -> None:
     (total,) = pg.execute(
         "select count(*) from pg_publication_tables"

@@ -17,6 +17,8 @@ venv/
 # Dados brutos e derivados — nunca versionar (ver docs/carga.md)
 data/*
 !data/atacado/
+data/atacado/*
+!data/atacado/tabela_exemplo.csv
 *.json.gz
 
 # Material de trabalho da planilha de acompanhamento

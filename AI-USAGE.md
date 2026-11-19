@@ -1385,15 +1385,20 @@ de tarefas nessa linha.
 - Apontou também: os ativos do Dagster chamam `main(list(argv))` em funções `main()` sem parâmetro (todo run falharia com `TypeError`); sem arquivo, a ingestão carrega a fixture de testes, com preços inventados; o cliente HTTP não tem URL nem é chamado; `coalesce(codigo_localidade, 1)` joga praças não casadas no Brasil; e o PR tem conflitos com a main em 3 arquivos.
 - Pesquisou na web se o PROCON publica preços de produtos como dados: só encontrou relatórios em PDF/DOCX (Procon-SP com DIEESE, Goiás, Anápolis, Rio Verde, Campina Grande), sem CSV, API ou conjunto no dados.gov.br. Abriu o PDF de outubro/2026 do Procon-SP: o preço aparece só para alguns dos 39 produtos, em gráficos e texto.
 - Analisou o que do PR se aproveita (só os conversores de número e data em formato brasileiro) e recomendou uma branch nova a partir da main.
-- Com o integrante, começou a desenhar a nova abordagem: base relacional de preços de um atacadista, que servirá de alvo para o modelo preditivo de reajuste da E4.
+- Com o integrante, desenhou a nova abordagem: o modelo da E4 aprende a variação do subitem do IPCA (real, desde 2006) e uma base relacional de preços de atacadista traduz o percentual em R$. Escreveu design e plano em `docs/superpowers/` e o integrante aprovou.
+- Implementou na branch `feat/precos-atacadista`: migration `0007` (schema `atacado` fora da publicação do CDC, `preco` insert-only, visão `preco_atual`), conversores de formato brasileiro com `Decimal` (vindos do PR #21), importador `just atacado-importar` direto no Postgres, atacadista fictício com 45 produtos de subitens reais, ADR 0004, dicionário e Seção 2.5 do `PLAN_E3_E4.md`. Os testes vieram antes do código.
+- Um revisor independente (subagente) leu a branch inteira e apontou casos que gravariam dado errado numa tabela insert-only: `1.250` virando R$ 1,25, coluna a mais derrubando o importador com traceback, troca de embalagem ou subitem e rótulo `ficticio` ignorados em silêncio, preço com data futura como atual e `.gitignore` liberando qualquer CSV de `data/atacado/`. Cada um ganhou um teste que falhou antes da correção.
 
 **O que foi verificado e como**
 - Assinaturas de `main()` do PR lidas com `ast` na branch do PR; conflitos pela simulação `git merge-tree` contra a `origin/main`.
 - Conteúdo do PDF do Procon-SP lido página a página.
+- Migration aplicada duas vezes no Postgres de desenvolvimento; importação real do exemplo (45 produtos; a segunda importação grava 0); `just check` com 501 testes passando; `mkdocs build --strict`; códigos dos 45 subitens conferidos na `classificacao`.
 
 **O que NÃO foi verificado**
-- Nenhum teste do PR foi executado localmente.
+- Nenhum teste do PR #21 foi executado localmente.
 - As fontes alternativas citadas (loja online do Atacadão, programas estaduais de preço por nota fiscal) não foram conferidas.
+- Os preços do atacadista de exemplo são inventados; a migration não foi testada num `just reset` do zero.
+- Pendências menores do revisor, não corrigidas: arquivo cp1252 dá erro pouco claro, nome de produto diferencia maiúsculas, a FK aceita código que não é subitem.
 
 ---
 

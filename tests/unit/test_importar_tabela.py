@@ -58,3 +58,25 @@ def test_mesmo_produto_e_data_com_precos_diferentes_e_recusado() -> None:
 def test_arquivo_sem_linhas_e_recusado() -> None:
     with pytest.raises(ValueError):
         ler_csv(f"{CABECALHO}\n")
+
+
+def test_coluna_a_mais_preenchida_cita_a_linha() -> None:
+    conteudo = f"{CABECALHO}\nArroz;5 kg;24,90;1101002;2026-11-01;sobra\n"
+
+    with pytest.raises(ValueError, match="linha 2"):
+        ler_csv(conteudo)
+
+
+def test_delimitador_sobrando_no_fim_e_ignorado() -> None:
+    conteudo = f"{CABECALHO}\nArroz;5 kg;24,90;1101002;2026-11-01;\n"
+
+    assert ler_csv(conteudo)[0].preco_centavos == 2490
+
+
+def test_mesmo_produto_e_data_com_unidade_diferente_e_recusado() -> None:
+    conteudo = (
+        f"{CABECALHO}\nArroz;5 kg;24,90;1101002;2026-11-01\nArroz;1 kg;24,90;1101002;2026-11-01\n"
+    )
+
+    with pytest.raises(ValueError, match="Arroz"):
+        ler_csv(conteudo)

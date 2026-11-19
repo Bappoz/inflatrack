@@ -65,7 +65,9 @@ select distinct on (pr.id_produto)
        pr.vigente_desde
 from atacado.preco as pr
 join atacado.produto as p on p.id = pr.id_produto
+where pr.vigente_desde <= current_date
 order by pr.id_produto, pr.vigente_desde desc;
-comment on view atacado.preco_atual is 'Último preço de cada produto do atacadista.';
+comment on view atacado.preco_atual is
+    'Preço que vale hoje para cada produto do atacadista. Tabela anunciada com data futura só entra na data.';
 
 commit;
