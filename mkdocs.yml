@@ -89,6 +89,7 @@ nav:
     - Orquestração (Dagster): pipeline/orquestracao.md
     - Contrato das Etapas: pipeline/contratoEtapas.md
     - Como rodar (Commodities): como_rodar/cr_commodities.md
+    - Como publicar no site (Supabase): como_rodar/publicar_site.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
