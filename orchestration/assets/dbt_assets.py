@@ -35,6 +35,9 @@ GRUPO_POR_PASTA = {
     "intermediate": "silver",
     "marts": "gold",
     "semantic": "gold",
+    # A previsão pesa (13 treinos do XGBoost): grupo próprio, fora do analitico_job, rodada só
+    # pelo predicao_job mensal e sem automação.
+    "predicao": "predicao",
 }
 
 
@@ -49,6 +52,8 @@ class TradutorInflatrack(DagsterDbtTranslator):
     def get_automation_condition(
         self, dbt_resource_props: Mapping[str, Any]
     ) -> AutomationCondition | None:
+        if self.get_group_name(dbt_resource_props) == "predicao":
+            return None
         return AutomationCondition.eager()
 
 
