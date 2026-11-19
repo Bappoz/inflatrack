@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.2.3",
     "requests>=2.34.2",
     "scipy>=1.14",
+    "xgboost>=3.4.1",
 ]
 
 [dependency-groups]
@@ -24,6 +25,9 @@ dev = [
     "ruff>=0.6",
     "pytest>=8.0",
     "dagster-webserver>=1.13.26",
+    "matplotlib>=3.11.2",
+    "jupyter>=1.1.1",
+    "nbconvert>=7.17.2",
 ]
 docs = ["mkdocs>=1.6.0", "mkdocs-material>=9.5.0"]
 
