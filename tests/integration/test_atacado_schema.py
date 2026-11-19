@@ -55,12 +55,15 @@ def test_update_em_preco_e_barrado(pg) -> None:
     _preco(pg, id_produto, 1000, "2026-01-01")
 
     with pytest.raises(psycopg.errors.RestrictViolation):
-        pg.execute("update atacado.preco set preco_centavos = 1 where id_produto = %s", (id_produto,))
+        pg.execute(
+            "update atacado.preco set preco_centavos = 1 where id_produto = %s", (id_produto,)
+        )
 
 
 def test_subitem_inexistente_e_recusado(pg) -> None:
     (id_fornecedor,) = pg.execute(
-        "insert into atacado.fornecedor (nome, codigo_localidade) values ('X', 5300108) returning id"
+        "insert into atacado.fornecedor (nome, codigo_localidade)"
+        " values ('X', 5300108) returning id"
     ).fetchone()
 
     with pytest.raises(psycopg.errors.ForeignKeyViolation):
