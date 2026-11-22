@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
   ArrowRight,
@@ -22,9 +22,41 @@ export default function RegistrationPage() {
   const [imageUnavailable, setImageUnavailable] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const savedCooldown = Number(
+      window.sessionStorage.getItem("inflatrack_signup_cooldown") ?? "0",
+    );
+    return Number.isFinite(savedCooldown) && savedCooldown > 0
+      ? savedCooldown
+      : 0;
+  });
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const timer = window.setTimeout(() => {
+      setCooldownSeconds((seconds) => {
+        const remaining = Math.max(0, seconds - 1);
+        if (remaining === 0) {
+          window.sessionStorage.removeItem("inflatrack_signup_cooldown");
+        } else {
+          window.sessionStorage.setItem(
+            "inflatrack_signup_cooldown",
+            String(remaining),
+          );
+        }
+        return remaining;
+      });
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting || cooldownSeconds > 0) return;
+
     const form = event.currentTarget;
     const formData = new FormData(form);
 
@@ -52,6 +84,7 @@ export default function RegistrationPage() {
       const result: {
         detail?: string | { msg?: string }[];
         confirmation_required?: boolean;
+        retry_after_seconds?: number;
       } = await response.json();
 
       if (!response.ok) {
@@ -59,6 +92,16 @@ export default function RegistrationPage() {
           ? result.detail.map((error) => error.msg).filter(Boolean).join(" ")
           : result.detail;
         const errorMessage = detail || "Não foi possível criar a conta. Tente novamente.";
+        if (response.status === 429) {
+          const retryAfter = Number.isFinite(result.retry_after_seconds)
+            ? Math.max(1, Math.ceil(result.retry_after_seconds ?? 3600))
+            : Math.max(1, Number(response.headers.get("Retry-After")) || 3600);
+          setCooldownSeconds(retryAfter);
+          window.sessionStorage.setItem(
+            "inflatrack_signup_cooldown",
+            String(retryAfter),
+          );
+        }
         setMessage(errorMessage);
         toast.error(errorMessage);
         return;
@@ -193,8 +236,16 @@ export default function RegistrationPage() {
               />
             </div>
 
-            <button className="submit-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Criando conta..." : "Criar minha conta"}
+            <button
+              className="submit-button"
+              type="submit"
+              disabled={isSubmitting || cooldownSeconds > 0}
+            >
+              {isSubmitting
+                ? "Criando conta..."
+                : cooldownSeconds > 0
+                  ? `Aguarde ${cooldownSeconds}s`
+                  : "Criar minha conta"}
               <ArrowRight aria-hidden="true" size={18} />
             </button>
             <p className="form-message" role="status" aria-live="polite">

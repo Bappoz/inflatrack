@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogOut, RefreshCw } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import {
   CartesianGrid,
   Legend,
@@ -16,12 +21,18 @@ import {
 
 type DashboardData = {
   latest_month: string | null;
+  location_options: { codigo_localidade: number; nome_localidade: string; uf: string | null }[];
   kpis: {
     ipca_12m_pct: number | null;
     inpc_12m_pct: number | null;
   };
   sectors: { setor: string; inflacao_12m_pct: number | null }[];
-  locations: { localidade: string; ipca_12m_pct: number | null; inpc_12m_pct: number | null }[];
+  locations: {
+    localidade: string;
+    uf: string | null;
+    ipca_12m_pct: number | null;
+    inpc_12m_pct: number | null;
+  }[];
   history: { mes_referencia: string; ipca_12m_pct: number | null; inpc_12m_pct: number | null }[];
   seasonality: {
     mes_numero: number;
@@ -35,7 +46,7 @@ type DashboardData = {
   purchasing_power: { mes_referencia: string; poder_compra_100_reais: number | null }[];
 };
 
-type DashboardUser = { id: string; email: string; nome: string };
+type DashboardUser = { id: string; email: string; nome: string; state?: string };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -75,6 +86,9 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedLocation, setSelectedLocation] = useState("1");
+  const [selectedPeriod, setSelectedPeriod] = useState("60");
+  const [selectedIndex, setSelectedIndex] = useState("Ambos");
 
   useEffect(() => {
     let active = true;
@@ -96,7 +110,15 @@ export default function HomePage() {
         }
         if (active) setUser(currentUser as DashboardUser);
 
-        const dashboardResponse = await fetch(`${baseUrl}/dashboard`, { credentials: "include" });
+        const dashboardParams = new URLSearchParams({
+          localidade: selectedLocation,
+          periodo: selectedPeriod,
+          indice: selectedIndex,
+        });
+        const dashboardResponse = await fetch(
+          `${baseUrl}/dashboard?${dashboardParams.toString()}`,
+          { credentials: "include" },
+        );
         const result = await dashboardResponse.json();
         if (dashboardResponse.status === 401) {
           router.replace("/login");
@@ -105,7 +127,17 @@ export default function HomePage() {
         if (!dashboardResponse.ok) {
           throw new Error(result.detail ?? "Não foi possível carregar o dashboard.");
         }
-        if (active) setData(result as DashboardData);
+        if (active) {
+          const dashboardData = result as DashboardData;
+          setData(dashboardData);
+          if (selectedLocation === "1" && currentUser.state) {
+            const accountLocation = dashboardData.location_options.find(
+              (option) =>
+                option.uf?.toUpperCase() === String(currentUser.state).toUpperCase(),
+            );
+            if (accountLocation) setSelectedLocation(String(accountLocation.codigo_localidade));
+          }
+        }
       } catch (loadError) {
         if (active) {
           setError(
@@ -123,7 +155,7 @@ export default function HomePage() {
     return () => {
       active = false;
     };
-  }, [reloadKey, router]);
+  }, [reloadKey, router, selectedLocation, selectedPeriod, selectedIndex]);
 
   async function handleLogout() {
     await fetch(`${apiUrl.replace(/\/$/, "")}/auth/logout`, {
@@ -147,13 +179,30 @@ export default function HomePage() {
       location.inpc_12m_pct ?? 0,
     ]),
   );
+  const accountState = user?.state?.trim().toUpperCase();
+  const orderedLocations = [...(data?.locations ?? [])].sort((left, right) => {
+    const leftMatches = left.uf?.toUpperCase() === accountState;
+    const rightMatches = right.uf?.toUpperCase() === accountState;
+    if (leftMatches !== rightMatches) return leftMatches ? -1 : 1;
+    return left.localidade.localeCompare(right.localidade, "pt-BR");
+  });
 
   return (
     <main className="dashboard-page">
       <div className="dashboard-content">
+        <header className="dashboard-topbar">
+          <nav className="dashboard-tabs" aria-label="Seções do painel">
+            <button type="button" className="dashboard-tab dashboard-tab-active">Visão geral</button>
+            <button type="button" className="dashboard-tab">Indicadores</button>
+            <button type="button" className="dashboard-tab">Praças</button>
+            <button type="button" className="dashboard-tab">Relatórios</button>
+          </nav>
+        </header>
         <section className="dashboard-heading">
           <div>
-            <p className="dashboard-eyebrow">VISÃO GERAL · BRASIL</p>
+            <p className="dashboard-eyebrow">
+              VISÃO GERAL · {accountState ? `REGIÃO ${accountState}` : "BRASIL"}
+            </p>
             <h1>{user ? `Olá, ${user.nome}!` : "Olá!"}</h1>
             <p className="dashboard-subtitle">
               Acompanhe os indicadores econômicos publicados pelo pipeline.
@@ -164,15 +213,6 @@ export default function HomePage() {
               <span>Último mês: {monthLabel(data.latest_month)}</span>
             )}
             <button
-              className="dashboard-logout-button"
-              type="button"
-              aria-label="Sair"
-              title="Sair"
-              onClick={handleLogout}
-            >
-              <LogOut aria-hidden="true" size={16} />
-            </button>
-            <button
               className="refresh-button"
               type="button"
               aria-label="Atualizar dashboard"
@@ -182,8 +222,58 @@ export default function HomePage() {
             >
               <RefreshCw aria-hidden="true" size={16} />
             </button>
+            <button
+              className="dashboard-logout-button"
+              type="button"
+              aria-label="Sair"
+              title="Sair"
+              onClick={handleLogout}
+            >
+              <LogOut aria-hidden="true" size={16} />
+            </button>
           </div>
         </section>
+
+        {data && (
+          <section className="dashboard-filters" aria-label="Filtros do dashboard">
+            <label>
+              <span>Praça</span>
+              <select
+                value={selectedLocation}
+                onChange={(event) => setSelectedLocation(event.target.value)}
+              >
+                {data.location_options.map((option) => (
+                  <option value={option.codigo_localidade} key={option.codigo_localidade}>
+                    {option.nome_localidade}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Período</span>
+              <select
+                value={selectedPeriod}
+                onChange={(event) => setSelectedPeriod(event.target.value)}
+              >
+                <option value="12">Últimos 12 meses</option>
+                <option value="24">Últimos 24 meses</option>
+                <option value="60">Últimos 5 anos</option>
+                <option value="0">Todo o histórico</option>
+              </select>
+            </label>
+            <label>
+              <span>Índice</span>
+              <select
+                value={selectedIndex}
+                onChange={(event) => setSelectedIndex(event.target.value)}
+              >
+                <option value="Ambos">IPCA e INPC</option>
+                <option value="IPCA">IPCA</option>
+                <option value="INPC">INPC</option>
+              </select>
+            </label>
+          </section>
+        )}
 
         {loading ? (
           <div className="dashboard-state" role="status">Carregando dados do pipeline…</div>
@@ -201,21 +291,27 @@ export default function HomePage() {
         ) : (
           <>
             <section className="dashboard-kpis" aria-label="Indicadores principais">
-              <article className="kpi-card kpi-ipca">
-                <span>IPCA · 12 meses</span>
-                <strong>{percentage(data.kpis.ipca_12m_pct)}</strong>
-                <small>Brasil · índice geral</small>
-              </article>
-              <article className="kpi-card kpi-inpc">
-                <span>INPC · 12 meses</span>
-                <strong>{percentage(data.kpis.inpc_12m_pct)}</strong>
-                <small>Brasil · índice geral</small>
-              </article>
-              <article className="kpi-card kpi-spread">
-                <span>Diferença IPCA − INPC</span>
-                <strong>{percentage(spread)}</strong>
-                <small>pontos percentuais · Brasil</small>
-              </article>
+              {selectedIndex !== "INPC" && (
+                <article className="kpi-card kpi-ipca">
+                  <span>IPCA · 12 meses</span>
+                  <strong>{percentage(data.kpis.ipca_12m_pct)}</strong>
+                  <small>{selectedLocation === "1" ? "Brasil" : "Praça selecionada"} · índice geral</small>
+                </article>
+              )}
+              {selectedIndex !== "IPCA" && (
+                <article className="kpi-card kpi-inpc">
+                  <span>INPC · 12 meses</span>
+                  <strong>{percentage(data.kpis.inpc_12m_pct)}</strong>
+                  <small>{selectedLocation === "1" ? "Brasil" : "Praça selecionada"} · índice geral</small>
+                </article>
+              )}
+              {selectedIndex === "Ambos" && (
+                <article className="kpi-card kpi-spread">
+                  <span>Diferença IPCA − INPC</span>
+                  <strong>{percentage(spread)}</strong>
+                  <small>pontos percentuais · {selectedLocation === "1" ? "Brasil" : "praça selecionada"}</small>
+                </article>
+              )}
             </section>
 
             <div className="dashboard-grid">
@@ -243,9 +339,18 @@ export default function HomePage() {
                     <span>IPCA</span>
                     <span>INPC</span>
                   </div>
-                  {data.locations.map((location) => (
-                    <div className="location-bar-row" key={location.localidade}>
-                      <span className="location-bar-label">{location.localidade}</span>
+                  {orderedLocations.map((location) => {
+                    const isAccountRegion = location.uf?.toUpperCase() === accountState;
+                    return (
+                    <div
+                      className={`location-bar-row${isAccountRegion ? " location-bar-row-account" : ""}`}
+                      key={location.localidade}
+                      title={isAccountRegion ? "Região cadastrada na sua conta" : undefined}
+                    >
+                      <span className="location-bar-label">
+                        {location.localidade}
+                        {isAccountRegion && <small> SUA REGIÃO</small>}
+                      </span>
                       <div className="location-bar-cell">
                         <strong>{percentage(location.ipca_12m_pct)}</strong>
                         <div className="dashboard-bar-track">
@@ -265,7 +370,8 @@ export default function HomePage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ChartPanel>
 
@@ -295,22 +401,26 @@ export default function HomePage() {
                       }}
                     />
                     <Legend />
-                    <Line
-                      dataKey="ipca_12m_pct"
-                      name="IPCA"
-                      stroke="var(--chart-gold)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      dataKey="inpc_12m_pct"
-                      name="INPC"
-                      stroke="var(--chart-lilac)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
+                    {selectedIndex !== "INPC" && (
+                      <Line
+                        dataKey="ipca_12m_pct"
+                        name="IPCA"
+                        stroke="var(--chart-gold)"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls
+                      />
+                    )}
+                    {selectedIndex !== "IPCA" && (
+                      <Line
+                        dataKey="inpc_12m_pct"
+                        name="INPC"
+                        stroke="var(--chart-lilac)"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </ChartPanel>
