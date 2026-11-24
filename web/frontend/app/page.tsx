@@ -28,6 +28,9 @@ export default function HomePage() {
   // O botão de atualizar pula o cache de 24 h só na próxima busca.
   const ignorarCache = useRef(false);
   const [selectedLocation, setSelectedLocation] = useState("1");
+  // A região da conta só é escolhida sozinha no primeiro carregamento;
+  // depois disso, "Brasil" escolhido pelo usuário fica como está.
+  const regiaoDaContaAplicada = useRef(false);
   const [selectedPeriod, setSelectedPeriod] = useState("60");
   const [selectedIndex, setSelectedIndex] = useState("Ambos");
   const [aba, setAba] = useState<Aba>("geral");
@@ -73,7 +76,9 @@ export default function HomePage() {
         if (active) {
           const dashboardData = result as DashboardData;
           setData(dashboardData);
-          if (selectedLocation === "1" && currentUser.state) {
+          const primeiraCarga = !regiaoDaContaAplicada.current;
+          regiaoDaContaAplicada.current = true;
+          if (primeiraCarga && selectedLocation === "1" && currentUser.state) {
             const accountLocation = dashboardData.location_options.find(
               (option) =>
                 option.uf?.toUpperCase() === String(currentUser.state).toUpperCase(),
