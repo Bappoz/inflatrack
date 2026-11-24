@@ -2040,3 +2040,17 @@ de tarefas nessa linha.
 
 **O que NÃO foi verificado**
 - Os scripts Node da taste-skill e o pacote npm `claude-code-templates`.
+
+### 2026-11-24 — Claude Code — Instalação da skill ui-ux-pro-max e revisão visual do dashboard
+
+**O que a ferramenta fez**
+- Instalou a skill ui-ux-pro-max só neste projeto (`.claude/skills/`), copiando a versão já revisada em vez de usar o `npx`. A pedido do integrante, trocou o trecho que mandava instalar o Python com `sudo`, `brew` ou `winget` por uma regra de não instalar nada.
+- Usou a skill para definir uma escala de tipos (12–32 px), contraste AA, botões de 44 px e foco visível, e aplicou isso ao dashboard num bloco de CSS no fim do `globals.css`. Manteve a paleta roxa e a fonte Geist.
+- Fez o conteúdo ocupar a largura da tela (até 1760 px, com margem lateral proporcional), dividir a linha entre os cartões de indicador e esticar um painel sozinho na largura toda.
+- Corrigiu problemas vistos nos prints: as abas sumiam no celular, os nomes dos setores apareciam cortados e o rodapé tinha letra de 10 px.
+
+**O que foi verificado e como**
+- Com uma conta de teste informada pelo integrante, um script local abriu o Edge sem janela, entrou no dashboard e tirou prints a 1920, 1366 e 390 px; os prints foram conferidos antes e depois de cada ajuste. A senha não foi gravada em arquivo.
+
+**O que NÃO foi verificado**
+- As abas Produtos, Praças e Relatórios por print; o modo escuro.
