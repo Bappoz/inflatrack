@@ -13,10 +13,10 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 24 | 2026-09-14 a 2026-10-30 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (11), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 27 | 2026-09-14 a 2026-11-19 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (14), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 10 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (7) |
+| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
 
 
 ## Todas as sessões
@@ -69,6 +69,12 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-02 (Fase 3) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Modelagem dbt (Silver/Gold) e Orquestração Dagster do PIB Internacional (E3) |
 | 2026-11-02 (Fase 4) | Artur Fernandes Galdino | Antigravity (Gemini 3.8 Flash) | Limpeza de Legados, Unificação no Dagster e Diário de Bordo (E3) |
 | 2026-11-08 | Lucas Zanetti | Claude Code (Opus 5.5) | Revisão e integração da E3: merge da `E3-pipeline`, execução do zero em clone limpo, correções de orquestração e Release Notes |
+| 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Pendências da E3: salário mínimo na Gold e no painel, checks de frescura em todas as fontes e fusão `ingest_*`/`bronze_*` de clima e salário mínimo |
+| 2026-11-09 | Lucas Zanetti | Claude Code (Sonnet 5.5) | Docs de arquitetura e ADRs desatualizados (dbt, Silver, Gold, Metabase) e primeiro teste E2E |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
+| 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
+| 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
+| 2026-11-19 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #21 (PROCON), preços de atacadista no Postgres (PR #23) e avaliação dos modelos de previsão (regressões x XGBoost) |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Integração do cadastro de usuário com Supabase Auth via backend Python |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Tabela pública de perfis sincronizada com Supabase Auth |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Home simples e navegação de teste entre cadastro, login e home |
@@ -289,6 +295,61 @@ separados e um PR.
 **Decisões que continuam sendo da Squad**
 - Recriar o slot do CDC automaticamente quando ele se perde, ou manter a falha explícita de hoje.
 - Levar o salário mínimo e o clima até a Gold, e fundir `ingest_*`/`bronze_*` dessas fontes.
+
+---
+
+### 2026-11-09 — Claude Code (Sonnet 5.5) — pendências da E3: salário mínimo na Gold, freshness em todas as fontes e fusão da Bronze
+
+**O que a ferramenta fez**
+- Fundiu `ingest_salario_minimo` + `bronze_salario_minimo` em `bronze/salario_minimo.py` e `ingest_clima` + `bronze_clima` em `bronze/clima.py` (subcomandos `coletar`, `checar`, `importar`, `load`); atualizou aliases do pacote, ativos do Dagster, `justfile` e testes.
+- Criou `gold.fct_salario_minimo_mensal` (reajuste e ganho real em 12 meses, valores corrigidos pelo IPCA), acrescentou-a à migration `0005` e a `exportar_serie.TABELAS`, e abriu uma segunda pergunta da P3 no painel (`p3_salario_minimo_real.sql`).
+- Reescreveu `orchestration/assets/checks.py` em torno de um `Sla` por fonte: checks de frescura e volume para IPCA, salário mínimo, PIB, PIB internacional, catálogo do clima e commodities, além dos três que já existiam.
+- Atualizou `sla_e_freshness.md`, `orquestracao.md`, o dicionário do salário mínimo, as release notes e `GUIA-PROJETO.md`.
+
+**O que foi verificado e como**
+- `dbt build` dos três modelos (Silver e Gold do salário mínimo) numa cópia do DuckDB com o HTML de fixture do DIEESE: 17 de 17 PASS; valores conferidos à mão em meses de referência.
+- Migration `0005`, cópia para `serie` (duas vezes, para provar o delete+insert), `tests/integration/test_serie_permissoes.py` (6 passaram) e a nova consulta da P3, lida com os papéis `metabase_leitor` e `lojista_app`, num Postgres descartável em projeto Compose separado, removido depois.
+- `tests/orchestration/test_checks.py`: 33 passaram; os checks de IPCA e salário mínimo também rodaram contra o DuckDB real (69 dias de defasagem, SLA cumprido).
+- `ruff check` sem erro; `pytest` completo: 309 passaram, 22 pulados (sem o Postgres do projeto no ar).
+- Numa cópia isolada da árvore de trabalho (Postgres e portas próprios, dados reais; IPCA copiado do banco de desenvolvimento): `macro_job`, `commodities_job`, `pib_internacional_job`, `dieese_job`, `clima_job`, coleta do PIB (2015 a 2026) e `analitico_job` em SUCCESS, com os 9 checks de frescura passando dentro do Dagster; `just dbt-test` 230/230; `pytest` 331 passaram e 0 pulados; `just metabase-painel` com 7 perguntas. A cópia foi desmontada depois.
+- A migration `0005` foi aplicada ao volume de desenvolvimento do usuário (`just migrar`): `serie.fct_salario_minimo_mensal` existe, com leitura para `metabase_leitor` e `lojista_app`.
+- `mkdocs build --strict` sem erro depois das mudanças de documentação.
+
+**Erros da ferramenta encontrados durante a verificação**
+- Reescrevi `sla_e_freshness.md` inteiro, contra a regra de preservar a estrutura de documentos de entrega; restaurei o original e refiz só com acréscimos.
+
+**O que NÃO foi verificado**
+- As medições diárias do clima (`clima_medicoes`) seguem fora do pipeline e sem check; o endpoint do INMET não foi testado.
+- O `popular_banco_job` inteiro e o CDC (`simular-cdc` e `transacional_job`) não foram rodados na cópia: o IPCA e o `bronze.transacional_mudanca` vieram do banco de desenvolvimento.
+
+**Decisões tomadas pelo usuário depois da entrega**
+- O prazo de 75 dias do SLA de IPCA e salário mínimo foi mantido e registrado em `sla_e_freshness.md`, seção 5.
+- O Parquet e o raw legados da coleta do salário mínimo foram mantidos, por causa do loader da E1.
+
+---
+
+### 2026-11-09 (2) — Claude Code (Sonnet 5.5) — docs de arquitetura e ADRs desatualizados, e primeiro teste E2E
+
+**O que a ferramenta fez**
+- Atualizou, com diff mínimo por linha, as páginas que ainda chamavam dbt, Silver, Gold e painel de "planejados": `stackTecnologica.md`, `arquiteturaMedallion.md`, `visaoGeral.md`, `fluxoDados.md`, `componentes.md`, `contratoEtapas.md`, os rótulos "Streamlit" dos três diagramas SVG e os ADRs 0001 (`docs/arquitetura.md`), 0002 e 0003. O Metabase substituiu o Streamlit nas descrições.
+- Descobriu, ao conferir o código, que o ADR 0003 (calendário civil com `forward fill`) não está implementado na trilha atual: os carregadores legados foram removidos e a Silver mensal só conta os dias úteis publicados. O ADR foi corrigido para dizer isso, sem declarar a decisão superada.
+- Criou `tests/e2e/test_cadeia_salario_minimo.py` (6 testes): HTML do DIEESE até a consulta da P3 do painel, com o código real de Bronze, loader, dbt e cópia para o Postgres, e o IPCA sintético para ter um oráculo.
+- Registrou a cobertura E2E (o que existe e o que falta) nas release notes.
+
+**O que foi verificado e como**
+- `tests/e2e`: 6 passaram, com o Postgres do projeto no ar. Quebrar as fórmulas do modelo `fct_salario_minimo_mensal` de propósito fez 2 testes falharem; o modelo foi restaurado e os 6 voltaram a passar.
+- `mkdocs build --strict` sem erro depois das edições.
+- Cada afirmação nova de documento foi conferida no código (nomes de tabelas Delta, modelos da Gold, contagem de testes dbt, quais fontes ainda gravam `data/raw/`).
+
+**O que NÃO foi verificado**
+- `docs/fontes/*`, `docs/dicionario/*` (exceto o salário mínimo) e `docs/visaoGeral/onboarding.md` não foram revisados: podem ter as mesmas referências antigas.
+- A decisão formal da Squad no ADR 0001 (`Decisores`) não foi alterada: não há registro de aprovação.
+- O E2E do salário mínimo não cobre o IPCA real, o CDC nem um job do Dagster.
+- No volume de desenvolvimento do usuário, que não tem a migration `0004`, a suíte dá 327 passaram, 1 falha e 9 pulados (`test_renomear_na_cesta_...` e o CDC). Num Postgres descartável com todas as migrations: 337 passaram, 0 pulados. A `0004` não foi aplicada ao volume do usuário: não foi pedida.
+
+**Decisões que continuam sendo da Squad**
+- Marcar o ADR 0003 como superado pelo grão mensal ou reimplementar o calendário civil no dbt.
+- Estender o E2E (IPCA, lojista e isolamento) na E4.
 
 ---
 
@@ -1217,6 +1278,175 @@ de tarefas nessa linha.
 - O asset `serie_postgres` com `AutomationCondition.eager` não foi visto disparando sozinho (o sensor de automação nasce desligado); só a execução manual.
 - A regra "PIB disponível 5 meses após o início do trimestre" continua sendo uma aproximação do calendário do IBGE.
 
+### 2026-11-09 — Claude Code (Sonnet 5.5 e Opus 5.5) — comando `just painel-up` para pôr o Metabase no ar
+
+**O que a ferramenta fez**
+- Respondeu, lendo o `justfile` e o `docker-compose.yml`, que não havia comando `just` para subir o contêiner do Metabase (só `just metabase-painel`, que monta o painel) e que a interface fica em `http://localhost:3001` (`METABASE_PORT`).
+- Criou a receita `painel-up` no `justfile`: `just up` (Postgres), `just serie` (cópia da Gold para o schema `serie`), `docker compose --profile bi up -d --wait metabase` e, por último, `just metabase-painel`.
+- Conferiu antes que `just serie` e `just duckdb-ui` abrem o DuckDB só para leitura, então os dois podem rodar juntos.
+
+**O que foi verificado e como**
+- `just --dry-run painel-up` lista os quatro comandos na ordem esperada.
+
+**O que NÃO foi verificado**
+- A receita não foi executada de verdade: não se sabe se os 150 s de espera do `/api/health` no `metabase_painel.py` bastam para a primeira subida do Metabase nesta máquina.
+- Num volume do Postgres criado antes da migration 0005, o script para com erro pedindo a migration; esse caso não foi testado.
+
+**Continuação na mesma data**
+- O primeiro `just painel-up` do integrante falhou: `gold.dim_calendario` não existia. A ferramenta conferiu o DuckDB, abrindo só para leitura: havia só a Bronze, sem `bronze.ipca_*` e sem `bronze.transacional_mudanca`, embora o Delta das duas fontes já existisse.
+- `just materializar transacional_job` falhou na primeira vez porque o `just duckdb-ui` estava aberto e travava a escrita no arquivo. A ferramenta não encerrou o processo, só avisou o integrante. Depois que ele fechou a interface, o job rodou e levou 312 linhas ao DuckDB.
+- `just materializar analitico_job`: cargas do IPCA e do PIB no DuckDB, dbt com 264/264 OK e cópia para `serie`. Em seguida, `just painel-up` montou o dashboard (id 2, 7 perguntas).
+- Nenhum dado foi criado ou editado à mão, e nenhum código mudou além da receita nova: só rodaram receitas e jobs que já existiam. O `simular-cdc` não foi executado.
+
+**O que NÃO foi verificado**
+- Os valores exibidos no painel não foram conferidos contra a fonte nesta sessão.
+
+**Correção: origem das 312 mudanças do CDC**
+- A ferramenta tinha dito que as 312 mudanças "já estavam no Delta". Não estavam. Pelo histórico do Delta, só 13 eram de 2026-11-03. As outras 299 estavam pendentes no slot de CDC e foram gravadas no Delta em 2026-11-09 às 08:16, pela primeira tentativa do `transacional_job` (o passo do CDC funcionou, só o do DuckDB falhou).
+- Os eventos têm duas origens, conferidas no conteúdo de `depois` contra o código:
+  - `inflatrack.cdc.simular_mudancas` (`just simular-cdc`): lojista "Mercadinho Demonstração" (`criado_em` fixo em 2025-09-01), produtos Arroz 5kg, Leite 1L e Feijão 1kg.
+  - `tests/integration/test_cdc_transacional.py`: lojistas e produtos criados com `criado_em` = agora, custo de 700 centavos, apagados no fim do teste. Esses testes rodam no Postgres de desenvolvimento, e o slot de CDC captura tudo, então cada `just test` gera eventos para a Bronze. Os eventos são de 2026-11-03 a 2026-11-05.
+- Nenhum evento veio de dado real de lojista nem foi inventado pela ferramenta.
+- Não foi verificado se os eventos dos testes chegam à `gold.fct_reajuste_lojista` e ao painel.
+
+### 2026-11-11 — Claude Code (Opus 5.5) — revisão do PR #22 (clima): BDMEP até a Gold
+
+**O que a ferramenta fez**
+- Revisou o PR #22 (`feat/ajusteClima`, do Johnnatan) a pedido do integrante. Achou o PR em conflito com a main (que tinha fundido `ingest_clima` e `bronze_clima` em `bronze/clima.py`) e agendando a coleta diária pela rota `estacao/diaria` da API do INMET.
+- Testou a API: a rota diária responde 404 e a horária devolve 204 sem token. Os pacotes anuais do BDMEP, que a evidência da E2 já recomendava, estão no ar. Perguntou ao integrante antes de trocar a fonte, o ano inicial (2006), o formato da Gold e a inclusão de Fortaleza (A305) no de-para; seguiu o que ele escolheu.
+- Resolveu os conflitos, portou as mudanças do PR para `bronze/clima.py` e implementou a coleta pelo BDMEP: o CSV de cada estação vai inteiro para `clima_resposta`, as leituras horárias viram um resumo por dia em `clima_medicao`, e um manifesto por pacote evita baixar de novo o que não mudou.
+- Ajustou a Silver mensal (cobertura, extremos, chuva só com 80% dos dias, anomalia contra a normal só dos anos anteriores) e criou `gold.fct_clima_mensal` (praça do IPCA x mês, lags de 1 a 3 meses, `mes_fechado`). Criou também o check de frescura das medições.
+- Tirou o `init_db` de dentro do ativo dbt do Dagster (orquestração importando `scripts/`): os loaders já aplicam o DDL. Manteve a melhoria do PR no `scripts/init_db.py` e o `just duckdb-init`.
+- Pediu uma revisão independente do diff a um subagente. Corrigiu o que procedia: falha quando o pacote de um ano encerrado some ou não tem nenhuma estação, falha por arquivo sem descartar as outras estações, id repetido no lote, hora repetida no CSV, aviso quando o portal não manda `Last-Modified`, e grade e `mes_fechado` por praça. A revisão que volta ao valor anterior ficou registrada como limite.
+- Copiou o Delta de clima e o DuckDB do integrante para `data/backup-old-lixo/` antes de gravar; nada foi apagado.
+
+**O que foi verificado e como**
+- Coleta real de 2006 a 2026 nos dados locais. A primeira passada falhou em 2019 (acentos do cabeçalho trocados por `?`); o parser foi corrigido com teste de regressão. A segunda passada releu tudo, trouxe 2019 e não mudou nenhum valor dos outros anos: 110.687 leituras de 16 estações.
+- `dagster asset materialize --select '*gold/fct_clima_mensal'`: `RUN_SUCCESS`, check de frescura passando, dbt PASS=40. `dbt build` do projeto inteiro numa cópia do DuckDB: PASS=277.
+- `pytest` com Postgres descartável (projeto compose e porta próprios, para não gerar eventos de CDC no banco de desenvolvimento): todos passaram, nenhum pulado. Inclui um teste E2E novo, do .zip à Gold, com anomalia, lag e cobertura conferidos contra contas feitas fora do SQL.
+- Conferência de sanidade: São Paulo em set/2024 com +3,0 °C e −57 mm de chuva, a seca real daquele mês. Números completos em `docs/evidencias/e3/clima_bdmep.md`.
+
+**O que NÃO foi verificado**
+- O agendamento diário não rodou no `dagster dev`; só a materialização pela linha de comando.
+- Recife (A301) e Fortaleza (A305) não têm dado recente; a troca por outra estação ficou para a Squad.
+- O modelo preditivo ainda não existe: a utilidade das variáveis de clima para ele não foi medida.
+
+**Continuação (2026-11-11): clima provisório pelo Open-Meteo**
+- A pedido do integrante, pesquisou fontes grátis do clima do dia (Open-Meteo, NASA POWER, INMET com token, NOAA GHCN-Daily), testou as APIs ao vivo e comparou o Open-Meteo com o medido em Brasília. A temperatura ficou de 0,1 a 0,7 °C acima; a chuva divergiu muito. O integrante escolheu o Open-Meteo para cobrir os dias que o INMET ainda não publicou.
+- Implementou o provisório no fluxo Medallion: cliente `clients/open_meteo.py` (uma chamada para as 16 estações), JSON no Raw, tabela Delta e DuckDB à parte (`clima_medicao_provisoria`), staging que só usa o provisório depois do último dia oficial (`fonte`, `observado = false`), `dias_provisorios` na Gold com `mes_fechado` só pelo oficial, ativos `clima_provisorio` e `clima_provisorio_duckdb` no `clima_job` e check de frescura de 5 dias.
+- As coordenadas das estações entraram no seed de-para, tiradas do cabeçalho dos CSVs do BDMEP (a A305 não está no catálogo da API).
+- Achou na execução real que o `dbt seed` falhava num banco com o seed antigo, de 3 colunas; passou a usar `full_refresh: true` no seed, com teste que falha sem a correção. Os testes novos da CLI acharam `--provisorio --estacao` recusado pela validação, e a validação foi corrigida.
+- Atualizou a documentação da fonte, o dicionário, a orquestração, a Medallion, o SLA, a evidência e o README (atribuição CC BY 4.0).
+
+**O que foi verificado e como (continuação)**
+- `dagster job execute -j clima_job` com os dados locais: `RUN_SUCCESS`, 160 leituras provisórias (16 estações, 01 a 10/11/2026), os 3 checks de clima passando. A materialização até a Gold deu `RUN_SUCCESS` com dbt PASS=47.
+- Nenhum dia provisório em data já publicada pelo INMET. O E2E cobre a sobreposição (provisório de 8 a 15/02, oficial até 10/02: só 11 a 15 entram).
+
+**O que NÃO foi verificado (continuação)**
+- A troca automática do provisório pelo oficial com um pacote real novo do INMET; só nos testes, com pacote sintético.
+- O uso do Open-Meteo como não comercial foi lido nos termos, não confirmado com o Open-Meteo.
+
+**Continuação (2026-11-11): regra de mês incompleto e pesquisa sobre clima e safras**
+- O integrante questionou o corte de 80% na chuva. A ferramenta pesquisou o padrão da OMM (regra 3/5 para médias; nenhum dia faltando para totais) e mediu nos dados que a temperatura não tinha regra nenhuma (138 meses com média de menos da metade dos dias). Por escolha do integrante, aplicou a regra 3/5 à temperatura, à umidade e à chuva; nas médias só contam os dias já decorridos, no total de chuva também os ainda não decorridos.
+- Pesquisou como se analisa clima para safras (boletim Conab/INMET, ZARC da Embrapa, estudos do Banco Central sobre clima e inflação de alimentos, índices SPI/SPEI, graus-dia, ENSO/RONI) e comparou com o que o projeto já coleta, sem implementar nada novo.
+- Verificado: E2E com mês de 4 dias seguidos faltando (anulado) e de 5 espalhados (válido); `dbt build` completo numa cópia do banco com PASS=294; `pytest` com 413 passando. Não verificado: o efeito da regra nova no desempenho do modelo preditivo, que ainda não existe.
+
+**Continuação (2026-11-11 e 12): polos agrícolas, SPI-3 e RONI**
+- Implementou as três prioridades da pesquisa, com as escolhas do integrante: 14 estações em polos produtores (seed `seed_estacao_polo_agricola`, escolhidas pela cobertura medida em 2006, 2019 e 2025) e a Gold `fct_clima_polo_mensal`; o SPI-3 (McKee/OMM) só com anos anteriores (mínimo 10), em modelo Python do dbt com SciPy, dependência nova documentada na stack; e o RONI do NOAA como fonte nova (Bronze Delta, loader, `enso_job` semanal, check de frescura e `fct_enso_mensal` no formato do Banco Central, com `mes_publicacao` para evitar vazamento).
+- Extraiu as colunas de clima das duas Gold para a macro `colunas_clima_mensal`.
+- Achados no caminho: a grade do RONI cortava 1950–1978 e deixava sem lag o início de 1979 (os lags passaram a sair da série inteira); duas expectativas de teste da ferramenta estavam erradas (lag de 3 meses e valor de 1978) e foram corrigidas contra o arquivo real do NOAA.
+- Verificado com os dados locais pelo Dagster: `clima_job` e `enso_job` com `RUN_SUCCESS` e checks passando, Gold com dbt PASS=92; `dbt build` completo numa cópia do banco com PASS=339; `pytest` com 439 passando (Postgres descartável). Sanidade: SPI-3 de set/2024 marca seca extrema em Unaí e severa em Patrocínio e Varginha; o maior RONI desde 1979 é jan/1983.
+- Não verificado: o ganho das variáveis novas no modelo preditivo (que ainda não existe) e o agendamento semanal do `enso_job` no `dagster dev`.
+
+**Continuação (2026-11-12): revisão da documentação e treino com clima no PLAN**
+- A pedido do integrante, auditou a documentação contra as mudanças do clima e achou lacunas: componentes, fluxo de dados, índice do dicionário (ainda com as tabelas legadas), release notes, README do dbt e três diagramas, sendo que o `esquema-clima.svg` desenhava as tabelas da E1. Atualizou tudo e reescreveu os exemplos do dicionário do clima para a Gold, testando as consultas no banco.
+- Ao regenerar os diagramas, viu que o gerador desfazia uma correção feita à mão nos SVGs ("Metabase" voltava a "Streamlit"). Corrigiu o gerador, e o `medallion.svg` passou a sair idêntico ao commitado.
+- Acrescentou ao `PLAN_E3_E4.md` a Seção 2.4 (como treinar o modelo preditivo com clima: data de corte, só meses fechados, walk-forward sem ajuste na série inteira, defasagens por tipo de alimento, polo x grupo do IPCA, agregação antes de treinar, nulos, comparação com e sem clima) e atualizou a árvore de pastas e a situação do clima na 5.4.
+- Verificado: `mkdocs build --strict` sem aviso; consultas de exemplo rodadas no DuckDB local. Não verificado: as regras da Seção 2.4 na prática, porque o modelo ainda não existe.
+
+**Continuação (2026-11-12): painel de clima no Metabase**
+- Criou a migration `0006_serie_clima.sql` (cópias das três Gold de clima em `serie`, colunas geradas da Gold real, permissões como as da 0005), incluiu as tabelas em `exportar_serie.TABELAS`, deu ao `metabase_painel.py` a opção `--painel` e montou o dashboard "InflaTrack — Clima (validação)" com 7 perguntas (`painel_clima.toml`).
+- Aplicou no ambiente do integrante: migration no Postgres de desenvolvimento, `just serie` e sincronização do painel. A porta 3001 estava ocupada por outro projeto do integrante; em vez de parar o contêiner dele, subiu o Metabase na 3011 só naquela execução.
+- Um teste escrito pelo terminal ficou com um caractere de controle na regex e passava a não testar nada; foi corrigido, e os arquivos alterados foram varridos atrás de caracteres desse tipo.
+- Verificado: as 7 perguntas executadas pela API do Metabase, todas com dados; `pytest` com 444 passando. O painel mostrou estações paradas em Aracaju e Fortaleza (3% de cobertura em 12 meses).
+
+**Continuação (2026-11-12): falhas no `popular_banco_job` e retry quando o processo morre**
+- A pedido do integrante, sem mexer em código, investigou por que `commodities_job`, `enso_job` e `ipca_job` falharam no `popular_banco_job`. Leu os eventos dos runs no SQLite de `.dagster/history`, o código do Dagster instalado (1.13.26), o `target/dbt.log` e o log de eventos do Windows. Os três morreram do mesmo jeito: um processo criado pelo Dagster (do run, no IPCA; de um passo, nos outros dois) saiu com código 1, sem traceback e antes de o código da fonte rodar, quando as 11 fontes subiram juntas. O `pib_china_parquet` morreu igual e só passou na 3ª tentativa. Os três ficaram vermelhos porque o passo que caiu não tinha retry; o erro de gRPC do IPCA é efeito colateral da limpeza do run morto. A hipótese de falta de memória não foi confirmada: o Windows não registrou nada.
+- Depois, a pedido do integrante, ligou o `run_retries` no `.dagster/dagster.yaml` (até 2 vezes, com `retry_on_asset_or_op_failure: false`: só o run cujo processo morreu é refeito, e erro de verdade num passo não gasta a cota das commodities). Fez a op do `popular_banco_job` seguir o run refeito, consultando as tags `dagster/will_retry` e `dagster/auto_retry_run_id` pelo GraphQL, e deu ao próprio job `dagster/max_retries=0`. Os testes vieram antes da implementação.
+- Verificado: 96 testes de `tests/orchestration` passando, ruff limpo, a instância carregando a configuração nova e a query GraphQL validada contra o schema do Dagster. Pelos motivos gravados nos runs de hoje, `RUN_EXCEPTION` ou nenhum nos processos mortos e `STEP_FAILURE` no `transacional_job`, a configuração separa os dois casos.
+- Não verificado: um retry automático de verdade no `dagster dev` (o `popular_banco_job` não foi rodado de novo) e a causa de os processos morrerem.
+
+**Continuação (2026-11-12): por que o `transacional_job` falha**
+- Sem mexer em código nem no banco, investigou o `inflatrack.cdc.transacional terminou com código 1`. Consultou o Postgres só lendo e achou o slot `inflatrack_cdc` com `wal_status = lost`, o que faz o coletor desistir. A ferramenta atribuiu a perda primeiro à carga do IPCA de hoje e depois se corrigiu pelo log do Postgres: o slot foi invalidado em 2026-11-11 às 13:38 UTC, 508 MB acima do limite de 2 GB.
+- Causa, pelos checkpoints do log e pelas estatísticas das tabelas: o slot segura o WAL do servidor inteiro, e o WAL veio da cópia da Gold para `serie` (`DELETE` + `INSERT` de toda a `serie.fct_inflacao_mensal`, 1,66 milhão de linhas, ~1 GB de WAL por cópia), duas vezes em 2026-11-09 e uma em 2026-11-11. O coletor só avança o slot quando chegam mudanças das tabelas do lojista. Isso foi confirmado num Postgres 16 descartável: com escrita só fora da publicação, a leitura devolve 0 mensagens e o slot segura o WAL.
+- Concluiu que o problema se repete numa instalação limpa depois de duas cópias para `serie`, mesmo com o agendamento horário do CDC ligado. Propôs avançar o slot até o LSN lido quando não houver mudanças e tornar `serie` `UNLOGGED` (ou trocar `DELETE` por `TRUNCATE`).
+- Com a autorização do integrante, apagou o slot perdido e implementou as duas medidas, com os testes escritos antes: cada captura lê o slot só até o LSN do início e termina avançando até ele, mesmo sem mensagem; o exportador deixa cada tabela de `serie` `UNLOGGED` e só roda o `ALTER TABLE` quando ela ainda não é, para não travar o Metabase durante a cópia. Atualizou as docstrings e o ADR do CDC.
+- Verificado: testes de integração no Postgres de desenvolvimento (escrita fora da publicação avança o slot; com `avancar=False` não avança; transação aberta durante a captura chega na seguinte; tabela da migration vira `UNLOGGED` com índice e dados; cópia de 50 mil linhas com menos de 1 MB de WAL), `pytest` com 454 passando, ruff limpo e `mkdocs build --strict`. Nos dados reais, `just serie` passou de ~1 GB para 250 kB de WAL por cópia, com as 11 tabelas `UNLOGGED`. O integrante rodou os jobs de novo e confirmou que funcionou.
+- Não verificado: o comportamento das tabelas `UNLOGGED` depois de uma queda do Postgres (pela documentação, voltam vazias até o próximo `just serie`).
+
+### 2026-11-19 — Claude Code (Opus 5.5) — revisão do PR #21 (PROCON) e nova abordagem para preços de produto
+
+**O que a ferramenta fez**
+- Revisou o PR #21 (Cesta Básica PROCON, autor Artur Fernandes Galdino) contra a regra do integrante de que preço de produto fica só no banco relacional, sem passar por Bronze, Silver e Gold. O PR faz exatamente esse caminho (Delta, DuckDB, `stg`/`int`/`fct_cesta_basica_mensal`) e foi considerado não apto para a main.
+- Apontou também: os ativos do Dagster chamam `main(list(argv))` em funções `main()` sem parâmetro (todo run falharia com `TypeError`); sem arquivo, a ingestão carrega a fixture de testes, com preços inventados; o cliente HTTP não tem URL nem é chamado; `coalesce(codigo_localidade, 1)` joga praças não casadas no Brasil; e o PR tem conflitos com a main em 3 arquivos.
+- Pesquisou na web se o PROCON publica preços de produtos como dados: só encontrou relatórios em PDF/DOCX (Procon-SP com DIEESE, Goiás, Anápolis, Rio Verde, Campina Grande), sem CSV, API ou conjunto no dados.gov.br. Abriu o PDF de outubro/2026 do Procon-SP: o preço aparece só para alguns dos 39 produtos, em gráficos e texto.
+- Analisou o que do PR se aproveita (só os conversores de número e data em formato brasileiro) e recomendou uma branch nova a partir da main.
+- Com o integrante, desenhou a nova abordagem: o modelo da E4 aprende a variação do subitem do IPCA (real, desde 2006) e uma base relacional de preços de atacadista traduz o percentual em R$. Escreveu design e plano em `docs/superpowers/` e o integrante aprovou.
+- Implementou na branch `feat/precos-atacadista`: migration `0007` (schema `atacado` fora da publicação do CDC, `preco` insert-only, visão `preco_atual`), conversores de formato brasileiro com `Decimal` (vindos do PR #21), importador `just atacado-importar` direto no Postgres, atacadista fictício com 45 produtos de subitens reais, ADR 0004, dicionário e Seção 2.5 do `PLAN_E3_E4.md`. Os testes vieram antes do código.
+- Um revisor independente (subagente) leu a branch inteira e apontou casos que gravariam dado errado numa tabela insert-only: `1.250` virando R$ 1,25, coluna a mais derrubando o importador com traceback, troca de embalagem ou subitem e rótulo `ficticio` ignorados em silêncio, preço com data futura como atual e `.gitignore` liberando qualquer CSV de `data/atacado/`. Cada um ganhou um teste que falhou antes da correção.
+- A pedido do integrante, pôs a carga no Dagster: ativo `atacado_postgres` (grupo `atacado`, só Postgres), `atacado_job` diário às 6h e entrada no `popular_banco_job`, esperando o `ipca_job` (o importador exige os subitens em `classificacao`). A guarda que proibia `orchestration/` de citar `atacado` foi trocada por testes do grafo: o ativo não tem dependentes e não entra no `analitico_job`. Verificado: `atacado_job` executado contra o Postgres local com sucesso e `just check` com 507 testes passando.
+
+**O que foi verificado e como**
+- Assinaturas de `main()` do PR lidas com `ast` na branch do PR; conflitos pela simulação `git merge-tree` contra a `origin/main`.
+- Conteúdo do PDF do Procon-SP lido página a página.
+- Migration aplicada duas vezes no Postgres de desenvolvimento; importação real do exemplo (45 produtos; a segunda importação grava 0); `just check` com 501 testes passando; `mkdocs build --strict`; códigos dos 45 subitens conferidos na `classificacao`.
+
+**O que NÃO foi verificado**
+- Nenhum teste do PR #21 foi executado localmente.
+- As fontes alternativas citadas (loja online do Atacadão, programas estaduais de preço por nota fiscal) não foram conferidas.
+- Os preços do atacadista de exemplo são inventados; a migration não foi testada num `just reset` do zero.
+- Pendências menores do revisor, não corrigidas: arquivo cp1252 dá erro pouco claro, nome de produto diferencia maiúsculas, a FK aceita código que não é subitem.
+
+**Continuação (2026-11-19): avaliação dos modelos de previsão (PR empilhado, `feat/modelo-reajuste`)**
+- Com o integrante, desenhou a avaliação: a pedido da professora, regressão linear e logarítmica (linhas de tendência sobre o índice do subitem) comparadas ao XGBoost, mais as duas previsões ingênuas da Regra 8. A avaliação fica num notebook, sem Dagster (escolha do integrante), e a praça é o Brasil (escolha do integrante, depois que um revisor-subagente mostrou que Brasília só tinha 39 dos 45 subitens no período de teste).
+- Implementou, com os testes antes, `src/inflatrack/predicao/` (base sem vazamento, com o ENSO pela data de publicação e o clima só de mês fechado; os modelos; o walk-forward e as métricas nas mesmas linhas) e o notebook `notebooks/avaliacao_modelos.ipynb` (`just modelo-notebook`). Trocou o `XGBRegressor` pela API nativa do xgboost, para não trazer o scikit-learn.
+- Achado no caminho: a regressão "pelo nível" (reta contra o último índice real) errava 6 p.p. por embutir uma volta para a reta. A ferramenta acrescentou a leitura "pela tendência" (2,26 p.p.) para a comparação ser justa, e registrou isso no design.
+- Resultado: o XGBoost sem clima erra 1,73 p.p. contra 2,21 p.p. da ingênua (ganho de cerca de 21%), mas perde em 6 dos 45 subitens (arroz, café, feijão, os dois açúcares e margarina); o clima piorou o erro.
+- Um revisor-subagente reproduziu os números e não achou vazamento nos modelos, mas apontou que o clima dos polos usava o `mes_fechado` de hoje (corrigido para o mês anterior, com teste que falhou antes) e que a conclusão subcontava os produtos em que o XGBoost perde (corrigida). Evidência em `docs/evidencias/e4/avaliacao_modelos.md`.
+- A pedido do integrante, pôs os gráficos do notebook na página da evidência E4 do mkdocs, como PNG em `docs/assets/e4/`, mantendo o link para o `.ipynb`. O `just modelo-notebook` regrava as imagens junto, e um teste falha se elas divergirem do notebook.
+- Não verificado: o desempenho em outras praças, ajuste de hiperparâmetros e as defasagens longas de clima da Regra 4.
+
+**Continuação (2026-11-19): planejamento da fase de aplicação e avaliação em todas as praças (`feat/aplicacao-modelo`)**
+- Com o integrante, planejou a fase de aplicação em três trabalhos: previsão e publicação, site e agente Google ADK. Leu o site existente na branch `feat/site` (Next.js + FastAPI + Supabase, de Johnnatan Salles) e o exemplo de agente ADK com LiteLLM enviado pelo integrante.
+- Decisões do integrante:
+  - treino local e publicação do mínimo no Supabase (plano gratuito);
+  - o site faz `preço × (1 + variação)` com o preço digitado, sem gravá-lo;
+  - caminho misto (gráficos do painel do lojista prontos, mais previsão e resumo para o agente);
+  - retenção por substituição;
+  - escolha de modelo por subitem;
+  - avaliação ampliada como ponto de parada.
+
+  Um revisor-subagente leu o design; a ferramenta decidiu a reserva (ingênua) para pares que o vencedor não prevê.
+- Implementou, com os testes antes: base e walk-forward com várias praças (a praça na chave e como variável; regressões por `groupby`), a escolha por subitem com medição em meses que ela não viu (`escolha.py`) e o notebook `avaliacao_todas_pracas.ipynb`. Conferiu que a avaliação anterior, com uma praça, dá os mesmos números.
+- Resultado:
+  - o XGBoost único erra 1,70 p.p. contra 2,39 da ingênua (+29%) e ganha em todas as 17 localidades;
+  - a escolha por subitem erra 1,64 contra 1,66 do XGBoost sozinho nos meses que não viu.
+
+  A ferramenta parou aqui para o integrante revisar, como combinado.
+- Depois do ponto de parada, o integrante escolheu o XGBoost fixo. A ferramenta simplificou o design (a previsão vai da Gold direto ao Supabase, sem cópia na `serie`) e implementou, com os testes antes:
+  - `aplicacao.py` (previsão do mês seguinte e erro típico de 12 meses, com reserva pelo grupo);
+  - o modelo Python do dbt `gold.fct_previsao_subitem`, num grupo próprio, sem automação e fora do `analitico_job`;
+  - a migration do Supabase `web/backend/migrations/003_publicacao_inflatrack.sql` (5 tabelas, RLS com leitura pública);
+  - `reverse_etl/publicar_site.py` (apaga e reescreve tudo numa transação);
+  - o ativo `site_supabase`, o `predicao_job` mensal e as receitas `just previsao` e `just publicar-site`.
+
+  Dois testes antigos foram ajustados para tratar a previsão como exceção explícita.
+- Verificado:
+  - `dbt build` real em 4m45s, com 4.045 previsões (17 praças, 377 subitens, mês previsto nov/2026) e os testes do dbt passando;
+  - a coleta e a gravação dos dados reais num schema temporário desfeito no fim (cerca de 1,5 MB);
+  - `anon` lê e não escreve.
+- Não verificado: a publicação num Supabase de verdade (a URL fica para o integrante preencher), o site e o agente.
+
 ---
 
 ## Artur Fernandes Galdino
@@ -1664,3 +1894,18 @@ de tarefas nessa linha.
 
 ---
 
+### 2026-11-09 — GitHub Copilot — Automação de clima e preparo do DuckDB
+
+**O que a ferramenta fez**
+- Incluiu coleta e carga de medições no `clima_job`, com as 15 estações do mapeamento e janela dos últimos 7 dias completos, conforme escolhas confirmadas pelo usuário. Preservou overrides para histórico e fixou as datas no tick diário.
+- Reutilizou os DDLs existentes antes do dbt no just e no Dagster, respeitando `DBT_DUCKDB_PATH`, sem consultas à API, dados fictícios ou exclusão de cargas anteriores.
+- Acrescentou testes de configuração, datas, grafo, idempotência e build de clima em banco vazio; atualizou a documentação da fonte e da orquestração.
+
+**O que foi verificado e como**
+- Testes automatizados das trilhas de clima e orquestração, incluindo execução real do dbt para modelos e testes de clima em DuckDB temporário sem ingestão.
+- Ruff nos arquivos Python alterados, checagem de whitespace do diff e `just --dry-run dbt`, confirmando que a preparação antecede o build.
+- O build isolado usa seleção indireta `cautious` e inclui os seeds necessários, sem exigir tabelas de fontes fora da trilha.
+
+**O que NÃO foi verificado**
+- Disponibilidade atual do endpoint de medições do INMET, coleta real das 15 estações, execução do agendador em produção ou build completo das demais fontes.
+- A validação final por Pylance ficou indisponível por falha de conexão do servidor; a verificação executável foi feita pelos testes e pelo Ruff.

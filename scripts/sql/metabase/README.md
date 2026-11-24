@@ -8,6 +8,7 @@ mora nesta pasta** e é recriado por um script:
 |---|---|
 | `painel.toml` | O dashboard: nome, conexões e, para cada pergunta, título, gráfico, eixos e posição |
 | `p<N>_*.sql` | Uma consulta por pergunta. O cabeçalho diz de onde ela lê e o que é provisório |
+| `painel_clima.toml` e `clima_c<N>_*.sql` | Segundo dashboard, **InflaTrack — Clima (validação)**: se o clima está chegando (cobertura por praça, oficial x provisório) e se faz sentido (temperatura, IPCA de alimentos x clima, El Niño, seca nos polos) |
 | `../../metabase_painel.py` | Lê esta pasta e cria ou atualiza tudo no Metabase pela API |
 
 ## Subir o painel do zero
@@ -32,6 +33,19 @@ cada loja. O script cria (ou atualiza a senha de) um login `METABASE_PG_USER`
 `metabase_leitor` da migration 0005: `SELECT` em `serie` e nada mais. Quem faz isso é o script,
 e não uma migration, porque a senha vem do `.env` e não pode ir para o Git.
 
+## Painel do clima
+
+```bash
+just migrar 0006_serie_clima.sql      # só num volume do Postgres criado antes da 0006
+just serie                            # copia a Gold (inclui fct_clima_*, fct_enso_mensal)
+uv run python scripts/metabase_painel.py --painel painel_clima.toml
+```
+
+Lê `serie.fct_clima_mensal`, `serie.fct_clima_polo_mensal` e `serie.fct_enso_mensal`, criadas
+pela migration 0006. Se a porta do Metabase (`METABASE_PORT`) estiver ocupada por outro programa,
+suba com outra só naquela execução: `METABASE_PORT=3011 docker compose --profile bi up -d metabase`
+e rode o script com a mesma variável.
+
 ## Mudar ou criar uma pergunta
 
 1. Escreva ou altere o `.sql`. Teste a consulta direto no banco antes.
@@ -48,7 +62,8 @@ sobrescreve. Para rascunhos, use outra coleção.
 |---|---|---|---|
 | `p1_inflacao_12m_por_setor.sql` | 1. Inflação acumulada do meu setor nos últimos 12 meses | Postgres | Lê `serie.fct_inflacao_mensal` + `serie.dim_cesta_ipca_scd2` |
 | `p2_sazonalidade_por_mes.sql` | 2. Sazonalidade e meses de pico da inflação | Postgres | Média por mês do ano, de jul/2006 em diante. **Falta** o efeito do clima (não chega à Gold; INMET exige token) |
-| `p3_poder_de_compra_desde_2006.sql` | 3. Poder de compra desde 2006 | Postgres | **Parcial:** só a inflação pelo número-índice (1737). Falta o salário mínimo do DIEESE na Gold |
+| `p3_poder_de_compra_desde_2006.sql` | 3. Poder de compra desde 2006 | Postgres | Inflação pelo número-índice (1737) |
+| `p3_salario_minimo_real.sql` | 3. O salário mínimo acompanhou a inflação? | Postgres | Lê `serie.fct_salario_minimo_mensal`: nominal x corrigido pelo IPCA, desde jan/2006 |
 | `p4_brasil_x_regiao.sql` | 4. Brasil x praça do lojista, IPCA x INPC | Postgres | Último mês, todas as localidades |
 | `p4_brasil_ipca_x_inpc_5_anos.sql` | 4. (evolução) IPCA x INPC nos últimos 5 anos | Postgres | Brasil, 60 meses |
 | `p5_reajuste_minimo_por_produto.sql` | 5. Reajuste mínimo para não perder margem | Postgres | Visão interna (todas as lojas); por lojista depende do RLS da E4. A projeção (`recomendacao_reajuste`) é E4 |

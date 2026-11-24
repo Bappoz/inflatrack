@@ -81,8 +81,9 @@ class Painel:
     perguntas: list[Pergunta]
 
 
-def ler_painel(pasta: Path = PASTA_PAINEL) -> Painel:
-    config = tomllib.loads((pasta / "painel.toml").read_text(encoding="utf-8"))
+def ler_painel(pasta: Path = PASTA_PAINEL, arquivo: str = "painel.toml") -> Painel:
+    """Lê um painel da pasta: o do lojista (``painel.toml``) ou outro (``painel_clima.toml``)."""
+    config = tomllib.loads((pasta / arquivo).read_text(encoding="utf-8"))
     perguntas = []
     for item in config.get("perguntas", []):
         if item["banco"] not in config["bancos"]:
@@ -332,6 +333,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--url", default=os.environ.get("METABASE_URL", f"http://localhost:{porta}")
     )
+    parser.add_argument(
+        "--painel",
+        default="painel.toml",
+        help="Arquivo do painel em scripts/sql/metabase/ (padrão: o do lojista)",
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -350,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         metabase.esperar_subir()
         metabase.entrar(email, senha)
-        id_dash = sincronizar(metabase, ler_painel())
+        id_dash = sincronizar(metabase, ler_painel(arquivo=args.painel))
     except (RuntimeError, httpx.HTTPError, ValueError, KeyError) as erro:
         logger.error("sincronização interrompida: %s", erro)
         return 1

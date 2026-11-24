@@ -179,6 +179,60 @@ def test_escrita_fora_das_tabelas_publicadas_nao_gera_evento(pg, slot, tmp_path)
     assert _capturar(pg, tmp_path, slot).lidas == 0
 
 
+def _slot_passou_de(pg, slot: str, lsn: str) -> bool:
+    return pg.execute(
+        "select confirmed_flush_lsn >= %s::pg_lsn from pg_replication_slots where slot_name = %s",
+        (lsn, slot),
+    ).fetchone()[0]
+
+
+def test_escrita_fora_da_publicacao_nao_prende_wal_no_slot(pg, slot, tmp_path):
+    """A cópia para `serie` gera WAL e nenhuma mensagem do pgoutput. O slot só avançava com
+    mensagem, então segurava esse WAL até passar de max_slot_wal_keep_size: perdido em
+    2026-11-11, depois de três cópias para `serie` sem mudança no lojista."""
+    _capturar(pg, tmp_path, slot)
+    schema = f"teste_{uuid.uuid4().hex[:8]}"
+    try:
+        pg.execute(f"create schema {schema}")
+        pg.execute(f"create table {schema}.fato as select g from generate_series(1, 10000) g")
+        (depois_da_escrita,) = pg.execute("select pg_current_wal_lsn()::text").fetchone()
+
+        assert _capturar(pg, tmp_path, slot).lidas == 0
+        assert _slot_passou_de(pg, slot, depois_da_escrita)
+    finally:
+        pg.execute(f"drop schema if exists {schema} cascade")
+
+
+def test_captura_parada_nao_avanca_o_slot_sem_mensagem(pg, slot, tmp_path):
+    _capturar(pg, tmp_path, slot)
+    pg.execute("select pg_logical_emit_message(true, 'teste', 'gera WAL')")
+    (depois,) = pg.execute("select pg_current_wal_lsn()::text").fetchone()
+
+    _capturar(pg, tmp_path, slot, avancar=False)
+
+    assert not _slot_passou_de(pg, slot, depois)
+
+
+def test_transacao_aberta_durante_a_captura_chega_na_seguinte(pg, slot, cnpj, tmp_path):
+    """Avançar o slot até o fim do WAL não pula quem ainda não fez commit."""
+    id_lojista = _lojista(pg, cnpj)
+    _capturar(pg, tmp_path, slot)
+    with psycopg.connect(dsn_do_ambiente(), connect_timeout=3) as outra:
+        id_produto = _produto(outra, id_lojista, "Aberto")
+        pg.execute("select pg_logical_emit_message(true, 'teste', 'gera WAL')")
+        durante = _capturar(pg, tmp_path, slot)
+        outra.commit()
+
+    depois = _capturar(pg, tmp_path, slot)
+
+    assert durante.lidas == 0
+    assert depois.novas == 1
+    assert any(
+        linha["tabela"] == "produto" and linha["id_registro"] == id_produto
+        for linha in _bronze(tmp_path)
+    )
+
+
 def test_historico_nao_aceita_update(pg, cnpj):
     id_produto = _produto(pg, _lojista(pg, cnpj))
     pg.execute(

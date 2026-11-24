@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_enso__roni
+    description: Uma linha por mês central de temporada, com a revisão mais recente do NOAA.
+    columns:
+      - name: mes_referencia
+        data_tests: [unique, not_null]
+      - name: temporada
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [DJF, JFM, FMA, MAM, AMJ, MJJ, JJA, JAS, ASO, SON, OND, NDJ]
+      - name: roni
+        data_tests: [not_null]

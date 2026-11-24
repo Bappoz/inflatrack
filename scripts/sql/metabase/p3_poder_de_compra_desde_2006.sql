@@ -7,8 +7,7 @@
 -- números-índice é o único cálculo e é provisória aqui: na E4 a "perda de poder de compra desde
 -- 2006" vira métrica da camada semântica do dbt (gold.sem_*, Seção 5.2).
 --
--- Parcial: falta comparar com o salário mínimo nominal e o necessário do DIEESE. A série existe em
--- silver.int_salario_minimo__mensal (Johnnatan), mas ainda não chega à Gold nem ao `serie`.
+-- O outro lado da pergunta, o salário mínimo do DIEESE, está em p3_salario_minimo_real.sql.
 with base as (
     select numero_indice
     from serie.fct_inflacao_mensal

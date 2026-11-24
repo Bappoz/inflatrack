@@ -35,7 +35,8 @@ O **PostgreSQL** roda em paralelo, com o lado transacional do lojista.
 | [Macroeconomia (Dólar, Selic)](macroeconomia.md) | `dolar_cotacao`, `selic_taxa` | DuckDB |
 | [Commodities e Energia (Alpha Vantage)](commodities.md) | `commodity`, `commodity_cotacao` | DuckDB |
 | [Salário Mínimo (DIEESE)](salario_minimo.md) | `salario_minimo` | DuckDB |
-| [Dados do Clima (INMET)](clima.md) | `estacao_meteorologica`, `clima_diario` | DuckDB |
+| [Dados do Clima (INMET)](clima.md) | `bronze.clima_estacao`, `bronze.clima_medicao`, `bronze.clima_medicao_provisoria`; Gold `fct_clima_mensal` e `fct_clima_polo_mensal` | DuckDB |
+| [El Niño / La Niña (RONI)](enso.md) | `bronze.enso_roni`; Gold `fct_enso_mensal` | DuckDB |
 
 A caracterização da origem (volume, frequência, restrições) fica em [Fonte de Dados](../arquitetura/fonteDados.md).
 
@@ -49,7 +50,7 @@ A caracterização da origem (volume, frequência, restrições) fica em [Fonte 
 
 - **Variação do subitem por praça**: série mensal do IPCA por subitem e localidade, para sugerir reajuste por produto
 - **Features macro defasadas**: dólar, Selic e commodities em colunas por mês, alinhados ao alvo do modelo
-- **Clima × alimentos**: medições do INMET cruzadas com o subgrupo de Alimentação e Bebidas
+- **Clima × alimentos**: clima das praças (`fct_clima_mensal`) e dos polos agrícolas (`fct_clima_polo_mensal`), SPI-3 e El Niño / La Niña (`fct_enso_mensal`) cruzados com o subgrupo de Alimentação e Bebidas; regras de uso no treino na Seção 2.4 do `PLAN_E3_E4.md`
 
 ## dbt docs
 

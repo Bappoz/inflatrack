@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from deltalake import DeltaTable
 
-from inflatrack import bronze_salario_minimo
+from inflatrack.bronze import salario_minimo as bronze_salario_minimo
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "salario_minimo"
 QUANDO = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)

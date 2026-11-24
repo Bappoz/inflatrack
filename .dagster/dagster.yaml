@@ -7,5 +7,15 @@ concurrency:
     default_limit: 1
     granularity: op
 
+# Refaz o run cujo processo morreu (de novo a partir do passo que não terminou), até 2 vezes.
+# Com as 11 fontes subindo juntas no popular_banco_job, o Windows encerra processos do Dagster
+# sem traceback ("exited with code 1"), antes de o código da fonte rodar. Erro de verdade num
+# passo não refaz o run: quem tenta de novo é o RetryPolicy do ativo (as commodities não têm,
+# para poupar a cota). Um job pode mudar o limite com a tag dagster/max_retries.
+run_retries:
+  enabled: true
+  max_retries: 2
+  retry_on_asset_or_op_failure: false
+
 telemetry:
   enabled: false

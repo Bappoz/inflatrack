@@ -3,7 +3,7 @@
 O que a fonte `clima` entrega na Entrega 2, com o comando que produziu cada número. Tudo nesta página foi executado em **2026-10-12**, contra a API pública do Instituto Nacional de Meteorologia (INMET), no commit correspondente (`deltalake` 1.6.6, `duckdb` 1.5.5, `pyarrow` 25.0.1).
 
 !!! info "Onde está o código"
-    [`src/inflatrack/bronze_clima.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze_clima.py) (transformação, checagens geográficas, gravação em Delta e importação), integrado a [`ingest_clima.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/ingest_clima.py). Testes unitários completos em `tests/test_clima.py`, com fixture real das estações em `tests/fixtures/clima/estacoes.json`. Esquema das tabelas Delta no [Dicionário de Dados](../../dicionario/clima.md#bronze-em-delta).
+    [`src/inflatrack/bronze/clima.py`](https://github.com/Bappoz/inflatrack/blob/main/src/inflatrack/bronze/clima.py) (transformação, checagens geográficas, gravação em Delta e importação), que desde a E3 também inclui a coleta (antes em `ingest_clima.py`). Testes unitários completos em `tests/test_clima.py`, com fixture real das estações em `tests/fixtures/clima/estacoes.json`. Esquema das tabelas Delta no [Dicionário de Dados](../../dicionario/clima.md#bronze-em-delta).
 
 ## Situação das tarefas da E2
 

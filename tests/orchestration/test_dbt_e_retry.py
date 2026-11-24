@@ -59,6 +59,11 @@ def test_ativos_do_dbt_ficam_no_pool_e_no_grupo_da_camada() -> None:
     for chave in ativos_dbt:
         no = GRAFO.get(chave)
         assert no.pools == {POOL_DUCKDB}, chave.to_user_string()
+        if chave.path[-1] == "fct_previsao_subitem":
+            # Única exceção: a previsão pesa e roda só no predicao_job mensal, sem automação.
+            assert no.group_name == "predicao"
+            assert no.automation_condition is None
+            continue
         assert no.group_name == chave.path[0], chave.to_user_string()  # silver/... ou gold/...
         assert no.automation_condition is not None, chave.to_user_string()
 

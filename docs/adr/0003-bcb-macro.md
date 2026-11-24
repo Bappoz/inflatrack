@@ -1,8 +1,8 @@
 # 0003 — Calendário civil para séries diárias do Banco Central
 
-- **Status:** implementado nos carregadores legados; migração da Bronze para Silver pendente
+- **Status:** decisão não implementada na trilha atual; a Silver mensal não usa o calendário civil
 - **Data:** 2026-09-25
-- **Revisado em:** 2026-10-18
+- **Revisado em:** 2026-11-09
 - **Decisores:** Squad InflaTrack
 
 ## Contexto
@@ -46,10 +46,18 @@ deve falhar explicitamente.
 
 ## Estado de implementação
 
-Os carregadores legados `ingest_dolar.py` e `ingest_selic.py` já geram o
-calendário civil, aplicam `forward fill`, registram `observado` e falham se não
-houver valor anterior para completar o início da janela. A Bronze Delta da E2
-guarda as observações publicadas pelo BCB sem preencher dias; a transformação
-equivalente na Silver ainda depende do projeto dbt. Portanto, o comportamento
-existe no caminho legado, mas não foi migrado para a nova trilha Bronze →
-Silver.
+Os carregadores legados `ingest_dolar.py` e `ingest_selic.py` geravam o calendário
+civil, aplicavam `forward fill`, registravam `observado` e falhavam se não
+houvesse valor anterior. Eles foram removidos na E3, e nenhum código atual repete
+essa regra.
+
+A trilha atual é diferente. A Bronze Delta guarda só as observações publicadas pelo
+BCB. A Silver (`stg_dolar__cotacao_diaria`, `stg_selic__taxa_diaria` e
+`int_macroeconomia__mensal`) agrega para o grão mensal com os dias úteis publicados,
+e conta `dias_uteis_dolar` e `dias_uteis_selic` em vez de preencher dias. A Gold
+(`fct_macroeconomia_mensal`) cruza Dólar, Selic e IPCA por `mes_referencia`.
+
+O motivo original da decisão, juntar vendas diárias do lojista ao câmbio do dia,
+não existe no grão atual: o banco do lojista guarda `venda_mensal`. A decisão fica
+em aberto para a Squad: marcar este ADR como superado pelo grão mensal, ou
+reimplementar o calendário civil no dbt se a E4 passar a usar vendas diárias.

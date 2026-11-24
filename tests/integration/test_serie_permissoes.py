@@ -74,3 +74,15 @@ def test_todas_as_tabelas_copiadas_existem_na_migration(pg) -> None:
     }
 
     assert set(exportar_serie.TABELAS) <= existentes
+
+
+@pytest.mark.parametrize("tabela", ["fct_clima_mensal", "fct_clima_polo_mensal", "fct_enso_mensal"])
+def test_lojista_le_o_clima_que_e_dado_publico(pg, tabela: str) -> None:
+    """Clima é público (migration 0006): o lojista lê, mas não escreve."""
+    if pg.execute(f"select to_regclass('serie.{tabela}')").fetchone()[0] is None:
+        pytest.skip("banco sem a migration 0006")
+    pg.execute("set local role lojista_app")
+
+    pg.execute(f"select count(*) from serie.{tabela}")
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        pg.execute(f"delete from serie.{tabela} where false")

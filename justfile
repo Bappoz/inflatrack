@@ -175,9 +175,14 @@ test:
 # O gate antes de dizer "pronto".
 check: fmt lint test
 
+# Aplica os DDLs idempotentes de scripts/sql/setup_duckdb*.sql no banco de DBT_DUCKDB_PATH:
+# sem consultar APIs e sem apagar dados. Fontes sem DDL (PIB, commodities...) exigem o loader.
+duckdb-init:
+    uv run python scripts/init_db.py
+
 # Silver e Gold no DuckDB: seeds, modelos e testes do dbt (dbt_project.yml na raiz).
-# Os loaders precisam ter rodado antes: o dbt só lê bronze.*.
-dbt:
+# O dbt só lê bronze.*: os loaders precisam ter rodado (o duckdb-init cobre as tabelas com DDL).
+dbt: duckdb-init
     uv run dbt build
 
 # Só os testes analíticos (Nível 3 da pirâmide).
@@ -195,6 +200,11 @@ explain-serie:
 # Recria o painel do Metabase a partir de scripts/sql/metabase/ (Metabase no ar: profile bi).
 metabase-painel:
     uv run python scripts/metabase_painel.py
+
+# Põe o painel no ar em http://localhost:3001 (METABASE_PORT no .env): Postgres, vitrine `serie`,
+# contêiner do Metabase e o painel. A Gold precisa existir no DuckDB (dbt ou Dagster antes).
+painel-up: up serie && metabase-painel
+    docker compose --profile bi up -d --wait metabase
 
 # Sobe servidor local de documentação (MkDocs) com live-reload.
 docs:
@@ -270,6 +280,31 @@ transacional-load:
 simular-cdc:
     uv run python -m inflatrack.cdc.simular_mudancas
 
+# Tabela de preços de um atacadista direto no Postgres (schema atacado; nunca na Bronze, ADR 0004).
+# Exige a migration 0007 e a carga do IPCA (os subitens precisam existir em classificacao).
+# Sem argumentos, importa o atacadista fictício de exemplo. Atacadista real:
+#   just atacado-importar tabela.csv "Nome do Atacadista" ""
+atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadista Exemplo" ficticio="--ficticio":
+    uv run python -m inflatrack.atacado.importar_tabela --arquivo "{{arquivo}}" --fornecedor "{{fornecedor}}" {{ficticio}}
+
+# E4: prevê o mês seguinte para cada praça e subitem (dbt, ~5 min) e publica no Supabase o que o
+# site e o agente leem. Exige SUPABASE_DB_URL no .env e a migration
+# web/backend/migrations/003_publicacao_inflatrack.sql aplicada no Supabase.
+previsao:
+    uv run dbt build --select fct_previsao_subitem
+
+publicar-site:
+    uv run python -m inflatrack.reverse_etl.publicar_site
+
+# E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
+# notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco). Os
+# gráficos vão também para docs/assets/e4/, que a página da evidência E4 mostra no mkdocs.
+# O de todas as praças leva dezenas de minutos (36 treinos do XGBoost com ~880 mil linhas).
+modelo-notebook:
+    uv run jupyter nbconvert --to notebook --execute --inplace notebooks/avaliacao_modelos.ipynb
+    uv run jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 notebooks/avaliacao_todas_pracas.ipynb
+    uv run python -m inflatrack.predicao.exportar_graficos
+
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
 e3-lojista: ipca-load simular-cdc transacional-load
     uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario
@@ -287,7 +322,7 @@ seed-macro: seed-dolar seed-selic seed-commodities
 
 # DIEESE: Salário Mínimo Nominal e Necessário
 salario-minimo-ingest:
-    uv run python -m inflatrack.bronze.ingest_salario_minimo
+    uv run python -m inflatrack.bronze.salario_minimo coletar
 
 salario-minimo-load:
     uv run python -m inflatrack.loaders.load_salario_minimo
@@ -296,35 +331,44 @@ salario-minimo: salario-minimo-ingest salario-minimo-load
 
 # Bronze do Salário Mínimo em Delta (data/parquet/salario_minimo/).
 bronze-salario-minimo:
-    uv run python -m inflatrack.bronze.ingest_salario_minimo
+    uv run python -m inflatrack.bronze.salario_minimo coletar
 
 bronze-salario-minimo-importar:
-    uv run python -m inflatrack.bronze.bronze_salario_minimo importar
+    uv run python -m inflatrack.bronze.salario_minimo importar
 
 bronze-salario-minimo-checar:
-    uv run python -m inflatrack.bronze.bronze_salario_minimo checar
+    uv run python -m inflatrack.bronze.salario_minimo checar
 
 bronze-salario-minimo-load modo="substitui":
     uv run python -m inflatrack.loaders.load_salario_minimo --modo {{modo}}
 
-# INMET: Dados de Clima e Estações
+# INMET: catálogo de estações (API) e medições diárias (BDMEP, desde 2006). A primeira
+# coleta baixa ~20 pacotes anuais; as seguintes só o que o INMET republicou. Depois, o clima
+# provisório (Open-Meteo) cobre do dia seguinte ao último publicado pelo INMET até ontem.
 clima-ingest:
-    uv run python -m inflatrack.bronze.ingest_clima --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --medicoes
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+
+# Só o clima provisório (Open-Meteo), sem baixar o BDMEP.
+clima-provisorio:
+    uv run python -m inflatrack.bronze.clima coletar --provisorio
+    uv run python -m inflatrack.loaders.load_clima --tabela provisoria
 
 clima-load:
     uv run python -m inflatrack.loaders.load_clima
 
 clima: clima-ingest clima-load
 
-# Bronze do Clima em Delta (data/parquet/clima/): cadastro de estações.
+# Bronze do Clima em Delta (data/parquet/clima/): só o cadastro de estações.
 bronze-clima:
-    uv run python -m inflatrack.bronze.ingest_clima --apenas-estacoes
+    uv run python -m inflatrack.bronze.clima coletar --apenas-estacoes
 
 bronze-clima-importar:
-    uv run python -m inflatrack.bronze.bronze_clima importar
+    uv run python -m inflatrack.bronze.clima importar
 
 bronze-clima-checar:
-    uv run python -m inflatrack.bronze.bronze_clima checar
+    uv run python -m inflatrack.bronze.clima checar
 
 bronze-clima-load modo="substitui":
     uv run python -m inflatrack.loaders.load_clima --modo {{modo}}

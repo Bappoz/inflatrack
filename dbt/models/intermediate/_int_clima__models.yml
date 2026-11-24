@@ -4,14 +4,74 @@ models:
   - name: int_clima__anomalia_mensal
     description: >
       Uma linha por estação x mês (mes_referencia = YYYY-MM-01), sem buracos entre o
-      primeiro e o último mês observado. Médias, desvios, acumulado de chuva e lags
-      t-1, t-2 e t-3; meses sem registros ficam com métricas nulas e contagem zero.
+      primeiro e o último mês observado. Médias, extremos, desvios, acumulado de chuva,
+      anomalia contra a normal dos anos anteriores e lags t-1, t-2 e t-3; meses sem
+      registros ficam com métricas nulas e contagem zero.
     columns:
       - name: estacao_id
         data_tests: [not_null]
       - name: mes_referencia
         data_tests: [not_null]
+      - name: temp_media
+        description: >
+          Média das temperaturas diárias. Regra 3/5 da OMM: nula se faltam mais de 5 dias
+          já decorridos do mês, ou mais de 3 seguidos. Vale também para desvio e extremos.
+      - name: precipitacao_total_mm
+        description: >
+          Soma da chuva diária. Regra 3/5 da OMM contando também os dias que ainda não
+          aconteceram: um total parcial faria o mês parecer seco.
+      - name: dias_sem_temperatura
+        description: Dias já decorridos do mês sem temperatura (entrada da regra 3/5).
+        data_tests: [not_null]
+      - name: maior_sequencia_sem_temperatura
+        description: Maior sequência de dias seguidos sem temperatura no mês.
+        data_tests: [not_null]
+      - name: dias_sem_chuva_medida
+        description: Dias do mês sem chuva medida, inclusive os ainda não decorridos.
+        data_tests: [not_null]
+      - name: maior_sequencia_sem_chuva
+        description: Maior sequência de dias seguidos sem chuva medida no mês.
+        data_tests: [not_null]
+      - name: dias_no_mes
+        data_tests: [not_null]
       - name: dias_com_registro
+        description: Dias com ao menos uma leitura horária válida.
         data_tests: [not_null]
       - name: dias_com_temperatura
+        data_tests: [not_null]
+      - name: dias_com_precipitacao
+        data_tests: [not_null]
+      - name: dias_com_chuva
+        description: Dias com 1 mm ou mais; nula quando a chuva do mês é nula (regra 3/5).
+      - name: temp_media_normal
+        description: >
+          Média da temperatura do mesmo mês do calendário nos anos ANTERIORES da estação
+          (sem vazamento do futuro para o treino).
+      - name: temp_media_anomalia
+        description: temp_media - temp_media_normal; exige ao menos 3 anos anteriores.
+      - name: precipitacao_anomalia_mm
+        description: precipitacao_total_mm - precipitacao_normal_mm; exige ao menos 3 anos anteriores.
+      - name: codigo_localidade
+        description: Praça do IPCA da estação, pelo seed_de_para_estacao_localidade.
+
+  - name: int_clima__spi_mensal
+    description: >
+      SPI-3 (Índice de Precipitação Padronizado de 3 meses, McKee/OMM) por estação x mês.
+      A chuva de 3 meses só existe com os 3 meses válidos pela regra 3/5. A gama de cada ano é
+      ajustada só com os anos anteriores do mesmo mês do calendário (mínimo de 10), então o
+      SPI começa por volta de 2016 e não vaza o futuro. Modelo Python (scipy), lógica em
+      src/inflatrack/common/spi.py. Grão garantido por assert_int_clima__spi_chave_unica.
+    columns:
+      - name: estacao_id
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests: [not_null]
+      - name: precipitacao_3m_mm
+        description: Chuva acumulada no mês e nos 2 anteriores (mm).
+      - name: spi_3
+        description: >
+          SPI-3, limitado a ±3. Abaixo de -1 seca moderada, -1,5 severa, -2 extrema; acima de
+          +1 excesso de chuva. Nulo com menos de 10 anos anteriores daquele mês.
+      - name: anos_referencia_spi
+        description: Anos anteriores do mesmo mês usados no ajuste da gama.
         data_tests: [not_null]

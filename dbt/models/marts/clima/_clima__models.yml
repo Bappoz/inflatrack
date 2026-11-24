@@ -1,0 +1,140 @@
+version: 2
+
+models:
+  - name: fct_clima_mensal
+    description: >
+      Uma linha por praça do IPCA x mês, do primeiro ao último mês com medição do INMET
+      (BDMEP). Variáveis climáticas do modelo preditivo: temperatura, extremos, chuva,
+      umidade, anomalias contra a normal dos anos anteriores e lags de 1 a 3 meses (o efeito
+      atrasado do clima na colheita). Junta-se a fct_inflacao_mensal por
+      (codigo_localidade, mes_referencia). Grão garantido por assert_fct_clima_mensal_chave_unica.
+    columns:
+      - name: codigo_localidade
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_localidade')
+                field: codigo_localidade
+      - name: mes_referencia
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: mes_fechado
+        description: >
+          Verdadeiro se o último dia do mês já está publicado pelo INMET (BDMEP). O mês em
+          curso e os meses com dia provisório ficam falsos e não devem entrar no treino.
+        data_tests: [not_null]
+      - name: dias_provisorios
+        description: >
+          Dias do mês cobertos pelo Open-Meteo (modelo em grade) porque o INMET ainda não
+          publicou. Somem quando o pacote oficial chega. A chuva do modelo diverge bastante da
+          do pluviômetro; a temperatura fica perto.
+        data_tests: [not_null]
+      - name: estacoes_com_dado
+        description: Estações da praça com ao menos um dia medido no mês.
+        data_tests: [not_null]
+      - name: dias_com_registro
+        description: Dias com ao menos uma leitura horária válida (máximo entre as estações).
+        data_tests: [not_null]
+      - name: cobertura_dias
+        description: dias_com_registro / dias_no_mes, de 0 a 1.
+        data_tests: [not_null]
+      - name: temp_media
+        description: >
+          Média das temperaturas médias diárias (°C); nula se faltam mais de 5 dias já
+          decorridos ou mais de 3 seguidos (regra 3/5 da OMM).
+      - name: temp_min_absoluta
+        description: Menor mínima do mês (°C), sinal de geada.
+      - name: temp_max_absoluta
+        description: Maior máxima do mês (°C), sinal de onda de calor.
+      - name: temp_media_anomalia
+        description: Temperatura do mês menos a normal do mesmo mês nos anos anteriores (°C).
+      - name: precipitacao_total_mm
+        description: >
+          Chuva acumulada; nula se faltam mais de 5 dias do mês ou mais de 3 seguidos
+          (regra 3/5 da OMM, contando os dias que ainda não aconteceram).
+      - name: precipitacao_anomalia_mm
+        description: Chuva do mês menos a normal do mesmo mês nos anos anteriores (mm).
+      - name: dias_com_chuva
+        description: Dias com 1 mm ou mais.
+      - name: precipitacao_3m_mm
+        description: Chuva do mês e dos 2 anteriores (mm), só com os 3 meses válidos.
+      - name: spi_3
+        description: >
+          SPI-3 (McKee/OMM) médio das estações da praça: abaixo de -1 seca moderada, -1,5
+          severa, -2 extrema; acima de +1 excesso. Gama ajustada só com anos anteriores
+          (mínimo 10), então começa por volta de 2016. Lags em spi_3_t_menos_1..3.
+
+  - name: fct_clima_polo_mensal
+    description: >
+      Uma linha por polo agrícola (estação do INMET) x mês: o clima onde os alimentos da cesta
+      são plantados. Mesmas colunas de clima de fct_clima_mensal (macro colunas_clima_mensal),
+      com polo, UF e culturas do seed_estacao_polo_agricola. Não tem praça do IPCA: junta-se ao
+      modelo por mes_referencia (e, se fizer sentido, por cultura x subitem da cesta). Grão
+      garantido por assert_fct_clima_polo_mensal_chave_unica.
+    columns:
+      - name: estacao_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('seed_estacao_polo_agricola')
+                field: estacao_id
+      - name: polo
+        data_tests: [not_null]
+      - name: culturas
+        data_tests: [not_null]
+      - name: mes_referencia
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: mes_fechado
+        description: Verdadeiro se o INMET já publicou o último dia do mês. Só ele entra no treino.
+        data_tests: [not_null]
+      - name: cobertura_dias
+        data_tests: [not_null]
+      - name: spi_3
+        description: SPI-3 da estação do polo (ver fct_clima_mensal.spi_3).
+
+  - name: fct_enso_mensal
+    description: >
+      El Niño / La Niña por mês (RONI do NOAA), global: junta-se a qualquer fato por
+      mes_referencia. Intensidades no formato do Banco Central (RONI além do limiar de ±0,5) e
+      lags de 3, 6, 9 e 12 meses. O RONI de um mês só é publicado 2 meses depois
+      (mes_publicacao): para prever o mês t, use só valores com mes_publicacao <= t.
+    columns:
+      - name: mes_referencia
+        description: Mês central da temporada de 3 meses (DJF -> janeiro).
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: mes_referencia
+      - name: mes_publicacao
+        description: Primeiro mês em que o valor já existe (o RONI usa o mês seguinte).
+        data_tests: [not_null]
+      - name: roni
+        description: Anomalia relativa da temperatura do mar no Niño 3.4 (°C).
+        data_tests: [not_null]
+      - name: fase_limiar
+        description: el_nino (> 0,5), la_nina (< -0,5) ou neutro, só pelo limiar do mês.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [el_nino, la_nina, neutro]
+      - name: intensidade_el_nino
+        description: RONI - 0,5 quando RONI > 0,5; senão 0.
+        data_tests: [not_null]
+      - name: intensidade_la_nina
+        description: "|RONI| - 0,5 quando RONI < -0,5; senão 0."
+        data_tests: [not_null]

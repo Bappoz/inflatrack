@@ -14,6 +14,11 @@ Cair entre a gravação e o avanço faz o próximo ciclo ler as mesmas mudanças
 consumiu, então nem CDC parado nem Postgres reiniciado perdem evento, até o limite de
 ``max_slot_wal_keep_size``; passou disso, o slot é invalidado e este módulo falha com erro claro.
 
+O slot segura o WAL do servidor inteiro, não só o das tabelas publicadas. Por isso cada captura
+termina avançando o slot até o fim do WAL lido, mesmo sem mudança do lojista: escrita fora da
+publicação não gera mensagem e, sem esse avanço, ficaria retida até invalidar o slot (como em
+2026-11-11, com as cópias para ``serie``).
+
 A primeira execução cria o slot e grava uma foto das tabelas (``operacao = 'r'``), porque o slot
 só enxerga o que acontece depois dele. Uma mudança que caia entre o slot e a foto aparece nos
 dois lugares, e a Silver chega ao mesmo estado final ao aplicar os eventos em ordem.
@@ -374,12 +379,14 @@ def capturar(
             conexao.execute("select pg_drop_replication_slot(%s)", (slot,))
             raise
 
+    # Lê até o fim do WAL de agora; o que for confirmado depois fica para a próxima captura.
+    (limite,) = conexao.execute("select (pg_current_wal_lsn() - '0/0')::bigint").fetchone()
     while True:
         mensagens = conexao.execute(
             "select (lsn - '0/0')::bigint, xid::text::bigint, data"
-            " from pg_logical_slot_peek_binary_changes(%s, null, %s,"
+            " from pg_logical_slot_peek_binary_changes(%s, %s::pg_lsn, %s,"
             " 'proto_version', '1', 'publication_names', %s)",
-            (slot, MUDANCAS_POR_LOTE, publicacao),
+            (slot, _texto_lsn(limite), MUDANCAS_POR_LOTE, publicacao),
         ).fetchall()
         if not mensagens:
             break
@@ -393,6 +400,16 @@ def capturar(
                 "select pg_replication_slot_advance(%s, %s::pg_lsn)",
                 (slot, _texto_lsn(fim)),
             )
+    if avancar:
+        # Tudo o que foi confirmado até `limite` já está na Bronze. O resto do WAL até ali não
+        # gera mensagem (a cópia para `serie`, por exemplo) e só avança o slot por aqui; sem
+        # isso, ele segura esse WAL até passar de max_slot_wal_keep_size e é perdido, como em
+        # 2026-11-11. Transação ainda aberta não se perde: ela entra pelo LSN do commit.
+        conexao.execute(
+            "select pg_replication_slot_advance(%s, greatest(confirmed_flush_lsn, %s::pg_lsn))"
+            " from pg_replication_slots where slot_name = %s",
+            (slot, _texto_lsn(limite), slot),
+        )
     return Captura(lidas, novas, foto)
 
 

@@ -1,0 +1,15 @@
+estacao_id,polo,uf,culturas,latitude,longitude,justificativa
+A904,Sorriso,MT,soja; milho,-12.55500,-55.72278,"Médio-norte de MT, polo de soja e milho"
+A025,Rio Verde,GO,soja; milho,-17.78528,-50.96500,"Sudoeste goiano, polo de grãos"
+A721,Dourados,MS,soja; milho,-22.19389,-54.91139,"Sul de MS, polo de grãos"
+A839,Passo Fundo,RS,soja; trigo; milho,-28.22667,-52.40361,"Planalto gaúcho, grãos de verão e trigo de inverno"
+A402,Barreiras,BA,soja; milho; algodão,-12.12472,-45.02694,Oeste baiano (Matopiba)
+A826,Alegrete,RS,arroz,-29.70917,-55.52556,"Fronteira oeste gaúcha, região de arroz irrigado"
+A515,Varginha,MG,café,-21.56639,-45.40417,"Sul de Minas, café arábica"
+A523,Patrocínio,MG,café,-18.99667,-46.98583,"Cerrado mineiro, café arábica"
+A614,Linhares,ES,café conilon; mamão,-19.35694,-40.06861,"Norte capixaba, café conilon"
+A542,Unaí,MG,feijão; milho,-16.55417,-46.88194,"Noroeste de MG, polo de feijão irrigado"
+A714,Itapeva,SP,batata; feijão,-23.98194,-48.88583,"Sudoeste paulista, batata e feijão"
+A424,Irecê,BA,feijão; cebola; hortaliças,-11.32889,-41.86444,"Microrregião de Irecê, feijão e cebola"
+A863,Ituporanga,SC,cebola,-27.41833,-49.64694,"Alto Vale do Itajaí, polo de cebola de SC"
+A518,Juiz de Fora,MG,leite,-21.77000,-43.36444,"Zona da Mata mineira, bacia leiteira"

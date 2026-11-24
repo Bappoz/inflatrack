@@ -1,0 +1,113 @@
+[
+  {
+    "latitude": -15.782073,
+    "longitude": -47.88678,
+    "generationtime_ms": 0.10228157043457031,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 1159.0,
+    "daily_units": {
+      "time": "iso8601",
+      "temperature_2m_mean": "°C",
+      "temperature_2m_max": "°C",
+      "temperature_2m_min": "°C",
+      "precipitation_sum": "mm",
+      "relative_humidity_2m_mean": "%",
+      "relative_humidity_2m_min": "%"
+    },
+    "daily": {
+      "time": [
+        "2026-11-01",
+        "2026-11-02",
+        "2026-11-03"
+      ],
+      "temperature_2m_mean": [
+        22.4,
+        24.1,
+        23.6
+      ],
+      "temperature_2m_max": [
+        28.4,
+        28.6,
+        29.4
+      ],
+      "temperature_2m_min": [
+        18.7,
+        20.1,
+        19.2
+      ],
+      "precipitation_sum": [
+        3.3,
+        3.1,
+        22.8
+      ],
+      "relative_humidity_2m_mean": [
+        79,
+        75,
+        74
+      ],
+      "relative_humidity_2m_min": [
+        45,
+        54,
+        43
+      ]
+    }
+  },
+  {
+    "latitude": -3.8312829,
+    "longitude": -38.560974,
+    "generationtime_ms": 0.07617473602294922,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 25.0,
+    "location_id": 1,
+    "daily_units": {
+      "time": "iso8601",
+      "temperature_2m_mean": "°C",
+      "temperature_2m_max": "°C",
+      "temperature_2m_min": "°C",
+      "precipitation_sum": "mm",
+      "relative_humidity_2m_mean": "%",
+      "relative_humidity_2m_min": "%"
+    },
+    "daily": {
+      "time": [
+        "2026-11-01",
+        "2026-11-02",
+        "2026-11-03"
+      ],
+      "temperature_2m_mean": [
+        28.5,
+        28.3,
+        28.4
+      ],
+      "temperature_2m_max": [
+        32.4,
+        31.5,
+        32.4
+      ],
+      "temperature_2m_min": [
+        26.0,
+        25.8,
+        25.6
+      ],
+      "precipitation_sum": [
+        0.0,
+        3.0,
+        0.5
+      ],
+      "relative_humidity_2m_mean": [
+        68,
+        69,
+        69
+      ],
+      "relative_humidity_2m_min": [
+        50,
+        53,
+        51
+      ]
+    }
+  }
+]

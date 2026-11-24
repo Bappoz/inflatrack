@@ -108,7 +108,6 @@ def test_toda_carga_no_duckdb_roda_por_algum_job_agendado():
     """Uma carga fora de todo job agendado deixa a Gold parada mesmo com a coleta rodando.
 
     Foi o caso do IPCA: `ipca_job` só coletava, e nada levava o Delta para `bronze.*`.
-    `clima_medicoes_duckdb` fica de fora: chama o mesmo `load_clima` que `clima_duckdb`.
     """
     agendados = {agendamento.job_name for agendamento in SCHEDULES}
     cobertas = set()
@@ -122,7 +121,7 @@ def test_toda_carga_no_duckdb_roda_por_algum_job_agendado():
         for chave in grafo.get_all_asset_keys()
         if chave.to_user_string().endswith("_duckdb") and "dbt" not in grafo.get(chave).kinds
     }
-    assert cargas - {"clima_medicoes_duckdb"} <= cobertas, cargas - cobertas
+    assert cargas <= cobertas, cargas - cobertas
 
 
 def test_analitico_job_carrega_o_ipca_antes_do_dbt():

@@ -20,7 +20,59 @@ A seta é tracejada porque o DDL (`scripts/sql/setup_duckdb_clima.sql`) não dec
 
 ---
 
-## Entidades
+## Consultas de Exemplo (Gold)
+
+### 1. Inflação de alimentos x clima da praça
+
+Grupo Alimentação e bebidas do IPCA em São Paulo, com a anomalia de temperatura do mês e a chuva e
+o SPI-3 do mês anterior. Só meses com o clima oficial fechado (`mes_fechado`).
+
+```sql
+SELECT
+    f.mes_referencia,
+    f.variacao_mensal_pct          AS alimentacao_pct,
+    c.temp_media_anomalia,
+    c.precipitacao_anomalia_t_menos_1,
+    c.spi_3_t_menos_1
+FROM gold.fct_inflacao_mensal AS f
+JOIN gold.fct_clima_mensal AS c USING (codigo_localidade, mes_referencia)
+WHERE f.indice = 'IPCA'
+  AND f.codigo_categoria = '1'          -- grupo Alimentação e bebidas
+  AND f.codigo_localidade = 3501        -- RM de São Paulo
+  AND c.mes_fechado
+ORDER BY f.mes_referencia DESC
+LIMIT 12;
+```
+
+### 2. Seca nos polos de soja x El Niño de 6 meses antes
+
+SPI-3 médio dos polos de grãos e a intensidade do El Niño 6 meses antes (já publicada naquela data).
+
+```sql
+SELECT
+    p.mes_referencia,
+    round(avg(p.spi_3), 2)          AS spi_3_graos,
+    count(p.spi_3)                  AS polos_com_spi,
+    e.intensidade_el_nino_t_menos_6
+FROM gold.fct_clima_polo_mensal AS p
+JOIN gold.fct_enso_mensal AS e USING (mes_referencia)
+WHERE p.culturas LIKE '%soja%'
+  AND p.mes_referencia >= DATE '2024-01-01'
+GROUP BY p.mes_referencia, e.intensidade_el_nino_t_menos_6
+ORDER BY p.mes_referencia;
+```
+
+Como usar essas tabelas no treino do modelo preditivo sem vazar o futuro: Seção 2.4 do
+`PLAN_E3_E4.md`.
+
+---
+
+## Tabelas legadas (E1)
+
+`estacao_meteorologica` e `clima_diario` são da primeira entrega. O DDL
+(`scripts/sql/setup_duckdb_clima.sql`) ainda as cria e o `load_clima` só as preenche se existirem
+os Parquets antigos (`estacoes.parquet`, `clima_diario.parquet`), que a coleta não gera mais. O
+pipeline usa a Bronze em Delta e a Gold descritas abaixo.
 
 ### Tabela: `estacao_meteorologica`
 
@@ -55,60 +107,27 @@ Tabela de fato com granularidade diária por estação, acumulando medições de
 
 ---
 
-## Consultas de Exemplo
-
-### 1. Precipitação Acumulada nos Últimos 30 Dias nos Cinturões Produtores
-
-```sql
-SELECT 
-    e.estado,
-    e.nome AS estacao,
-    round(sum(c.precipitacao_total_mm), 1) AS chuva_acumulada_30d_mm,
-    round(avg(c.temp_media), 1) AS temp_media_30d_c
-FROM clima_diario c
-JOIN estacao_meteorologica e ON e.estacao_id = c.estacao_id
-WHERE e.estado IN ('MT', 'GO', 'MS', 'PR')
-  AND c.data_referencia >= CURRENT_DATE - INTERVAL 30 DAYS
-GROUP BY e.estado, e.nome
-ORDER BY chuva_acumulada_30d_mm ASC;
-```
-
-### 2. Cruzamento de Choques Climáticos com Preço de Commodities Agrícolas
-
-Avalia a relação entre secas ou geadas e as cotações de milho, café ou trigo:
-
-```sql
-SELECT 
-    c.data_referencia,
-    round(avg(c.precipitacao_total_mm), 2) AS media_chuva_brasil_mm,
-    round(min(c.temp_min), 1) AS temperatura_minima_nacional_c,
-    p.preco AS preco_milho_usd
-FROM clima_diario c
-JOIN commodity_cotacao p ON p.data_referencia = c.data_referencia AND p.symbol = 'CORN'
-WHERE c.data_referencia >= '2024-01-01'
-GROUP BY c.data_referencia, p.preco
-ORDER BY c.data_referencia DESC;
-```
-
----
-
 ## Bronze em Delta
 
 As tabelas da fonte meteorológica gravadas pelo ingestor em `data/parquet/clima/`, em formato Delta. Ficam no Delta e substituem os arquivos `.json.gz` de `data/raw/inmet/`. Quando necessário, o DuckDB lê com `delta_scan`.
 
 ### clima_resposta
 
-Armazena o payload JSON bruto da resposta recebida da API do INMET. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`).
+Armazena a resposta original de cada coleta. Uma linha por resposta **diferente** (deduplicada por `hash_corpo`). Três tipos, pelo `tipo_conteudo`:
+
+- `application/json` com `_requisicao` em `/estacoes/T`: o catálogo de estações da API;
+- `text/csv; charset=iso-8859-1`: o CSV horário de uma estação dentro do pacote anual do BDMEP, na íntegra (`_requisicao` = `{url do zip}#{arquivo no zip}`);
+- `application/json; charset=utf-8` com `_requisicao` = URL do zip: o **manifesto** do pacote processado (`Last-Modified`, tamanho e lista de estações). Se o manifesto já existe, a coleta seguinte não baixa o pacote de novo.
 
 | Campo | Tipo | Descrição |
 |---|---|---|
 | `id_resposta` | string | Identificador da resposta: o hash SHA-256 do corpo |
 | `_fonte` | string | Sempre `"clima"` |
-| `_requisicao` | string | URL consultada na API do INMET (`/estacoes/T`) |
+| `_requisicao` | string | URL consultada (API do INMET ou pacote do BDMEP com o arquivo após `#`) |
 | `_ingerido_em` | timestamp (UTC) | Momento do download da resposta |
 | `status_http` | smallint, nulo | Status HTTP da resposta (200, ou nulo se importado do Raw) |
 | `tipo_conteudo` | string, nulo | `Content-Type` do cabeçalho HTTP |
-| `corpo` | string | O JSON original na íntegra |
+| `corpo` | string | O conteúdo original na íntegra (JSON ou CSV) |
 | `hash_corpo` | string | SHA-256 do corpo (idempotência) |
 | `tamanho_bytes` | bigint | Tamanho do payload em bytes |
 
@@ -137,7 +156,11 @@ Cadastro nacional das estações meteorológicas (automáticas e convencionais) 
 
 ### clima_medicao
 
-Tabela Delta em `data/parquet/clima/medicao/`, com uma linha por versão de leitura diária. O campo
+Tabela Delta em `data/parquet/clima/medicao/`, com uma linha por versão de leitura diária, resumida
+das 24 leituras horárias do CSV do BDMEP no dia UTC (o BDMEP publica em UTC; hora repetida no CSV
+conta uma vez, valendo a última linha). Cada métrica só sai
+com ao menos 18 horas válidas (`HORAS_MINIMAS`); vazio, `-9999` e valores fora da faixa física
+(temperatura de -15 a 50 °C, chuva de 0 a 200 mm/h, umidade de 0 a 100%) viram nulo. O campo
 `id_medicao` é calculado a partir dos valores da leitura, sem incluir metadados de ingestão; assim,
 uma reexecução idêntica não duplica linhas e uma revisão histórica é preservada como versão nova.
 
@@ -145,4 +168,84 @@ O loader espelha a tabela em `bronze.clima_medicao`, criada por
 `scripts/sql/setup_duckdb_clima.sql`. O script SQL é necessário ao loader e não deve ser removido.
 Na Silver, a leitura mais recente por estação e dia alimenta a consolidação mensal, com defasagens
 `t-1`, `t-2` e `t-3`. Campos ausentes e sentinelas viram `NULL`; zeros reais permanecem zero.
+
+| Campo | Tipo | Origem no CSV do BDMEP | Descrição |
+|---|---|---|---|
+| `id_medicao` | string | — | SHA-256 dos valores da leitura (inclui `horas_com_registro`) |
+| `estacao_id` | string | `CODIGO (WMO)` | Código INMET da estação |
+| `data_referencia` | date | `Data` / `DATA (YYYY-MM-DD)` | Dia UTC |
+| `temp_min` | double, nulo | `TEMPERATURA MÍNIMA NA HORA ANT.` | Menor mínima horária do dia (°C) |
+| `temp_max` | double, nulo | `TEMPERATURA MÁXIMA NA HORA ANT.` | Maior máxima horária do dia (°C) |
+| `temp_media` | double, nulo | `TEMPERATURA DO AR - BULBO SECO, HORARIA` | Média das temperaturas horárias (°C) |
+| `precipitacao_total_mm` | double, nulo | `PRECIPITAÇÃO TOTAL, HORÁRIO` | Soma da chuva horária (mm) |
+| `umidade_relativa_media_pct` | double, nulo | `UMIDADE RELATIVA DO AR, HORARIA` | Média da umidade horária (%) |
+| `umidade_relativa_min_pct` | double, nulo | `UMIDADE REL. MIN. NA HORA ANT.` | Menor umidade mínima horária (%) |
+| `horas_com_registro` | smallint | — | Horas do dia com ao menos uma medida válida |
+| `observado` | boolean | — | Sempre verdadeiro: leitura medida, não estimada |
+| `_id_resposta` | string | — | Chave para `clima_resposta.id_resposta` (o CSV de origem) |
+| `_fonte`, `_requisicao`, `_ingerido_em` | — | — | Procedência, como nas demais tabelas |
+
+### clima_medicao_provisoria
+
+Tabela Delta em `data/parquet/clima/medicao_provisoria/`, espelhada em
+`bronze.clima_medicao_provisoria`. Uma linha por versão de dia provisório do Open-Meteo para os
+dias que o INMET ainda não publicou. Mesmas medidas de `clima_medicao` (`temp_min`, `temp_max`,
+`temp_media`, `precipitacao_total_mm`, `umidade_relativa_media_pct`, `umidade_relativa_min_pct`),
+mais:
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `id_medicao` | string | SHA-256 dos valores do dia (uma revisão do modelo vira linha nova) |
+| `latitude_grade`, `longitude_grade` | double | Ponto da grade do modelo que o Open-Meteo usou |
+| `fonte` | string | Sempre `open_meteo` |
+| `_id_resposta` | string | Chave para o JSON original em `clima_resposta` |
+
+### Silver: `silver.stg_clima__medicao_diaria`
+
+Uma linha por estação x dia: a última revisão do INMET e, só depois do último dia oficial, o
+provisório. `fonte` diz de onde veio (`inmet_bdmep` ou `open_meteo`) e `observado` é falso no
+provisório. `horas_com_registro` fica nulo no provisório (não há leitura horária).
+
+## Gold: `gold.fct_clima_mensal`
+
+Uma linha por praça do IPCA x mês, do primeiro ao último mês com medição. É a tabela de clima do
+modelo preditivo e se junta a `gold.fct_inflacao_mensal` por `(codigo_localidade, mes_referencia)`.
+A praça vem de `dbt/seeds/seed_de_para_estacao_localidade.csv` (uma estação por praça; o Brasil não
+entra). Nenhuma coluna usa meses futuros: as normais climatológicas são só dos anos anteriores.
+
+| Campo | Descrição |
+|---|---|
+| `codigo_localidade`, `mes_referencia` | Chave (FK para `dim_localidade` e `dim_calendario`) |
+| `mes_fechado` | Falso no mês que o INMET ainda não publicou inteiro (inclui todo mês com dia provisório): não usar no treino |
+| `dias_provisorios` | Dias do mês cobertos pelo Open-Meteo enquanto o INMET não publica |
+| `estacoes_com_dado`, `dias_com_registro`, `dias_no_mes`, `cobertura_dias` | Cobertura do mês (0 a 1) |
+| `temp_media`, `temp_min_absoluta`, `temp_max_absoluta` | Temperatura média e extremos (°C); nulos se faltarem mais de 5 dias já decorridos ou mais de 3 seguidos (regra 3/5) |
+| `temp_media_anomalia` | Temperatura menos a normal do mesmo mês nos anos anteriores (mín. 3 anos) |
+| `precipitacao_total_mm`, `dias_com_chuva` | Chuva do mês; nulos se faltarem mais de 5 dias do mês ou mais de 3 seguidos, contando os ainda não decorridos (regra 3/5 da OMM) |
+| `precipitacao_anomalia_mm` | Chuva menos a normal do mesmo mês nos anos anteriores |
+| `umidade_relativa_media_pct` | Umidade média (%) |
+| `precipitacao_3m_mm`, `spi_3` | Chuva dos últimos 3 meses e SPI-3 (seca: < -1 moderada, < -1,5 severa, < -2 extrema), média das estações da praça |
+| `*_t_menos_1`, `*_t_menos_2`, `*_t_menos_3`, `temp_media_mm3` | Lags de 1 a 3 meses de calendário (temperatura, anomalias, chuva e SPI-3) e média móvel de 3 meses |
+
+## Silver: `silver.int_clima__spi_mensal`
+
+Uma linha por estação x mês, calculada por modelo Python do dbt (SciPy).
+
+| Campo | Descrição |
+|---|---|
+| `precipitacao_3m_mm` | Chuva do mês e dos 2 anteriores; nula se algum dos 3 falha na regra 3/5 |
+| `spi_3` | SPI-3, limitado a ±3; nulo com menos de 10 anos anteriores daquele mês |
+| `anos_referencia_spi` | Anos anteriores do mesmo mês usados no ajuste da gama |
+
+## Gold: `gold.fct_clima_polo_mensal`
+
+Uma linha por polo agrícola (estação) x mês, com as mesmas colunas de clima de
+`fct_clima_mensal` (macro `colunas_clima_mensal`), mais:
+
+| Campo | Descrição |
+|---|---|
+| `estacao_id`, `polo`, `uf`, `culturas` | Estação do INMET e o polo do `seed_estacao_polo_agricola` |
+| `mes_fechado` | Verdadeiro se o INMET já publicou o último dia do mês naquela estação |
+
+O ENSO (El Niño / La Niña) está em [`gold.fct_enso_mensal`](enso.md).
 

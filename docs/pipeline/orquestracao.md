@@ -3,7 +3,7 @@
 O **Dagster** é o orquestrador do InflaTrack: é ele que decide *quando* cada pedaço do dado é produzido, *em que ordem* e *o que refazer* quando algo falha. Ele substitui o disparo manual das receitas do `justfile` sem mudar o código de ingestão — as receitas continuam existindo como caminho manual de emergência.
 
 !!! info "Status: em uso de ponta a ponta (E3)"
-    O código está em `orchestration/` e cobre a Bronze de todas as fontes, a Silver e a Gold do dbt (`dbt_assets.py`), a cópia da Gold para o `serie` do Postgres (`serie.py`) e os *asset checks* de frescura (`checks.py`). Falta o ETL reverso da recomendação ao lojista (E4). A divisão de responsabilidades sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
+    O código está em `orchestration/` e cobre a Bronze de todas as fontes, a Silver e a Gold do dbt (`dbt_assets.py`), a cópia da Gold para o `serie` do Postgres (`serie.py`) e os *asset checks* de frescura e volume de todas as fontes que chegam ao DuckDB (`checks.py`, [SLA por fonte](../evidencias/e3/sla_e_freshness.md)). Falta o ETL reverso da recomendação ao lojista (E4). A divisão de responsabilidades sustenta o [ADR 0002](../adr/0002-duckdb-unico.md) e os [Componentes](../arquitetura/componentes.md#dagster).
 
 ## Por que Dagster e não Airflow
 
@@ -44,10 +44,13 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `commodities` | `commodities_parquet` → `commodities_duckdb` | Delta → DuckDB | `bronze.commodities`, `loaders.load_commodities` |
 | `pib` | `pib_parquet` → `pib_duckdb` (a carga roda no `analitico_job`, como a do IPCA) | Delta → DuckDB | `bronze.pib`, `loaders.load_pib` |
 | `pib_internacional` | `pib_china_parquet`, `pib_usa_parquet`, `pib_russia_parquet` → `pib_internacional_duckdb` | Delta → DuckDB | `bronze.pib_internacional`, `loaders.load_pib_internacional` |
-| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `ingest_salario_minimo`, `load_salario_minimo` |
-| `clima` | `clima_parquet` → `clima_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
-| `clima_medicoes` | `clima_medicoes` → `clima_medicoes_duckdb` | Delta → DuckDB | `ingest_clima`, `load_clima` |
+| `dieese` | `salario_minimo_parquet` → `salario_minimo_duckdb` | Delta → DuckDB | `bronze.salario_minimo`, `load_salario_minimo` |
+| `clima` | `clima_parquet` → `clima_duckdb` (catálogo, API); `clima_medicoes` → `clima_medicoes_duckdb` (medições, BDMEP); `clima_medicoes` → `clima_provisorio` → `clima_provisorio_duckdb` (provisório, Open-Meteo) | Delta → DuckDB | `bronze.clima`, `load_clima --tabela estacao\|medicao\|provisoria` |
+| `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
+| `atacado` | `atacado_postgres` (sem dependentes: o preço não vai para a Bronze, ADR 0004) | Postgres (`atacado`) | `atacado.importar_tabela` |
+| `predicao` | `fct_previsao_subitem` (modelo Python do dbt; XGBoost único, mês seguinte por praça e subitem) | DuckDB (`gold`) | `predicao.aplicacao` |
+| `site` | `site_supabase` (sem dependentes) | Supabase do site | `reverse_etl.publicar_site` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
@@ -62,6 +65,7 @@ orchestration/
 │   ├── commodities.py, dolar.py, selic.py, salario_minimo.py, clima.py, pib_internacional.py
 │   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
 │   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
+│   ├── atacado.py          # preços do atacadista direto no Postgres (nunca na Bronze)
 │   ├── dbt_assets.py       # @dbt_assets: Silver e Gold, ligados às cargas pelo meta.dagster.asset_key
 │   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
 │   └── checks.py           # asset checks de frescura e volume
@@ -83,7 +87,8 @@ Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados. As demais fonte
 | PIB e setores (SIDRA 1846) | Anual (relê o ano corrente e o anterior) | Diário nos meses de divulgação (mar, jun, set, dez) | Contas nacionais trimestrais |
 | Dólar e Selic (BCB) | Diária | Dias úteis, após o fechamento | Publicação do BCB |
 | Commodities (Alpha Vantage) | Diária | 1×/dia, respeitando a cota de 25 req./dia | Cota da API |
-| Clima (INMET) | — | Catálogo 1×/dia; medições só manuais (`clima_medicoes`) | Estações automáticas |
+| Clima (INMET + Open-Meteo) | Anual (pacote BDMEP por ano, desde 2006) | 1×/dia às 7h: catálogo pela API; medições só baixam o pacote que o INMET republicou (HEAD + manifesto); o provisório (Open-Meteo) relê do dia seguinte ao último oficial até ontem | O INMET republica o pacote do ano corrente cerca de 1×/mês; o Open-Meteo tem o dia anterior |
+| El Niño / La Niña (RONI, NOAA) | Mensal | 1×/semana, segunda às 9h (série inteira, detecta revisão) | Publicação do NOAA no começo do mês |
 | Salário mínimo (DIEESE) | Mensal | 1×/mês | Publicação do DIEESE |
 | PIB internacional (Banco Mundial) | — | 1×/mês, dia 1 (detecta revisão) | Revisões fora de calendário |
 | Gold de inflação e vitrine (`dashboard_job`) | — | 1×/dia às 20h30, depois do SIDRA | Dependência do dashboard |
@@ -114,11 +119,15 @@ A partir da interface: materializar um ativo, selecionar um intervalo de partiç
 
 `popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
 
-Os jobs rodam em paralelo, com uma exceção: o `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
+O `predicao_job` (dia 14, 11h) roda os grupos `predicao` e `site`: prevê o mês seguinte ao último IPCA e publica no Supabase, para o site e o agente. Fica fora do `analitico_job` diário porque a previsão leva uns 5 minutos, e fora do `popular_banco_job` porque precisa da Gold pronta.
+
+Os jobs rodam em paralelo, com duas exceções. O `atacado_job` espera o `ipca_job`, porque o importador exige os subitens em `classificacao`, que a carga do IPCA grava no Postgres. O `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
 
 Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
 
-Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos; as medições de clima não entram (o ativo `clima_medicoes` é manual).
+Exige o `dagster dev` no ar (é lançado pela interface, não por `just materializar`), o Postgres (`just up`) para o grupo `sidra`, e a chave da Alpha Vantage para commodities. O IPCA completo leva cerca de 20 minutos. O `clima_job` sem config traz as medições desde 2006 na primeira execução (~20 pacotes anuais do BDMEP) e, nas seguintes, só os pacotes que mudaram. No mesmo run, depois do BDMEP, o `clima_provisorio` cobre com o Open-Meteo os dias que o INMET ainda não publicou; ver [fonte do clima](../fontes/clima.md#taxa-de-escrita).
+
+O `clima_duckdb` e o `clima_medicoes_duckdb` aplicam o DDL do clima antes de carregar, então as duas tabelas `bronze.clima_*` existem mesmo antes da primeira coleta. Fora do Dagster, `just dbt` roda antes o `just duckdb-init` (os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql`, respeitando `DBT_DUCKDB_PATH`, sem API e sem apagar dados); fontes sem DDL ainda dependem de seus loaders.
 
 O `dashboard_job` fica ativo diariamente às 20h30; os schedules SIDRA rodam nos dias 9 a 13 e releem os três meses anteriores para captar revisões do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)). O `analitico_job` completo continua manual. Numa máquina nova, faça o backfill SIDRA antes da primeira execução do dashboard.
 
@@ -126,7 +135,5 @@ Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia. O mê
 
 ## O que falta
 
-1. *Freshness checks* das outras fontes: hoje só Dólar, Selic e `gold.fct_macroeconomia_mensal` têm SLA declarado e checado (`checks.py`, ver [evidência](../evidencias/e3/sla_e_freshness.md)).
-2. Medições do clima no agendamento: `clima_medicoes` exige estações e intervalo por config e fica fora do `clima_job` e do `popular_banco_job`.
-3. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
-4. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.
+1. ETL reverso da recomendação de reajuste para o banco do lojista (E4).
+2. Erros de esquema ainda são repetidos pelo retry: fora do "nada divulgado ainda" das coletas particionadas (que falha sem retry), os módulos de ingestão não distinguem erro de rede de erro de payload no código de saída.

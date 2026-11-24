@@ -38,6 +38,23 @@ Armazena os valores mensais de salário mínimo desde o início do Plano Real (j
 | `salario_necessario` | `DOUBLE` | | Salário mínimo calculado pelo DIEESE necessário para suprir as despesas básicas de uma família de quatro pessoas (em R$). |
 | `multiplo_necessario_nominal` | `DOUBLE` | | Múltiplo derivado pela razão entre o salário necessário e o nominal (`salario_necessario / salario_nominal`). |
 
+### Gold: `fct_salario_minimo_mensal`
+
+Uma linha por mês, de jul/1994 ao último mês do DIEESE, no schema `gold` do DuckDB e copiada para `serie.fct_salario_minimo_mensal` no Postgres (lida pelo Metabase). Junta a Silver `int_salario_minimo__mensal` ao IPCA geral do Brasil de `fct_inflacao_mensal` pela `dim_calendario`. Modelo: `dbt/models/marts/macro/fct_salario_minimo_mensal.sql`.
+
+| Coluna | Descrição |
+|---|---|
+| `mes_referencia` | Primeiro dia do mês (`YYYY-MM-01`). Chave. |
+| `salario_nominal`, `salario_necessario` | Valores do DIEESE em R$. |
+| `multiplos_salario_necessario` | `salario_necessario / salario_nominal`. |
+| `variacao_nominal_pct`, `variacao_necessario_pct` | Variação mensal, em %. |
+| `media_movel_nominal_3m` | Média do salário nominal nos últimos 3 meses. |
+| `variacao_nominal_12m_pct` | Reajuste do salário nominal em 12 meses. Nulo nos 12 primeiros meses. |
+| `ipca_12m_pct` | IPCA acumulado em 12 meses, índice geral, Brasil. |
+| `ganho_real_12m_pct` | `(1 + reajuste nominal 12m) / (1 + IPCA 12m) - 1`, em %. Positivo quando o piso subiu acima da inflação. |
+| `mes_base_real` | Mês do número-índice usado na correção (o mais recente do IPCA). |
+| `salario_nominal_real`, `salario_necessario_real` | Os valores de cada mês em reais de `mes_base_real`, corrigidos pelo número-índice do IPCA. |
+
 ---
 
 ## Consultas de Exemplo

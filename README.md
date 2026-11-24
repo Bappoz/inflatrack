@@ -128,7 +128,9 @@ Acesse em: 👉 **[http://localhost:8080](http://localhost:8080)** (`ADMINER_POR
 | [Alpha Vantage](https://www.alphavantage.co/) | Commodities e Energia | Séries históricas | Diária / Mensal | Cotações de petróleo, gás natural e commodities agrícolas |
 | [World Bank API](https://data.worldbank.org/country/china) | PIB da China | 1960 – 2025 | Anual | Indicador antecedente de demanda global por commodities |
 | [DIEESE](https://www.dieese.org.br/analisecestabasica/salarioMinimo.html) | Salário Mínimo Nominal e Necessário | 1994 – | Mensal | Paralelo entre poder de compra familiar e inflação de preços |
-| [INMET](https://portal.inmet.gov.br/) | Dados do Clima Diário | Histórico contínuo | Diária | Variável explicativa de choques climáticos sobre safras e preços agrícolas |
+| [INMET](https://portal.inmet.gov.br/) | Dados do Clima Diário | 2006 – (BDMEP) | Diária | Variável explicativa de choques climáticos sobre safras e preços agrícolas |
+| [Open-Meteo](https://open-meteo.com/) | Clima provisório (modelo) | Dias que o INMET ainda não publicou | Diária | Cobre o atraso de ~1 mês do BDMEP; sai quando o dado oficial chega. *Weather data by Open-Meteo.com* (CC BY 4.0) |
+| [NOAA](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/) | RONI (El Niño / La Niña) | 1950 – | Mensal | Antecipa chuva e seca regionais que afetam safras; o Banco Central usa o índice desde 2026 |
 
 Três armadilhas que a ingestão trata e que não são óbvias:
 
