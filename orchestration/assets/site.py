@@ -1,9 +1,10 @@
-"""Ativo do site: publica no Supabase a previsão, os nomes, o resumo e os gráficos do painel.
+"""Ativo do site: publica no Supabase a previsão, os nomes, o resumo, os gráficos e o dashboard.
 
 O site e o agente não acessam o ambiente local; leem só o que este ativo grava (ver
 `inflatrack.reverse_etl.publicar_site` e `web/backend/migrations/003_publicacao_inflatrack.sql`).
 Lê a Gold (só leitura), por isso entra no pool `duckdb_writer`. Sem dependentes: nada do
-pipeline lê o Supabase de volta.
+pipeline lê o Supabase de volta. Roda no `predicao_job` (previsão nova) e no fim do
+`dashboard_job` (IPCA novo).
 """
 
 import os
@@ -17,7 +18,8 @@ from orchestration.assets.comum import POOL_DUCKDB, RETRY_REDE, executar
 
 @asset(
     group_name="site",
-    deps=[AssetKey(["gold", "fct_previsao_subitem"])],
+    # Os gráficos e o dashboard por praça saem da `serie`: publica depois da cópia para lá.
+    deps=[AssetKey(["gold", "fct_previsao_subitem"]), AssetKey("dashboard_serie_postgres")],
     pool=POOL_DUCKDB,
     retry_policy=RETRY_REDE,
     kinds={"python", "duckdb", "postgres"},

@@ -1,16 +1,18 @@
 """Publica no Supabase o mínimo que o site e o agente precisam (ETL reverso para fora).
 
-O site não acessa o ambiente local. Ele lê só estas cinco tabelas, criadas por
-`web/backend/migrations/003_publicacao_inflatrack.sql`:
+O site não acessa o ambiente local. Ele lê só estas seis tabelas, criadas por
+`web/backend/migrations/003_publicacao_inflatrack.sql` e `004_dashboard_localidade.sql`:
 
 - `previsao_subitem`: a `gold.fct_previsao_subitem` (variação prevista e erro típico);
 - `subitem`: nome e grupo de cada subitem, para a busca por produto;
 - `uf_praca`: a praça do IPCA de cada UF (UF sem praça usa o Brasil);
 - `resumo_subitem`: o IPCA do último mês, por praça e subitem (mês e 12 meses);
-- `painel_grafico`: o resultado pronto de cada gráfico do painel do lojista do Metabase.
+- `painel_grafico`: o resultado pronto de cada gráfico do painel do lojista do Metabase;
+- `dashboard_localidade`: o dashboard de inflação de cada praça, com o histórico inteiro.
 
 A previsão, os nomes e o resumo vêm da Gold (DuckDB, só leitura). Os gráficos rodam os SQLs de
-`scripts/sql/metabase/` na `serie` do Postgres local, como o Metabase. Cada publicação apaga e
+`scripts/sql/metabase/` na `serie` do Postgres local, como o Metabase, e o dashboard por praça
+sai da mesma `serie` (`dashboard_site`). Cada publicação apaga e
 reescreve tudo numa transação: ou entra inteira, ou o site continua com a anterior. Nenhum preço
 vai para o Supabase (ADR 0004).
 
@@ -41,6 +43,7 @@ from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
 from inflatrack.common.db import DUCKDB_PADRAO, dsn_do_ambiente
+from inflatrack.reverse_etl.dashboard_site import load_dashboard_data
 
 logger = logging.getLogger("inflatrack.publicar_site")
 
@@ -75,7 +78,14 @@ UF_PRACA: dict[str, int] = {
     "RN": BRASIL, "RO": BRASIL, "RR": BRASIL, "SC": BRASIL, "TO": BRASIL,
 }  # fmt: skip
 
-_TABELAS = ("previsao_subitem", "subitem", "uf_praca", "resumo_subitem", "painel_grafico")
+_TABELAS = (
+    "previsao_subitem",
+    "subitem",
+    "uf_praca",
+    "resumo_subitem",
+    "painel_grafico",
+    "dashboard_localidade",
+)
 
 
 @dataclass
@@ -85,6 +95,8 @@ class Publicacao:
     uf_praca: pd.DataFrame
     resumo: pd.DataFrame
     painel: list[dict[str, Any]]
+    # codigo_localidade -> dashboard já em formato JSON (ver `dashboard_json`).
+    dashboard: dict[int, dict[str, Any]]
 
 
 def perguntas_do_painel(caminho: Path = PAINEL) -> list[dict[str, Any]]:
@@ -119,6 +131,19 @@ def linhas_json(linhas: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return valor
 
     return [{chave: converter(valor) for chave, valor in linha.items()} for linha in linhas]
+
+
+def _valor_json(valor: Any) -> Any:
+    if isinstance(valor, dict):
+        return {chave: _valor_json(v) for chave, v in valor.items()}
+    if isinstance(valor, list):
+        return [_valor_json(v) for v in valor]
+    return linhas_json([{"v": valor}])[0]["v"]
+
+
+def dashboard_json(dados: dict[str, Any]) -> dict[str, Any]:
+    """O dashboard de uma praça com datas em ISO e Decimal em float, em qualquer nível."""
+    return _valor_json(dados)
 
 
 def coletar(caminho_duckdb: Path, dsn_local: str) -> Publicacao:
@@ -167,7 +192,22 @@ def coletar(caminho_duckdb: Path, dsn_local: str) -> Publicacao:
         uf_praca=uf_praca,
         resumo=resumo,
         painel=_painel(dsn_local),
+        dashboard=_dashboards(dsn_local),
     )
+
+
+def _dashboards(dsn_local: str) -> dict[int, dict[str, Any]]:
+    """O dashboard de cada praça da `serie`, com o histórico inteiro (`periodo=0`)."""
+    dashboards = {}
+    with psycopg.connect(dsn_local, connect_timeout=5) as conexao:
+        localidades = conexao.execute(
+            "select codigo_localidade from serie.dim_localidade order by 1"
+        ).fetchall()
+        conexao.rollback()
+        for (localidade,) in localidades:
+            dashboards[localidade] = dashboard_json(load_dashboard_data(conexao, localidade, 0))
+            conexao.rollback()  # cada praça abre a própria transação somente leitura
+    return dashboards
 
 
 def _painel(dsn_local: str) -> list[dict[str, Any]]:
@@ -193,7 +233,7 @@ def _painel(dsn_local: str) -> list[dict[str, Any]]:
 
 
 def gravar(conexao: psycopg.Connection, publicacao: Publicacao) -> dict[str, int]:
-    """Apaga e reescreve as cinco tabelas numa transação. Devolve as linhas por tabela.
+    """Apaga e reescreve as seis tabelas numa transação. Devolve as linhas por tabela.
 
     Recusa, antes de apagar qualquer coisa, uma publicação vazia: a Gold ou a `serie` sem dado
     (clone novo antes do `analitico_job`) deixariam o site em branco com uma execução "de sucesso".
@@ -224,6 +264,13 @@ def gravar(conexao: psycopg.Connection, publicacao: Publicacao) -> dict[str, int
                     for g in publicacao.painel
                 ],
             )
+            cursor.executemany(
+                "insert into dashboard_localidade (codigo_localidade, dados) values (%s, %s)",
+                [
+                    (localidade, json.dumps(dados))
+                    for localidade, dados in sorted(publicacao.dashboard.items())
+                ],
+            )
         return {
             tabela: conexao.execute(f"select count(*) from {tabela}").fetchone()[0]  # noqa: S608
             for tabela in _TABELAS
@@ -243,6 +290,8 @@ def _conferir_nao_vazia(publicacao: Publicacao) -> None:
     vazias += [f"painel_grafico/{g['id']}" for g in publicacao.painel if g["linhas"] == []]
     if not publicacao.painel:
         vazias.append("painel_grafico")
+    if BRASIL not in publicacao.dashboard:
+        vazias.append("dashboard_localidade (sem o Brasil)")
     if vazias:
         raise ValueError(
             f"publicação recusada, tabelas vazias: {', '.join(vazias)}."

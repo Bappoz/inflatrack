@@ -70,6 +70,8 @@ dashboard_job = define_asset_job(
         AssetKey(["gold", "dim_cesta_ipca_scd2"]),
         AssetKey(["gold", "fct_inflacao_mensal"]),
         AssetKey("dashboard_serie_postgres"),
+        # O site lê só o Supabase: o job termina publicando lá o que acabou de calcular.
+        AssetKey("site_supabase"),
     ),
 )
 

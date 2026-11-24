@@ -45,7 +45,8 @@ def test_publicacao_depende_da_previsao_usa_o_pool_e_nao_tem_dependentes() -> No
 
     no = defs.resolve_asset_graph().get(SITE)
 
-    assert no.parent_keys == {PREVISAO}
+    # Publica depois da cópia para a serie, de onde saem os gráficos e o dashboard por praça.
+    assert no.parent_keys == {PREVISAO, AssetKey("dashboard_serie_postgres")}
     assert no.child_keys == set()
     assert no.pools == {POOL_DUCKDB}
 

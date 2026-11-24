@@ -1,11 +1,14 @@
 # Como publicar no site (Supabase)
 
-O que fazer para colocar a previsão e os gráficos no Supabase do site. A primeira vez exige os
+O que fazer para colocar a previsão, os gráficos e o dashboard no Supabase do site. O site e a
+Felicia leem **só** o Supabase: o modelo é treinado e tudo é calculado na máquina local, e só o
+resultado sobe. A primeira vez exige os
 passos 1 a 3. Depois, só o passo 4, ou o agendamento do passo 6.
 
 ## O que vai para o Supabase
 
-São só 5 tabelas pequenas, com cerca de 1,5 MB no total. Nenhuma tem preço nem dado de usuário:
+São só 6 tabelas pequenas, com cerca de 1 MB de dados (medido em 2026-11-24). Nenhuma tem preço
+nem dado de usuário:
 
 | Tabela | O que é | Linhas |
 |---|---|---|
@@ -14,8 +17,17 @@ São só 5 tabelas pequenas, com cerca de 1,5 MB no total. Nenhuma tem preço ne
 | `uf_praca` | A praça do IPCA de cada UF (UF sem praça usa o Brasil) | 27 |
 | `resumo_subitem` | IPCA do último mês, por praça e subitem (mês e 12 meses) | ~4.000 |
 | `painel_grafico` | Os 6 gráficos do painel do lojista, já calculados | 6 |
+| `dashboard_localidade` | O dashboard de inflação de cada praça (KPIs, setores, praças, histórico inteiro, sazonalidade, poder de compra). O backend só recorta o período | 17 |
 
-Cada publicação **apaga e reescreve** as 5 tabelas numa transação só. Ou entra tudo, ou o site
+Quem lê o quê:
+
+- `GET /dashboard`: `dashboard_localidade`.
+- Felicia: `consultar_inflacao` lê o dashboard do Brasil; `buscar_produto` lê `subitem`;
+  `prever_reajuste` lê `uf_praca`, `previsao_subitem` e `resumo_subitem` e devolve
+  preço x (1 + variação prevista), com a faixa de +/- erro. O preço que o lojista digita não é
+  gravado.
+
+Cada publicação **apaga e reescreve** as 6 tabelas numa transação só. Ou entra tudo, ou o site
 continua com a publicação anterior. Nada antigo fica acumulado.
 
 ## Antes de começar
@@ -28,11 +40,11 @@ continua com a publicação anterior. Nada antigo fica acumulado.
 
 1. No painel do Supabase, abra o projeto do site e vá em **SQL Editor > New query**.
 2. Cole o conteúdo inteiro de `web/backend/migrations/003_publicacao_inflatrack.sql` e clique em
-   **Run**.
-3. Confira em **Table Editor** se as 5 tabelas apareceram, todas com o selo **RLS enabled**.
+   **Run**. Repita com `web/backend/migrations/004_dashboard_localidade.sql`.
+3. Confira em **Table Editor** se as 6 tabelas apareceram, todas com o selo **RLS enabled**.
 
 O arquivo pode ser rodado de novo sem problema: ele só cria o que falta e refaz as permissões.
-As permissões deixam qualquer visitante do site ler as 5 tabelas, mas ninguém escrever. Só a
+As permissões deixam qualquer visitante do site ler as 6 tabelas, mas ninguém escrever. Só a
 conexão do passo 2 escreve.
 
 ## 2. Copiar a URL de conexão
@@ -73,7 +85,7 @@ Se o seu `.env` for anterior a esta mudança e não tiver a linha, copie-a do `.
 
 ```bash
 just previsao        # prevê o mês seguinte para cada praça e subitem (~5 min)
-just publicar-site   # grava as 5 tabelas no Supabase (alguns segundos)
+just publicar-site   # grava as 6 tabelas no Supabase (alguns segundos)
 ```
 
 Se tudo der certo, o `just publicar-site` termina com algo assim:
@@ -84,10 +96,15 @@ INFO subitem: 377 linhas
 INFO uf_praca: 27 linhas
 INFO resumo_subitem: 4045 linhas
 INFO painel_grafico: 6 linhas
+INFO dashboard_localidade: 17 linhas
 ```
 
-Pelo Dagster dá no mesmo: lance o **`predicao_job`** na interface (`just orquestrador`). Ele roda
-`fct_previsao_subitem` e depois `site_supabase`.
+Pelo Dagster dá no mesmo. Dois jobs terminam no `site_supabase`:
+
+- **`predicao_job`**: gera a previsão nova (`fct_previsao_subitem`) e publica.
+- **`dashboard_job`**: carrega o IPCA, roda o dbt, copia para a `serie` e publica. É o que
+  atualiza o dashboard do site quando sai um IPCA novo. Ele republica a última previsão local,
+  então precisa que o `predicao_job` (ou `just previsao`) já tenha rodado uma vez.
 
 ## 5. Conferir no Supabase
 

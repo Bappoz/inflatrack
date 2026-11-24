@@ -13,13 +13,9 @@ import pytest
 from inflatrack.common.db import dsn_do_ambiente
 from inflatrack.reverse_etl.publicar_site import Publicacao, gravar
 
-MIGRATION = (
-    Path(__file__).resolve().parents[2]
-    / "web"
-    / "backend"
-    / "migrations"
-    / "003_publicacao_inflatrack.sql"
-)
+MIGRATIONS = Path(__file__).resolve().parents[2] / "web" / "backend" / "migrations"
+MIGRATION = MIGRATIONS / "003_publicacao_inflatrack.sql"
+MIGRATION_DASHBOARD = MIGRATIONS / "004_dashboard_localidade.sql"
 
 
 @pytest.fixture
@@ -41,6 +37,7 @@ def supabase():
         conexao.execute("grant usage on schema teste_supabase to anon, authenticated")
         conexao.execute("set local search_path to teste_supabase")
         conexao.execute(MIGRATION.read_text(encoding="utf-8"))
+        conexao.execute(MIGRATION_DASHBOARD.read_text(encoding="utf-8"))
         yield conexao
         conexao.rollback()
 
@@ -94,6 +91,10 @@ def _publicacao(variacao: float = 0.5, painel_ok: bool = True) -> Publicacao:
                 "ate_o_mes": "10/2026",
             }
         ],
+        dashboard={
+            1: {"latest_month": "2026-10-01", "kpis": {"ipca_12m_pct": 4.5}, "history": []},
+            3501: {"latest_month": "2026-10-01", "kpis": {"ipca_12m_pct": 4.8}, "history": []},
+        },
     )
 
 
@@ -111,6 +112,7 @@ def test_publicar_duas_vezes_nao_dobra_as_linhas(supabase) -> None:
         "uf_praca": 2,
         "resumo_subitem": 1,
         "painel_grafico": 1,
+        "dashboard_localidade": 2,
     }
     assert _contar(supabase, "previsao_subitem") == 2
     (valor,) = supabase.execute(
@@ -130,6 +132,7 @@ def test_erro_no_meio_mantem_a_publicacao_anterior(supabase) -> None:
     ).fetchone()
     assert valor == pytest.approx(0.5)
     assert _contar(supabase, "painel_grafico") == 1
+    assert _contar(supabase, "dashboard_localidade") == 2
 
 
 def test_anon_le_e_nao_escreve(supabase) -> None:
@@ -141,18 +144,36 @@ def test_anon_le_e_nao_escreve(supabase) -> None:
         supabase.execute("delete from previsao_subitem")
 
 
-@pytest.mark.parametrize("esvaziar", ["previsao", "painel"], ids=["sem-previsao", "grafico-vazio"])
+def test_dashboard_da_praca_volta_como_foi_publicado(supabase) -> None:
+    gravar(supabase, _publicacao())
+
+    (dados,) = supabase.execute(
+        "select dados from dashboard_localidade where codigo_localidade = 3501"
+    ).fetchone()
+    assert dados["kpis"] == {"ipca_12m_pct": 4.8}
+
+
+@pytest.mark.parametrize(
+    "esvaziar",
+    ["previsao", "painel", "dashboard", "dashboard-sem-brasil"],
+    ids=["sem-previsao", "grafico-vazio", "sem-dashboard", "dashboard-sem-brasil"],
+)
 def test_publicacao_vazia_e_recusada_antes_de_apagar(supabase, esvaziar: str) -> None:
     """Gold ou serie vazias (clone novo antes do analitico_job) não podem apagar o site."""
     gravar(supabase, _publicacao())
     vazia = _publicacao()
     if esvaziar == "previsao":
         vazia.previsao = vazia.previsao.iloc[0:0]
-    else:
+    elif esvaziar == "painel":
         vazia.painel[0]["linhas"] = []
+    elif esvaziar == "dashboard":
+        vazia.dashboard = {}
+    else:
+        del vazia.dashboard[1]
 
     with pytest.raises(ValueError, match="vazi"):
         gravar(supabase, vazia)
 
     assert _contar(supabase, "previsao_subitem") == 2
     assert _contar(supabase, "painel_grafico") == 1
+    assert _contar(supabase, "dashboard_localidade") == 2

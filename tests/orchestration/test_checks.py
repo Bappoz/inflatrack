@@ -234,6 +234,8 @@ def test_dashboard_job_is_focused_and_scheduled() -> None:
         "gold/dim_cesta_ipca_scd2",
         "gold/fct_inflacao_mensal",
         "dashboard_serie_postgres",
+        # Publica no Supabase o que o site lê: atualizar o dashboard já atualiza o site.
+        "site_supabase",
     }
     schedule = next(item for item in repo.schedule_defs if item.job_name == "dashboard_job")
     sidra_schedules = [
