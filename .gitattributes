@@ -1,0 +1,15 @@
+# Normaliza quebras de linha: LF no repositório e no disco, em qualquer SO.
+* text=auto eol=lf
+
+# Arquivos binários: nunca converter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.duckdb binary
+*.parquet binary
+*.zip binary
+*.woff binary
+*.woff2 binary
