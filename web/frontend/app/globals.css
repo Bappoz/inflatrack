@@ -1557,3 +1557,172 @@ button {
     display: none;
   }
 }
+
+/* ---- Dashboard do lojista: resumo, simulador e destaques ---- */
+.dashboard-summary {
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 14px;
+  background: var(--dashboard-raised);
+  color: var(--dashboard-text);
+}
+.dashboard-summary p { margin: 0; font-size: 1.15rem; line-height: 1.5; }
+.dashboard-summary small { display: block; margin-top: 6px; color: var(--dashboard-muted); }
+
+.dashboard-panel-subtitle { margin: -8px 0 14px; color: var(--dashboard-muted); font-size: 0.82rem; line-height: 1.45; }
+
+.dashboard-bar-highlight { box-shadow: inset 3px 0 0 var(--chart-mint); border-radius: 8px; }
+/* Aba Praças: o painel ocupa a largura toda, sem rolagem própria. */
+.dashboard-grid-single .location-bar-list { max-height: none; overflow: visible; }
+.dashboard-grid-single .location-bar-header,
+.dashboard-grid-single .location-bar-row {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+}
+.dashboard-grid-single .location-bar-cell { grid-template-columns: 44px minmax(0, 1fr); }
+
+.dashboard-grid.dashboard-grid-single { grid-template-columns: minmax(0, 1fr); }
+
+.simulador {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 110px) auto;
+  gap: 12px;
+  align-items: end;
+}
+.simulador > * { min-width: 0; }
+.simulador input,
+.simulador select { width: 100%; box-sizing: border-box; }
+.simulador-produto { grid-column: 1 / -1; }
+.simulador label { display: grid; gap: 6px; color: var(--dashboard-muted); font-size: 0.82rem; }
+.simulador input,
+.simulador select {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 10px;
+  background: var(--dashboard-panel);
+  color: var(--dashboard-text);
+  font: inherit;
+}
+.simulador-produto { position: relative; }
+.simulador-sugestoes {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 10px;
+  background: var(--dashboard-panel);
+  box-shadow: 0 10px 26px rgba(28, 24, 34, 0.12);
+}
+.simulador-sugestoes button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--dashboard-text);
+  text-align: left;
+  cursor: pointer;
+}
+.simulador-sugestoes button:hover { background: var(--dashboard-raised); }
+.simulador-sugestoes small,
+.destaques-lista small { color: var(--dashboard-muted); }
+.simulador-botao,
+.simulador-felicia {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--chart-mint);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.simulador-botao:disabled { opacity: 0.6; cursor: progress; }
+.simulador-felicia {
+  margin-top: 14px;
+  font-size: 0.88rem;
+  background: none;
+  color: var(--chart-mint);
+  padding: 0;
+  min-height: auto;
+}
+.simulador-erro { margin: 12px 0 0; color: var(--chart-coral); }
+.simulador-resultado {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--dashboard-raised);
+  color: var(--dashboard-text);
+}
+.simulador-resultado span { color: var(--dashboard-muted); }
+.simulador-resultado strong { font-size: 1.7rem; }
+.simulador-resultado,
+.simulador-erro { font-size: 0.9rem; }
+.simulador-resultado p { margin: 0; }
+.simulador-resultado small { margin-top: 6px; color: var(--dashboard-muted); }
+
+.destaques-lista { display: grid; gap: 2px; margin: 0; padding: 0 0 0 22px; font-size: 0.88rem; }
+.destaques-lista li { padding: 7px 0; border-bottom: 1px solid var(--chart-grid); color: var(--dashboard-text); }
+.destaques-lista small { font-size: 0.78rem; }
+.destaques-lista li > * { vertical-align: middle; }
+.destaques-lista strong { float: right; color: var(--chart-coral); }
+
+@media (max-width: 720px) {
+  .simulador { grid-template-columns: minmax(0, 1fr) minmax(0, 90px); }
+  .simulador-botao { grid-column: 1 / -1; }
+}
+
+/* ---- Aba Praças: R$ 100 de um ano atrás, região a região ---- */
+.pracas-topo { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.pracas-topo > div { flex: 1 1 360px; min-width: 0; }
+.pracas-ordem { display: grid; gap: 6px; color: var(--dashboard-muted); font-size: 0.82rem; }
+.pracas-ordem select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 10px;
+  background: var(--dashboard-panel);
+  color: var(--dashboard-text);
+  font: inherit;
+}
+/* Lista de barras da aba Praças: ocupa a largura toda, sem rolagem própria. */
+.pracas-lista { max-height: none; overflow: visible; margin-top: 6px; }
+.pracas-lista .location-bar-header.pracas-colunas-2,
+.pracas-lista .location-bar-row.pracas-colunas-2 {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+}
+.pracas-lista .location-bar-header.pracas-colunas-1,
+.pracas-lista .location-bar-row.pracas-colunas-1 {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+  column-gap: 16px;
+}
+.pracas-lista .location-bar-cell { grid-template-columns: 78px minmax(0, 1fr); }
+.pracas-ipca .dashboard-bar-fill { background: var(--chart-gold); }
+.pracas-inpc .dashboard-bar-fill { background: var(--chart-lilac); }
+
+.simulador-confianca {
+  justify-self: start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.simulador-resultado .simulador-confianca-alta { background: #e3f4ea; color: #1f7a4d; }
+.simulador-resultado .simulador-confianca-baixa { background: #fdeceb; color: #b23a48; }
+.simulador-alerta {
+  padding: 8px 10px;
+  border-left: 3px solid var(--chart-coral);
+  border-radius: 6px;
+  background: var(--dashboard-panel);
+}

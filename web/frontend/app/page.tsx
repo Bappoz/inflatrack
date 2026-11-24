@@ -1,83 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import {
-  Bell,
-  LogOut,
-  RefreshCw,
-  Search,
-} from "lucide-react";
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useEffect, useRef, useState } from "react";
+import { LogOut, RefreshCw } from "lucide-react";
 
-type DashboardData = {
-  latest_month: string | null;
-  location_options: { codigo_localidade: number; nome_localidade: string; uf: string | null }[];
-  kpis: {
-    ipca_12m_pct: number | null;
-    inpc_12m_pct: number | null;
-  };
-  sectors: { setor: string; inflacao_12m_pct: number | null }[];
-  locations: {
-    localidade: string;
-    uf: string | null;
-    ipca_12m_pct: number | null;
-    inpc_12m_pct: number | null;
-  }[];
-  history: { mes_referencia: string; ipca_12m_pct: number | null; inpc_12m_pct: number | null }[];
-  seasonality: {
-    mes_numero: number;
-    mes: string;
-    indice_geral_pct: number | null;
-    alimentacao_pct: number | null;
-    habitacao_pct: number | null;
-    vestuario_pct: number | null;
-    transportes_pct: number | null;
-  }[];
-  purchasing_power: { mes_referencia: string; poder_compra_100_reais: number | null }[];
-};
+import { apiUrl, getComCache, monthLabel } from "./dashboard/formato";
+import Pracas from "./dashboard/pracas";
+import Produtos from "./dashboard/produtos";
+import Relatorios from "./dashboard/relatorios";
+import type { Aba, DashboardData, DashboardUser } from "./dashboard/tipos";
+import VisaoGeral from "./dashboard/visao-geral";
 
-type DashboardUser = { id: string; email: string; nome: string; state?: string };
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function percentage(value: number | null) {
-  if (value === null) return "—";
-  return `${new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)}%`;
-}
-
-function monthLabel(value: string) {
-  return new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR", {
-    month: "short",
-    year: "2-digit",
-  });
-}
-
-function barWidth(value: number | null, maximum: number) {
-  if (value === null || maximum <= 0) return "0%";
-  return `${Math.max(0, (value / maximum) * 100)}%`;
-}
-
-function ChartPanel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="dashboard-panel">
-      <h2>{title}</h2>
-      {children}
-    </section>
-  );
-}
+const ABAS: { id: Aba; rotulo: string; titulo: string }[] = [
+  { id: "geral", rotulo: "Visão geral", titulo: "Como está a inflação na sua região" },
+  { id: "produtos", rotulo: "Produtos", titulo: "Quanto cobrar no mês que vem" },
+  { id: "pracas", rotulo: "Praças", titulo: "Sua região x o resto do país" },
+  { id: "relatorios", rotulo: "Relatórios", titulo: "O histórico dos preços" },
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -86,9 +25,12 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  // O botão de atualizar pula o cache de 24 h só na próxima busca.
+  const ignorarCache = useRef(false);
   const [selectedLocation, setSelectedLocation] = useState("1");
   const [selectedPeriod, setSelectedPeriod] = useState("60");
   const [selectedIndex, setSelectedIndex] = useState("Ambos");
+  const [aba, setAba] = useState<Aba>("geral");
 
   useEffect(() => {
     let active = true;
@@ -98,7 +40,7 @@ export default function HomePage() {
       setError("");
 
       try {
-        const baseUrl = apiUrl.replace(/\/$/, "");
+        const baseUrl = apiUrl;
         const userResponse = await fetch(`${baseUrl}/auth/me`, { credentials: "include" });
         if (userResponse.status === 401) {
           router.replace("/login");
@@ -115,17 +57,18 @@ export default function HomePage() {
           periodo: selectedPeriod,
           indice: selectedIndex,
         });
-        const dashboardResponse = await fetch(
+        const dashboardResponse = await getComCache(
           `${baseUrl}/dashboard?${dashboardParams.toString()}`,
-          { credentials: "include" },
+          { forcar: ignorarCache.current },
         );
-        const result = await dashboardResponse.json();
+        ignorarCache.current = false;
+        const result = dashboardResponse.corpo as DashboardData & { detail?: string };
         if (dashboardResponse.status === 401) {
           router.replace("/login");
           return;
         }
         if (!dashboardResponse.ok) {
-          throw new Error(result.detail ?? "Não foi possível carregar o dashboard.");
+          throw new Error(result?.detail ?? "Não foi possível carregar o dashboard.");
         }
         if (active) {
           const dashboardData = result as DashboardData;
@@ -158,54 +101,53 @@ export default function HomePage() {
   }, [reloadKey, router, selectedLocation, selectedPeriod, selectedIndex]);
 
   async function handleLogout() {
-    await fetch(`${apiUrl.replace(/\/$/, "")}/auth/logout`, {
+    await fetch(`${apiUrl}/auth/logout`, {
       method: "POST",
       credentials: "include",
     }).catch(() => null);
     router.replace("/login");
   }
 
-  const ipca = data?.kpis.ipca_12m_pct;
-  const inpc = data?.kpis.inpc_12m_pct;
-  const spread = typeof ipca === "number" && typeof inpc === "number" ? ipca - inpc : null;
-  const maxSectorInflation = Math.max(
-    0,
-    ...(data?.sectors ?? []).map((sector) => sector.inflacao_12m_pct ?? 0),
-  );
-  const maxLocationInflation = Math.max(
-    0,
-    ...(data?.locations ?? []).flatMap((location) => [
-      location.ipca_12m_pct ?? 0,
-      location.inpc_12m_pct ?? 0,
-    ]),
-  );
   const accountState = user?.state?.trim().toUpperCase();
-  const orderedLocations = [...(data?.locations ?? [])].sort((left, right) => {
-    const leftMatches = left.uf?.toUpperCase() === accountState;
-    const rightMatches = right.uf?.toUpperCase() === accountState;
-    if (leftMatches !== rightMatches) return leftMatches ? -1 : 1;
-    return left.localidade.localeCompare(right.localidade, "pt-BR");
-  });
+  const selectedOption = data?.location_options.find(
+    (option) => String(option.codigo_localidade) === selectedLocation,
+  );
+  const nomePraca = selectedOption?.nome_localidade ?? "Brasil";
+  const regionLabel =
+    selectedLocation === "1"
+      ? accountState
+        ? `BRASIL · SEU ESTADO ${accountState}`
+        : "BRASIL"
+      : `${nomePraca.toUpperCase()}${selectedOption?.uf ? ` · ${selectedOption.uf.toUpperCase()}` : ""}`;
+  const abaAtual = ABAS.find((item) => item.id === aba) ?? ABAS[0];
 
   return (
     <main className="dashboard-page">
       <div className="dashboard-content">
         <header className="dashboard-topbar">
-          <nav className="dashboard-tabs" aria-label="Seções do painel">
-            <button type="button" className="dashboard-tab dashboard-tab-active">Visão geral</button>
-            <button type="button" className="dashboard-tab">Indicadores</button>
-            <button type="button" className="dashboard-tab">Praças</button>
-            <button type="button" className="dashboard-tab">Relatórios</button>
+          <nav className="dashboard-tabs" aria-label="Seções do painel" role="tablist">
+            {ABAS.map((item) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={aba === item.id}
+                className={`dashboard-tab${aba === item.id ? " dashboard-tab-active" : ""}`}
+                key={item.id}
+                onClick={() => setAba(item.id)}
+              >
+                {item.rotulo}
+              </button>
+            ))}
           </nav>
         </header>
         <section className="dashboard-heading">
           <div>
             <p className="dashboard-eyebrow">
-              VISÃO GERAL · {accountState ? `REGIÃO ${accountState}` : "BRASIL"}
+              {abaAtual.rotulo.toUpperCase()} · {regionLabel}
             </p>
             <h1>{user ? `Olá, ${user.nome}!` : "Olá!"}</h1>
             <p className="dashboard-subtitle">
-              Acompanhe os indicadores econômicos publicados pelo pipeline.
+              {abaAtual.titulo}.
             </p>
           </div>
           <div className="dashboard-heading-meta">
@@ -217,7 +159,10 @@ export default function HomePage() {
               type="button"
               aria-label="Atualizar dashboard"
               title="Atualizar dashboard"
-              onClick={() => setReloadKey((key) => key + 1)}
+              onClick={() => {
+                ignorarCache.current = true;
+                setReloadKey((key) => key + 1);
+              }}
               disabled={loading}
             >
               <RefreshCw aria-hidden="true" size={16} />
@@ -234,8 +179,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {data && (
-          <section className="dashboard-filters" aria-label="Filtros do dashboard">
+        {/* Na aba Produtos o estado do simulador já escolhe a região: sem filtros. */}
+        {data && aba !== "produtos" && (
+          <section
+            className="dashboard-filters"
+            aria-label="Filtros do dashboard"
+          >
             <label>
               <span>Praça</span>
               <select
@@ -281,220 +230,27 @@ export default function HomePage() {
           <div className="dashboard-state dashboard-state-error" role="alert">
             <strong>Dados indisponíveis</strong>
             <p>{error}</p>
-            <span>Confira o PostgreSQL e execute os ativos da Dagster até `serie_postgres`.</span>
+            <span>Confira se o dashboard_job já publicou os dados no Supabase.</span>
           </div>
         ) : !data?.latest_month ? (
           <div className="dashboard-state">
-            <strong>A vitrine ainda não tem dados</strong>
-            <p>Execute o pipeline da Dagster para publicar os modelos Gold em `serie`.</p>
+            <strong>Ainda não há dados publicados</strong>
+            <p>Rode o dashboard_job no Dagster para publicar os dados no Supabase.</p>
           </div>
+        ) : aba === "produtos" ? (
+          <Produtos pracas={data.location_options} ufConta={accountState ?? null} />
         ) : (
-          <>
-            <section className="dashboard-kpis" aria-label="Indicadores principais">
-              {selectedIndex !== "INPC" && (
-                <article className="kpi-card kpi-ipca">
-                  <span>IPCA · 12 meses</span>
-                  <strong>{percentage(data.kpis.ipca_12m_pct)}</strong>
-                  <small>{selectedLocation === "1" ? "Brasil" : "Praça selecionada"} · índice geral</small>
-                </article>
-              )}
-              {selectedIndex !== "IPCA" && (
-                <article className="kpi-card kpi-inpc">
-                  <span>INPC · 12 meses</span>
-                  <strong>{percentage(data.kpis.inpc_12m_pct)}</strong>
-                  <small>{selectedLocation === "1" ? "Brasil" : "Praça selecionada"} · índice geral</small>
-                </article>
-              )}
-              {selectedIndex === "Ambos" && (
-                <article className="kpi-card kpi-spread">
-                  <span>Diferença IPCA − INPC</span>
-                  <strong>{percentage(spread)}</strong>
-                  <small>pontos percentuais · {selectedLocation === "1" ? "Brasil" : "praça selecionada"}</small>
-                </article>
-              )}
-            </section>
-
-            <div className="dashboard-grid">
-              <ChartPanel title="Inflação acumulada em 12 meses por setor">
-                <div className="sector-bar-list">
-                  {data.sectors.map((sector) => (
-                    <div className="sector-bar-row" key={sector.setor}>
-                      <span className="sector-bar-label">{sector.setor}</span>
-                      <div className="dashboard-bar-track">
-                        <span
-                          className="dashboard-bar-fill sector-bar-fill"
-                          style={{ width: barWidth(sector.inflacao_12m_pct, maxSectorInflation) }}
-                        />
-                      </div>
-                      <strong>{percentage(sector.inflacao_12m_pct)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </ChartPanel>
-
-              <ChartPanel title="IPCA e INPC em 12 meses por praça">
-                <div className="location-bar-list">
-                  <div className="location-bar-header">
-                    <span>Localidade</span>
-                    <span>IPCA</span>
-                    <span>INPC</span>
-                  </div>
-                  {orderedLocations.map((location) => {
-                    const isAccountRegion = location.uf?.toUpperCase() === accountState;
-                    return (
-                    <div
-                      className={`location-bar-row${isAccountRegion ? " location-bar-row-account" : ""}`}
-                      key={location.localidade}
-                      title={isAccountRegion ? "Região cadastrada na sua conta" : undefined}
-                    >
-                      <span className="location-bar-label">
-                        {location.localidade}
-                        {isAccountRegion && <small> SUA REGIÃO</small>}
-                      </span>
-                      <div className="location-bar-cell">
-                        <strong>{percentage(location.ipca_12m_pct)}</strong>
-                        <div className="dashboard-bar-track">
-                          <span
-                            className="dashboard-bar-fill location-ipca-fill"
-                            style={{ width: barWidth(location.ipca_12m_pct, maxLocationInflation) }}
-                          />
-                        </div>
-                      </div>
-                      <div className="location-bar-cell">
-                        <strong>{percentage(location.inpc_12m_pct)}</strong>
-                        <div className="dashboard-bar-track">
-                          <span
-                            className="dashboard-bar-fill location-inpc-fill"
-                            style={{ width: barWidth(location.inpc_12m_pct, maxLocationInflation) }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </ChartPanel>
-
-              <ChartPanel title="IPCA x INPC · últimos 5 anos">
-                <ResponsiveContainer width="100%" height={290}>
-                  <LineChart data={data.history} margin={{ top: 8, right: 14, left: 0, bottom: 4 }}>
-                    <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                    <XAxis
-                      dataKey="mes_referencia"
-                      tickFormatter={monthLabel}
-                      minTickGap={30}
-                      stroke="var(--chart-muted)"
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tickFormatter={(value: number) => `${value}%`}
-                      stroke="var(--chart-muted)"
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      labelFormatter={(value) => monthLabel(String(value))}
-                      formatter={(value, name) => [`${Number(value).toFixed(2)}%`, name]}
-                      contentStyle={{
-                        background: "#ffffff",
-                        borderColor: "#ddd6e8",
-                        color: "#1c1822",
-                      }}
-                    />
-                    <Legend />
-                    {selectedIndex !== "INPC" && (
-                      <Line
-                        dataKey="ipca_12m_pct"
-                        name="IPCA"
-                        stroke="var(--chart-gold)"
-                        strokeWidth={2}
-                        dot={false}
-                        connectNulls
-                      />
-                    )}
-                    {selectedIndex !== "IPCA" && (
-                      <Line
-                        dataKey="inpc_12m_pct"
-                        name="INPC"
-                        stroke="var(--chart-lilac)"
-                        strokeWidth={2}
-                        dot={false}
-                        connectNulls
-                      />
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartPanel>
-
-              <ChartPanel title="Sazonalidade · variação média por mês">
-                <ResponsiveContainer width="100%" height={290}>
-                  <LineChart data={data.seasonality} margin={{ top: 8, right: 14, left: 0, bottom: 4 }}>
-                    <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                    <XAxis dataKey="mes" stroke="var(--chart-muted)" tickLine={false} />
-                    <YAxis
-                      tickFormatter={(value: number) => `${value}%`}
-                      stroke="var(--chart-muted)"
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      formatter={(value) => `${Number(value).toFixed(2)}%`}
-                      contentStyle={{
-                        background: "#ffffff",
-                        borderColor: "#ddd6e8",
-                        color: "#1c1822",
-                      }}
-                    />
-                    <Legend />
-                    <Line dataKey="indice_geral_pct" name="Índice geral" stroke="var(--chart-mint)" dot={false} />
-                    <Line dataKey="alimentacao_pct" name="Alimentação" stroke="var(--chart-gold)" dot={false} />
-                    <Line dataKey="habitacao_pct" name="Habitação" stroke="var(--chart-lilac)" dot={false} />
-                    <Line dataKey="vestuario_pct" name="Vestuário" stroke="var(--chart-coral)" dot={false} />
-                    <Line dataKey="transportes_pct" name="Transportes" stroke="var(--chart-blue)" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartPanel>
-
-              <ChartPanel title="Poder de compra de R$ 100 desde jan/2006">
-                <ResponsiveContainer width="100%" height={290}>
-                  <LineChart data={data.purchasing_power} margin={{ top: 8, right: 14, left: 0, bottom: 4 }}>
-                    <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                    <XAxis
-                      dataKey="mes_referencia"
-                      tickFormatter={monthLabel}
-                      minTickGap={30}
-                      stroke="var(--chart-muted)"
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tickFormatter={(value: number) => `R$ ${value}`}
-                      stroke="var(--chart-muted)"
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      labelFormatter={(value) => monthLabel(String(value))}
-                      formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, "Poder de compra"]}
-                      contentStyle={{
-                        background: "#ffffff",
-                        borderColor: "#ddd6e8",
-                        color: "#1c1822",
-                      }}
-                    />
-                    <Line
-                      dataKey="poder_compra_100_reais"
-                      name="Poder de compra"
-                      stroke="var(--chart-coral)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartPanel>
-            </div>
-          </>
+          (() => {
+            const props = { data, selectedIndex, nomePraca, accountState };
+            if (aba === "pracas") return <Pracas {...props} />;
+            if (aba === "relatorios") return <Relatorios {...props} />;
+            return <VisaoGeral {...props} />;
+          })()
         )}
 
         <footer className="dashboard-footer">
           <span>Fonte: IBGE · IPCA e INPC</span>
-          <span>Dados publicados pela Dagster em `serie`</span>
+          <span>Previsões do modelo InflaTrack</span>
         </footer>
       </div>
     </main>

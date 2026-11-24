@@ -1909,3 +1909,134 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Disponibilidade atual do endpoint de medições do INMET, coleta real das 15 estações, execução do agendador em produção ou build completo das demais fontes.
 - A validação final por Pylance ficou indisponível por falha de conexão do servidor; a verificação executável foi feita pelos testes e pelo Ruff.
+
+### 2026-11-24 — Claude Code — Resolução de merge, orientação de execução e chatbot Felicia
+
+**O que a ferramenta fez**
+- Resolveu o conflito de merge em `tests/orchestration/test_checks.py`, mantendo o teste do `dashboard_job` e os novos testes de SLA por fonte.
+- Orientou a execução do frontend, do backend e do pipeline (`dashboard_job`), e explicou as URLs do Supabase e os limites de cadastro.
+- Criou `web/backend/chat.py` (agente Google ADK com modelo via proxy LiteLLM e uma ferramenta que lê os dados do dashboard), o endpoint autenticado `POST /chat` e ligou o `felicia-chat.tsx` a ele.
+
+**O que foi verificado e como**
+- `pytest tests/orchestration/test_checks.py` (40 passaram) e `pytest web/backend/tests` (19 passaram), `ruff` no backend e `tsc`/`eslint` no frontend sem erros.
+
+**O que NÃO foi verificado**
+- Chamada real ao proxy LiteLLM: as credenciais não estavam no `.env`, e o nome do modelo (`LITELLM_MODEL`) é um palpite.
+- O fluxo completo no navegador (login, abrir a Felicia e receber resposta).
+
+### 2026-11-24 — Claude Code — Diagnóstico do `dashboard_job` travado no pool `duckdb_writer`
+
+**O que a ferramenta fez**
+- Explicou o erro "finished without success or failure event" (subprocesso do passo morreu) e como o `run_retries` do `.dagster/dagster.yaml` se aplica ao `dashboard_job`.
+- Leu o armazenamento local do Dagster (`.dagster/history/runs/*.db`) e achou a causa do "bloqueio": a única vaga do pool `duckdb_writer` (tabela `concurrency_slots`) ficou presa com o passo morto `ipca_duckdb_check_ipca_freshness_e_volume` do run `7b2e4743`, que seguia como STARTED. O arquivo DuckDB não estava travado.
+- Orientou terminar o run e liberar a vaga na UI; o integrante fez isso e o job rodou completo.
+- Confirmou no `web/backend/app.py` que `GET /dashboard` lê o Postgres a cada requisição, sem cache.
+
+**O que NÃO foi verificado**
+- Por que o subprocesso morreu: os logs `.out`/`.err` do passo estavam vazios. Suspeita de memória, não confirmada.
+
+### 2026-11-24 — Claude Code — Site e Felicia passam a ler só o Supabase
+
+**O que a ferramenta fez**
+- Discutiu com o integrante a mudança de arquitetura: treino e cálculos ficam no ambiente local, e o site e a Felicia leem só o que é publicado no Supabase.
+- Mediu antes o tamanho da publicação, montando-a localmente sem enviar: cerca de 0,64 MB nas 5 tabelas que já existiam, mais 0,41 MB do dashboard das 17 praças. Ficou em torno de 1 MB.
+- Moveu as consultas do dashboard do backend para `src/inflatrack/reverse_etl/dashboard_site.py`, criou a tabela `dashboard_localidade` (`web/backend/migrations/004_dashboard_localidade.sql`) e a incluiu na transação do `publicar_site`, que recusa a publicação sem o Brasil.
+- Fez o `site_supabase` depender do `dashboard_serie_postgres` e o pôs no fim do `dashboard_job`.
+- Criou `web/backend/publicacao.py`: o `GET /dashboard` lê o Supabase (`DATABASE_URL`) e recorta o período. A Felicia ganhou `buscar_produto` e `prever_reajuste` (preço x (1 + variação prevista) ± erro, sem gravar o preço).
+- Escreveu os testes antes do código e atualizou `docs/como_rodar/publicar_site.md`.
+
+**O que foi verificado e como**
+- 93 testes passaram (`tests/unit` da publicação, `web/backend/tests`, `tests/integration/test_publicar_site.py` no Postgres local, `tests/orchestration/test_checks.py` e `test_predicao.py`), além do `ruff`.
+- Coleta real sem envio: 17 praças, 407 KB; Brasil com IPCA 12m de 4,63% em 2026-10; recorte de 12 meses de 2025-11 a 2026-10.
+
+**O que NÃO foi verificado**
+- Publicação real no Supabase: falta aplicar a migração 004 no projeto e rodar o `dashboard_job`.
+- A Felicia chamando as ferramentas novas com o modelo real (o proxy LiteLLM não está configurado).
+
+### 2026-11-24 — Claude Code — Orientação de publicação e deploy
+
+**O que a ferramenta fez**
+- Explicou onde pegar a `SUPABASE_DB_URL` (Session pooler) e qual job gera a `gold.fct_previsao_subitem` (`predicao_job`, depois do `analitico_job`).
+- Analisou o deploy na Vercel:
+  - frontend Next.js com Root Directory `web/frontend`;
+  - backend FastAPI melhor fora da Vercel, pelo tamanho do `google-adk` e pela sessão em memória da Felicia;
+  - os cookies de sessão no domínio do backend quebrariam o login entre domínios, e a solução sugerida foi um rewrite `/api` no Next.
+- Avaliou hospedar o backend no Supabase: as Edge Functions rodam Deno/TypeScript, não Python.
+
+**O que NÃO foi verificado**
+- Nenhum deploy foi feito; o tamanho exato do pacote Python na Vercel não foi medido.
+
+### 2026-11-24 — Claude Code — Diagnóstico da publicação e desenho do dashboard do lojista
+
+**O que a ferramenta fez**
+- Achou por que o `site_supabase` falhava: no Supabase só existia a tabela da migração 004; as 5 da 003 não tinham sido criadas. Conferiu isso numa conexão só de leitura, sem gravar nada.
+- Testou o proxy LiteLLM (respondeu em 3 s) quando a Felicia pareceu não responder; ela respondeu logo depois.
+- Comparou o dashboard do site com os painéis do Metabase e propôs três abordagens. O integrante escolheu abas de verdade.
+- Escreveu o desenho em `docs/superpowers/specs/2026-11-24-dashboard-lojista-design.md`.
+
+**O que NÃO foi verificado**
+- Nada foi implementado ainda; o desenho aguarda aprovação.
+
+### 2026-11-24 — Claude Code — Dashboard do site para o pequeno lojista
+
+**O que a ferramenta fez**
+- Implementou o desenho aprovado: as abas Visão geral, Produtos, Praças e Relatórios passaram a funcionar, divididas em componentes em `web/frontend/app/dashboard/`, com textos em linguagem de lojista.
+- A Visão geral ganhou uma frase de tendência. A aba Produtos é nova: um simulador de preço para qualquer produto e preço digitados e os 10 itens com maior alta prevista. A aba Relatórios ganhou o gráfico do salário mínimo real.
+- No backend, criou `GET /produtos`, `POST /reajuste` (a mesma `publicacao.prever_reajuste` da Felicia) e `GET /previsoes/destaques`, e pôs o `minimum_wage` no `/dashboard`.
+- A Felicia passou a procurar pela categoria genérica (Coca-Cola → refrigerante).
+- Com dados reais, viu que o IPCA repete nomes entre consumo em casa (11xx) e fora de casa (12xx). A busca agora mostra essa diferença.
+- Um revisor independente (subagente) apontou dois problemas, ambos corrigidos: a busca oferecia produtos sem previsão, e o preço "1.234" era lido como 1,234.
+- Apagou o desenho e o plano temporários, como o integrante pediu.
+
+**O que foi verificado e como**
+- Testes escritos antes do código: 47 testes do backend passaram, e `tsc` e `eslint` do frontend ficaram limpos.
+- Leituras reais no Supabase: arroz a R$ 25,50 em SP sai a R$ 26,58 (faixa de R$ 26,09 a R$ 27,06, previsão para 11/2026); os destaques de SP são passagem aérea, tomate e cebola; o salário mínimo tem 250 meses.
+
+**O que NÃO foi verificado**
+- As telas no navegador, logado: o backend em execução precisa ser reiniciado para carregar as rotas novas.
+- A Felicia respondendo com a busca por categoria genérica, usando o modelo real.
+
+### 2026-11-24 — Claude Code — Ajustes de uso no dashboard do lojista
+
+**O que a ferramenta fez**
+- Corrigiu o espaçamento do simulador, a rolagem lateral da aba Praças e o gráfico de poder de compra vazio nas praças: o número-índice só existe para o Brasil, e a praça passou a mostrar a série nacional com um aviso.
+- Criou um cache de 24 h no navegador (`getComCache`) para o dashboard e os destaques; o botão de atualizar ignora o cache do dashboard.
+- Trocou a busca de produtos por uma lista completa (377 itens, 35 KB) guardada no cache e filtrada no navegador, sem diferenciar acentos. `GET /produtos` passou a devolver a lista inteira.
+- Redesenhou a aba Praças a pedido do integrante: quanto custam hoje R$ 100 em compras de 12 meses atrás, por região, com consumo amplo (IPCA) e básico (INPC), a diferença para o Brasil e opções de ordenação, com o Brasil e a região da conta fixos no topo.
+
+**O que foi verificado e como**
+- 50 testes do backend passaram (testes escritos antes do código), e `tsc` e `eslint` do frontend ficaram limpos; a lista e o filtro foram conferidos com os dados reais do Supabase.
+
+**O que NÃO foi verificado**
+- As telas novas no navegador.
+
+### 2026-11-24 — Claude Code — Confiança da previsão no simulador
+
+**O que a ferramenta fez**
+- Voltou a aba Praças para barras, agora em reais (R$ 100 de 12 meses atrás), e corrigiu o texto do simulador para "caiu" ou "subiu" conforme o sinal.
+- Explicou a faixa larga: o `erro_tipico_pct` é o MAE do XGBoost por subitem em 12 meses, e em 94% das previsões ele é maior que a variação prevista.
+- Com o integrante, criou a confiança da previsão em `publicacao.prever_reajuste`, usada pelo simulador e pela Felicia:
+  - "baixa" quando o erro típico passa de 2 p.p. (72 dos 377 itens no Brasil);
+  - a faixa não cruza o preço atual contra a previsão;
+  - com confiança baixa, a tela mostra o preço sugerido com um alerta, sem a faixa.
+- Listou os itens mais estáveis e os mais voláteis, com dados reais do Supabase.
+
+**O que foi verificado e como**
+- 57 testes do backend passaram (testes escritos antes do código), e `tsc` e `eslint` ficaram limpos.
+
+**O que NÃO foi verificado**
+- A tela no navegador e a resposta da Felicia com o modelo real.
+
+### 2026-11-24 — Claude Code — Avaliação de segurança de skills de design
+
+**O que a ferramenta fez**
+- Avaliou a segurança de duas skills de terceiros para o Claude Code: a taste-skill (tasteskill.dev) e a ui-ux-pro-max (aitmpl.com), lendo os sites, o SKILL.md, os scripts de instalação e o código das skills.
+- Apontou os riscos: a taste-skill instala um hook que roda código ao fim de cada resposta; os instaladores via `npx` não fixam versão; a ui-ux-pro-max manda o agente instalar o Python com `sudo`.
+- A pedido do integrante, baixou só a pasta da ui-ux-pro-max, numa pasta temporária isolada fora do projeto, sem permissão de administrador, e não a instalou.
+
+**O que foi verificado e como**
+- Buscas nos 23 CSVs e nos 3 scripts Python por instruções escondidas, segredos, acesso à rede e caracteres invisíveis não encontraram nada suspeito; os links apontam só para documentação oficial e para o Google Fonts.
+- O script de busca rodou com uma consulta de teste e devolveu um design system de dashboard.
+
+**O que NÃO foi verificado**
+- Os scripts Node da taste-skill e o pacote npm `claude-code-templates`.

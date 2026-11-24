@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 import Image from "next/image";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 type ChatMessage = {
   role: "assistant" | "user";
   text: string;
@@ -15,14 +17,23 @@ export default function FeliciaChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      text: "Olá! Sou a Felicia. Em breve poderei consultar os dados do InflaTrack e ajudar você.",
+      text: "Olá! Sou a Felicia. Posso responder perguntas sobre os dados de inflação do InflaTrack.",
     },
   ]);
+  const [sending, setSending] = useState(false);
+  const sessionId = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    // Outras telas (como a aba Produtos) abrem o chat disparando "felicia:abrir".
+    const abrir = () => setOpen(true);
+    window.addEventListener("felicia:abrir", abrir);
+    return () => window.removeEventListener("felicia:abrir", abrir);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -35,20 +46,32 @@ export default function FeliciaChat() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = message.trim();
-    if (!text) return;
+    if (!text || sending) return;
 
-    setMessages((current) => [
-      ...current,
-      { role: "user", text },
-      {
-        role: "assistant",
-        text: "Recebi sua mensagem. A conexão inteligente estará disponível na próxima etapa.",
-      },
-    ]);
+    if (!sessionId.current) sessionId.current = crypto.randomUUID();
+    setMessages((current) => [...current, { role: "user", text }]);
     setMessage("");
+    setSending(true);
+
+    let reply = "Não consegui falar com o servidor. Tente de novo em instantes.";
+    try {
+      const response = await fetch(`${apiUrl}/chat`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, session_id: sessionId.current }),
+      });
+      const body = await response.json().catch(() => null);
+      if (response.ok && typeof body?.reply === "string") reply = body.reply;
+      else if (typeof body?.detail === "string") reply = body.detail;
+    } catch {
+      // mantém a mensagem padrão de falha de rede
+    }
+    setMessages((current) => [...current, { role: "assistant", text: reply }]);
+    setSending(false);
   }
 
   return (
@@ -103,7 +126,7 @@ export default function FeliciaChat() {
               placeholder="Digite sua pergunta..."
               aria-label="Mensagem para a Felicia"
             />
-            <button type="submit" aria-label="Enviar mensagem" disabled={!message.trim()}>
+            <button type="submit" aria-label="Enviar mensagem" disabled={!message.trim() || sending}>
               <Send size={17} aria-hidden="true" />
             </button>
           </form>

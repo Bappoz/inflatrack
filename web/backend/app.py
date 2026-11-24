@@ -4,23 +4,32 @@ from typing import Literal, Self
 from uuid import UUID
 
 import httpx
-import psycopg
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from psycopg.rows import dict_row
-from pydantic import BaseModel, ConfigDict, EmailStr, SecretStr, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 
-from inflatrack.common.db import dsn_do_ambiente
-
 if __package__:
-    from .database import DatabaseConfigurationError, check_user_store, save_user
+    from . import publicacao
+    from .chat import chat_configurado, responder
+    from .database import DatabaseConfigurationError, check_user_store, get_engine, save_user
 else:
-    from database import DatabaseConfigurationError, check_user_store, save_user
+    import publicacao
+    from chat import chat_configurado, responder
+    from database import DatabaseConfigurationError, check_user_store, get_engine, save_user
 
 load_dotenv(Path(__file__).with_name(".env"))
 
@@ -220,7 +229,11 @@ def _public_user(user: dict[str, object]) -> dict[str, str]:
         )
     if not isinstance(name, str) or not name.strip():
         name = email.split("@", maxsplit=1)[0]
-    return {"id": str(user.get("id", "")), "email": email, "nome": name.strip()}
+    public = {"id": str(user.get("id", "")), "email": email, "nome": name.strip()}
+    state = metadata.get("state") if isinstance(metadata, dict) else None
+    if isinstance(state, str) and state.strip():
+        public["state"] = state.strip().upper()
+    return public
 
 
 async def _authenticated_user(request: Request, response: Response) -> dict[str, str]:
@@ -386,174 +399,147 @@ async def logout_user(request: Request, response: Response) -> dict[str, bool]:
     return {"ok": True}
 
 
-def load_dashboard_data(connection: psycopg.Connection) -> dict[str, object]:
-    with connection.cursor(row_factory=dict_row) as cursor:
-        cursor.execute("SET TRANSACTION READ ONLY")
-
-        cursor.execute(
-            """
-            with ultimo_mes as (
-                select max(mes_referencia) as mes
-                from serie.fct_inflacao_mensal
-                where indice = 'IPCA' and codigo_localidade = 1 and nivel_categoria = 'geral'
-            )
-            select u.mes,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'IPCA') as ipca_12m_pct,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'INPC') as inpc_12m_pct
-            from ultimo_mes u
-            left join serie.fct_inflacao_mensal f
-                on f.mes_referencia = u.mes
-                and f.codigo_localidade = 1
-                and f.nivel_categoria = 'geral'
-            group by u.mes
-            """
-        )
-        summary = cursor.fetchone() or {}
-
-        cursor.execute(
-            """
-            with ultimo_mes as (
-                select max(mes_referencia) as mes
-                from serie.fct_inflacao_mensal
-                where indice = 'IPCA' and codigo_localidade = 1 and nivel_categoria = 'geral'
-            )
-            select c.nome_categoria as setor,
-                round(f.variacao_acum_12m_pct, 2) as inflacao_12m_pct,
-                to_char(f.mes_referencia, 'MM/YYYY') as ate_o_mes
-            from serie.fct_inflacao_mensal f
-            join ultimo_mes u on f.mes_referencia = u.mes
-            join serie.dim_cesta_ipca_scd2 c on c.id_versao_cesta = f.id_versao_cesta
-            where f.indice = 'IPCA'
-                and f.codigo_localidade = 1
-                and f.nivel_categoria in ('geral', 'grupo')
-            order by f.nivel_categoria = 'geral' desc, f.variacao_acum_12m_pct desc
-            """
-        )
-        sectors = cursor.fetchall()
-
-        cursor.execute(
-            """
-            with ultimo_mes as (
-                select max(mes_referencia) as mes
-                from serie.fct_inflacao_mensal
-                where indice = 'IPCA' and codigo_localidade = 1 and nivel_categoria = 'geral'
-            )
-            select l.nome_localidade as localidade,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'IPCA') as ipca_12m_pct,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'INPC') as inpc_12m_pct
-            from serie.fct_inflacao_mensal f
-            join ultimo_mes u on f.mes_referencia = u.mes
-            join serie.dim_localidade l on l.codigo_localidade = f.codigo_localidade
-            where f.nivel_categoria = 'geral'
-            group by l.codigo_localidade, l.nome_localidade
-            order by l.codigo_localidade = 1 desc, ipca_12m_pct desc nulls last
-            """
-        )
-        locations = cursor.fetchall()
-
-        cursor.execute(
-            """
-            with ultimo_mes as (
-                select max(mes_referencia) as mes
-                from serie.fct_inflacao_mensal
-                where indice = 'IPCA' and codigo_localidade = 1 and nivel_categoria = 'geral'
-            )
-            select f.mes_referencia,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'IPCA') as ipca_12m_pct,
-                max(f.variacao_acum_12m_pct) filter (where f.indice = 'INPC') as inpc_12m_pct
-            from serie.fct_inflacao_mensal f
-            cross join ultimo_mes u
-            where f.codigo_localidade = 1
-                and f.nivel_categoria = 'geral'
-                and f.mes_referencia > u.mes - interval '60 months'
-            group by f.mes_referencia
-            order by f.mes_referencia
-            """
-        )
-        history = cursor.fetchall()
-
-        cursor.execute(
-            """
-            select extract(month from f.mes_referencia)::int as mes_numero,
-                (array['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out',
-                    'nov', 'dez'])[extract(month from f.mes_referencia)::int] as mes,
-                round(avg(f.variacao_mensal_pct) filter (where f.nivel_categoria = 'geral'), 2)
-                    as indice_geral_pct,
-                round(avg(f.variacao_mensal_pct) filter (where f.codigo_categoria = '1'), 2)
-                    as alimentacao_pct,
-                round(avg(f.variacao_mensal_pct) filter (where f.codigo_categoria = '2'), 2)
-                    as habitacao_pct,
-                round(avg(f.variacao_mensal_pct) filter (where f.codigo_categoria = '4'), 2)
-                    as vestuario_pct,
-                round(avg(f.variacao_mensal_pct) filter (where f.codigo_categoria = '5'), 2)
-                    as transportes_pct
-            from serie.fct_inflacao_mensal f
-            where f.indice = 'IPCA'
-                and f.codigo_localidade = 1
-                and f.nivel_categoria in ('geral', 'grupo')
-                and f.mes_referencia >= date '2006-07-01'
-            group by mes_numero
-            order by mes_numero
-            """
-        )
-        seasonality = cursor.fetchall()
-
-        cursor.execute(
-            """
-            with base as (
-                select numero_indice
-                from serie.fct_inflacao_mensal
-                where indice = 'IPCA'
-                    and codigo_localidade = 1
-                    and nivel_categoria = 'geral'
-                    and mes_referencia = date '2006-01-01'
-            )
-            select f.mes_referencia,
-                round(100 * b.numero_indice / f.numero_indice, 2) as poder_compra_100_reais
-            from serie.fct_inflacao_mensal f
-            cross join base b
-            where f.indice = 'IPCA'
-                and f.codigo_localidade = 1
-                and f.nivel_categoria = 'geral'
-                and f.numero_indice is not null
-                and f.mes_referencia >= date '2006-01-01'
-            order by f.mes_referencia
-            """
-        )
-        purchasing_power = cursor.fetchall()
-
-    return {
-        "latest_month": summary.get("mes"),
-        "kpis": {
-            "ipca_12m_pct": summary.get("ipca_12m_pct"),
-            "inpc_12m_pct": summary.get("inpc_12m_pct"),
-        },
-        "sectors": sectors,
-        "locations": locations,
-        "history": history,
-        "seasonality": seasonality,
-        "purchasing_power": purchasing_power,
-    }
-
-
-def _read_dashboard_from_postgres() -> dict[str, object]:
-    with psycopg.connect(dsn_do_ambiente(), connect_timeout=3) as connection:
-        return load_dashboard_data(connection)
+def _consultar_supabase(sql: str, params: dict[str, object]) -> list[dict[str, object]]:
+    """Lê o que o pipeline publicou no Supabase (mesma conexão do cadastro, DATABASE_URL)."""
+    with get_engine().connect() as connection:
+        return [dict(row) for row in connection.execute(text(sql), params).mappings()]
 
 
 @app.get("/dashboard")
-async def dashboard(request: Request, response: Response) -> dict[str, object]:
+async def dashboard(
+    request: Request,
+    response: Response,
+    localidade: int = Query(1, ge=1),
+    periodo: int = Query(60, ge=0, le=600),
+) -> dict[str, object]:
     await _authenticated_user(request, response)
+
+    def ler() -> dict[str, object] | None:
+        dados = publicacao.dashboard(_consultar_supabase, localidade, periodo)
+        if dados is not None:
+            salario = publicacao.grafico(_consultar_supabase, "p3_salario_minimo_real")
+            dados["minimum_wage"] = salario or []
+        return dados
+
+    dados = await _ler_publicacao(ler)
+    if dados is None:
+        raise HTTPException(status_code=404, detail="Praça sem dados publicados.")
+    return dados
+
+
+async def _ler_publicacao(funcao, *args):
+    """Roda uma leitura do Supabase fora do loop; banco fora do ar vira 503."""
     try:
-        return await run_in_threadpool(_read_dashboard_from_postgres)
-    except psycopg.Error as error:
+        return await run_in_threadpool(funcao, *args)
+    except (DatabaseConfigurationError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Dados do dashboard indisponíveis. Inicie o PostgreSQL e execute o pipeline "
-                "Dagster para preencher o schema serie."
+                "Dados indisponíveis. Confira a DATABASE_URL e se o dashboard_job "
+                "já fez a publicação no Supabase."
             ),
         ) from error
+
+
+class ReajusteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    codigo_subitem: str = Field(min_length=1, max_length=20)
+    uf: str = Field(pattern=r"^[A-Za-z]{2}$")
+    preco_atual: float = Field(gt=0, le=1_000_000)
+
+
+@app.get("/produtos")
+async def produtos(request: Request, response: Response) -> dict[str, object]:
+    """A lista inteira de produtos com previsão: o site guarda por 24 h e filtra localmente."""
+    await _authenticated_user(request, response)
+    return {"produtos": await _ler_publicacao(publicacao.listar_produtos, _consultar_supabase)}
+
+
+@app.post("/reajuste")
+async def reajuste(
+    payload: ReajusteRequest, request: Request, response: Response
+) -> dict[str, object]:
+    """Mesma conta da Felicia. O preço digitado não é gravado nem registrado em log (ADR 0004)."""
+    await _authenticated_user(request, response)
+    try:
+        return await _ler_publicacao(
+            publicacao.prever_reajuste,
+            _consultar_supabase,
+            payload.codigo_subitem,
+            payload.uf,
+            payload.preco_atual,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/previsoes/destaques")
+async def previsoes_destaques(
+    request: Request, response: Response, localidade: int = Query(1, ge=1)
+) -> dict[str, object]:
+    await _authenticated_user(request, response)
+    return {
+        "destaques": await _ler_publicacao(publicacao.destaques, _consultar_supabase, localidade)
+    }
+
+
+class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=2000)
+    session_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
+def consultar_inflacao() -> dict:
+    """IPCA/INPC em 12 meses, inflação por setor e por praça, do último mês divulgado (Brasil)."""
+    dados = publicacao.dashboard(_consultar_supabase, publicacao.BRASIL, 1) or {}
+    return {chave: dados.get(chave) for chave in ("latest_month", "kpis", "sectors", "locations")}
+
+
+def buscar_produto(nome: str) -> dict:
+    """Procura produtos (subitens do IPCA) pelo nome, como "arroz" ou "gasolina".
+
+    Devolve até 10 opções com o `codigo_subitem`, que `prever_reajuste` precisa.
+    """
+    return {"produtos": publicacao.buscar_produto(_consultar_supabase, nome)}
+
+
+def prever_reajuste(codigo_subitem: str, uf: str, preco_atual: float) -> dict:
+    """Sugere o preço do produto para o próximo mês, pela inflação prevista na praça da UF.
+
+    Args:
+        codigo_subitem: código do produto, vindo de `buscar_produto`.
+        uf: sigla do estado do lojista, como "SP".
+        preco_atual: preço que o lojista cobra hoje, em reais.
+    """
+    try:
+        return publicacao.prever_reajuste(_consultar_supabase, codigo_subitem, uf, preco_atual)
+    except ValueError as error:
+        return {"erro": str(error)}
+
+
+FERRAMENTAS_FELICIA = [consultar_inflacao, buscar_produto, prever_reajuste]
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(payload: ChatRequest, request: Request, response: Response) -> ChatResponse:
+    user = await _authenticated_user(request, response)
+    if not chat_configurado():
+        raise HTTPException(status_code=503, detail="A Felicia não está configurada.")
+    try:
+        reply = await responder(
+            user["id"], payload.session_id, payload.message, FERRAMENTAS_FELICIA
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=502, detail="A Felicia não conseguiu responder agora."
+        ) from error
+    return ChatResponse(reply=reply or "Não consegui formular uma resposta.")
 
 
 @app.post("/auth/register", response_model=RegistrationResponse, status_code=201)

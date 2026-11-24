@@ -1,7 +1,6 @@
 from uuid import UUID
 
 import httpx
-import psycopg
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
@@ -416,85 +415,55 @@ def test_register_rejects_supabase_obfuscated_duplicate(monkeypatch) -> None:
     assert response.json()["detail"] == "Este e-mail já está cadastrado."
 
 
-def test_dashboard_reads_serie_tables_in_read_only_transaction(monkeypatch) -> None:
+def test_dashboard_reads_the_published_locality_from_supabase(monkeypatch) -> None:
     mock_authenticated_user(monkeypatch)
+    pedidos = []
 
-    class FakeCursor:
-        def __init__(self) -> None:
-            self.query_index = -1
-            self.queries: list[str] = []
-            self.rows = [
-                [{"mes": "2026-09-01", "ipca_12m_pct": 4.5, "inpc_12m_pct": 4.2}],
-                [{"setor": "Índice geral", "inflacao_12m_pct": 4.5}],
-                [{"localidade": "Brasil", "ipca_12m_pct": 4.5, "inpc_12m_pct": 4.2}],
-                [{"mes_referencia": "2026-09-01", "ipca_12m_pct": 4.5, "inpc_12m_pct": 4.2}],
-                [{"mes_numero": 1, "mes": "jan", "indice_geral_pct": 0.4}],
-                [{"mes_referencia": "2026-09-01", "poder_compra_100_reais": 46.0}],
-            ]
+    def ler(consultar, localidade, periodo):
+        pedidos.append((localidade, periodo))
+        return {"latest_month": "2026-09-01", "kpis": {"ipca_12m_pct": 4.5}}
 
-        def __enter__(self) -> "FakeCursor":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-        def execute(self, query: str) -> None:
-            self.queries.append(query)
-            if query != "SET TRANSACTION READ ONLY":
-                self.query_index += 1
-
-        def fetchone(self) -> dict[str, object]:
-            return self.rows[self.query_index][0]
-
-        def fetchall(self) -> list[dict[str, object]]:
-            return self.rows[self.query_index]
-
-    class FakeConnection:
-        def __init__(self) -> None:
-            self.fake_cursor = FakeCursor()
-
-        def __enter__(self) -> "FakeConnection":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-        def cursor(self, *, row_factory):
-            assert row_factory is auth_app.dict_row
-            return self.fake_cursor
-
-    connection = FakeConnection()
-    monkeypatch.setattr(
-        auth_app.psycopg,
-        "connect",
-        lambda *args, **kwargs: connection,
-    )
+    monkeypatch.setattr(auth_app.publicacao, "dashboard", ler)
 
     client = TestClient(auth_app.app)
     client.cookies.set("inflatrack_access_token", "test-access-token")
-    response = client.get("/dashboard")
+    response = client.get("/dashboard?localidade=29&periodo=12")
 
     assert response.status_code == 200
-    assert response.json()["latest_month"] == "2026-09-01"
-    assert response.json()["kpis"] == {"ipca_12m_pct": 4.5, "inpc_12m_pct": 4.2}
-    assert connection.fake_cursor.queries[0] == "SET TRANSACTION READ ONLY"
-    assert all("serie." in query for query in connection.fake_cursor.queries[1:])
+    assert response.json()["kpis"] == {"ipca_12m_pct": 4.5}
+    assert pedidos == [(29, 12)]
 
 
-def test_dashboard_reports_unavailable_postgres(monkeypatch) -> None:
+def test_dashboard_reports_unpublished_locality(monkeypatch) -> None:
+    mock_authenticated_user(monkeypatch)
+    monkeypatch.setattr(auth_app.publicacao, "dashboard", lambda *args: None)
+
+    client = TestClient(auth_app.app)
+    client.cookies.set("inflatrack_access_token", "test-access-token")
+    response = client.get("/dashboard?localidade=999")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OperationalError("select", {}, Exception("down")), auth_app.DatabaseConfigurationError("x")],
+    ids=["supabase-fora", "sem-database-url"],
+)
+def test_dashboard_reports_unavailable_supabase(monkeypatch, error) -> None:
     mock_authenticated_user(monkeypatch)
 
-    def fail_connect(*args: object, **kwargs: object):
-        raise psycopg.OperationalError("connection refused")
+    def fail(*args):
+        raise error
 
-    monkeypatch.setattr(auth_app.psycopg, "connect", fail_connect)
+    monkeypatch.setattr(auth_app.publicacao, "dashboard", fail)
 
     client = TestClient(auth_app.app)
     client.cookies.set("inflatrack_access_token", "test-access-token")
     response = client.get("/dashboard")
 
     assert response.status_code == 503
-    assert "execute o pipeline Dagster" in response.json()["detail"]
+    assert "publicação no Supabase" in response.json()["detail"]
 
 
 def test_dashboard_requires_authenticated_session() -> None:
@@ -502,3 +471,104 @@ def test_dashboard_requires_authenticated_session() -> None:
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Entre na sua conta para continuar."
+
+
+def _client_logado(monkeypatch) -> TestClient:
+    mock_authenticated_user(monkeypatch)
+    client = TestClient(auth_app.app)
+    client.cookies.set("inflatrack_access_token", "test-access-token")
+    return client
+
+
+def test_reajuste_usa_a_mesma_funcao_da_felicia(monkeypatch) -> None:
+    pedidos = []
+
+    def prever(consultar, codigo, uf, preco):
+        pedidos.append((consultar, codigo, uf, preco))
+        return {"preco_sugerido": 10.2}
+
+    monkeypatch.setattr(auth_app.publicacao, "prever_reajuste", prever)
+    response = _client_logado(monkeypatch).post(
+        "/reajuste", json={"codigo_subitem": "1101002", "uf": "SP", "preco_atual": 10}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"preco_sugerido": 10.2}
+    assert pedidos == [(auth_app._consultar_supabase, "1101002", "SP", 10.0)]
+
+
+def test_reajuste_sem_previsao_devolve_422_com_a_mensagem(monkeypatch) -> None:
+    def prever(*args):
+        raise ValueError("Não há previsão publicada para o subitem 999.")
+
+    monkeypatch.setattr(auth_app.publicacao, "prever_reajuste", prever)
+    response = _client_logado(monkeypatch).post(
+        "/reajuste", json={"codigo_subitem": "999", "uf": "SP", "preco_atual": 10}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Não há previsão publicada para o subitem 999."
+
+
+@pytest.mark.parametrize(
+    "corpo",
+    [
+        {"codigo_subitem": "1101002", "uf": "SP", "preco_atual": 0},
+        {"codigo_subitem": "1101002", "uf": "SPX", "preco_atual": 10},
+        {"codigo_subitem": "1101002", "uf": "SP", "preco_atual": 10, "extra": 1},
+    ],
+    ids=["preco-zero", "uf-invalida", "campo-extra"],
+)
+def test_reajuste_recusa_entrada_invalida(monkeypatch, corpo) -> None:
+    response = _client_logado(monkeypatch).post("/reajuste", json=corpo)
+
+    assert response.status_code == 422
+
+
+def test_produtos_devolve_a_lista_inteira(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auth_app.publicacao, "listar_produtos", lambda consultar: [{"nome": "Arroz"}]
+    )
+
+    response = _client_logado(monkeypatch).get("/produtos")
+
+    assert response.status_code == 200
+    assert response.json() == {"produtos": [{"nome": "Arroz"}]}
+
+
+def test_destaques_vazio_e_200(monkeypatch) -> None:
+    monkeypatch.setattr(auth_app.publicacao, "destaques", lambda consultar, localidade: [])
+
+    response = _client_logado(monkeypatch).get("/previsoes/destaques?localidade=3501")
+
+    assert response.status_code == 200
+    assert response.json() == {"destaques": []}
+
+
+@pytest.mark.parametrize(
+    ("metodo", "rota"),
+    [("get", "/produtos"), ("post", "/reajuste"), ("get", "/previsoes/destaques")],
+)
+def test_rotas_do_lojista_exigem_sessao(metodo: str, rota: str) -> None:
+    client = TestClient(auth_app.app)
+    corpo = (
+        {"json": {"codigo_subitem": "1", "uf": "SP", "preco_atual": 1}} if metodo == "post" else {}
+    )
+
+    response = getattr(client, metodo)(rota, **corpo)
+
+    assert response.status_code == 401
+
+
+def test_dashboard_inclui_salario_minimo(monkeypatch) -> None:
+    linhas = [{"mes_referencia": "2026-10-01", "salario_nominal": 1518}]
+    monkeypatch.setattr(auth_app.publicacao, "dashboard", lambda *args: {"kpis": {}})
+    monkeypatch.setattr(
+        auth_app.publicacao,
+        "grafico",
+        lambda consultar, id: linhas if id == "p3_salario_minimo_real" else None,
+    )
+
+    response = _client_logado(monkeypatch).get("/dashboard")
+
+    assert response.json()["minimum_wage"] == linhas
