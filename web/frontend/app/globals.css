@@ -1726,3 +1726,128 @@ button {
   border-radius: 6px;
   background: var(--dashboard-panel);
 }
+
+/* ---- Dashboard: escala de tipos e largura (revisão com a skill ui-ux-pro-max) ----
+   Escala modular 12 / 14 / 16 / 18 / 24 / 32 px; texto corrido com no mínimo 14px
+   e altura de linha 1.5; conteúdo usa a largura da tela até 1760px. */
+.dashboard-page .dashboard-content {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1760px;
+  margin: 0 auto;
+  padding: 28px clamp(20px, 4vw, 72px) 40px;
+}
+
+.dashboard-page .dashboard-eyebrow { font-size: 12px; letter-spacing: 0.12em; }
+.dashboard-page .dashboard-heading h1 { font-size: clamp(28px, 2.4vw, 38px); }
+.dashboard-page .dashboard-subtitle { font-size: 16px; line-height: 1.5; }
+.dashboard-page .dashboard-heading-meta { font-size: 14px; }
+
+.dashboard-page .dashboard-filters { gap: 16px; padding: 14px 16px; }
+.dashboard-page .dashboard-filters label { font-size: 12px; letter-spacing: 0.06em; }
+.dashboard-page .dashboard-filters select { height: 46px; font-size: 16px; }
+
+.dashboard-page .dashboard-summary { padding: 22px 26px; margin-bottom: 20px; }
+.dashboard-page .dashboard-summary p { font-size: clamp(18px, 1.4vw, 22px); }
+.dashboard-page .dashboard-summary small { font-size: 14px; margin-top: 8px; }
+
+/* Cartões de indicador: dividem a linha inteira, seja 1, 2 ou 3 cartões. */
+.dashboard-page .dashboard-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.dashboard-page .kpi-card { min-height: 160px; padding: 22px 26px; }
+.dashboard-page .kpi-card span { font-size: 14px; }
+.dashboard-page .kpi-card strong { font-size: clamp(32px, 2.6vw, 44px); }
+.dashboard-page .kpi-card small { font-size: 14px; line-height: 1.5; color: #4d4556; }
+
+/* Painéis: um painel sozinho ocupa a linha toda. */
+.dashboard-page .dashboard-grid { gap: 20px; }
+.dashboard-page .dashboard-grid > :only-child { grid-column: 1 / -1; }
+.dashboard-page .dashboard-panel { padding: 24px 26px 18px; }
+.dashboard-page .dashboard-panel h2 { font-size: 18px; margin-bottom: 14px; }
+.dashboard-page .dashboard-panel-subtitle { font-size: 14px; margin: -6px 0 18px; }
+
+.dashboard-page .sector-bar-list { gap: 16px; }
+.dashboard-page .sector-bar-row {
+  grid-template-columns: minmax(160px, 1fr) minmax(120px, 2.4fr) 64px;
+  gap: 16px;
+}
+.dashboard-page .dashboard-bar-track { height: 10px; }
+.dashboard-page .sector-bar-label,
+.dashboard-page .location-bar-label { font-size: 15px; color: #3a3341; }
+.dashboard-page .sector-bar-row strong,
+.dashboard-page .location-bar-cell strong { font-size: 15px; font-weight: 650; }
+.dashboard-page .location-bar-header { font-size: 12px; }
+.dashboard-page .location-bar-row { min-height: 40px; }
+.dashboard-page .location-bar-label small { font-size: 11px; }
+
+.dashboard-page .simulador label,
+.dashboard-page .pracas-ordem { font-size: 14px; }
+.dashboard-page .simulador input,
+.dashboard-page .simulador select,
+.dashboard-page .pracas-ordem select { min-height: 46px; font-size: 16px; }
+.dashboard-page .simulador-botao { min-height: 46px; font-size: 16px; }
+.dashboard-page .simulador-resultado,
+.dashboard-page .simulador-erro { font-size: 15px; }
+.dashboard-page .simulador-resultado strong { font-size: 32px; }
+.dashboard-page .simulador-felicia { font-size: 15px; }
+.dashboard-page .destaques-lista { font-size: 15px; }
+.dashboard-page .destaques-lista small { font-size: 13px; }
+
+@media (max-width: 860px) {
+  .dashboard-page .dashboard-content { padding-top: 20px; }
+}
+@media (max-width: 600px) {
+  .dashboard-page .dashboard-kpis { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-page .sector-bar-row { grid-template-columns: minmax(110px, 1fr) minmax(60px, 1.2fr) 54px; gap: 10px; }
+  .dashboard-page .sector-bar-label,
+  .dashboard-page .location-bar-label,
+  .dashboard-page .sector-bar-row strong { font-size: 14px; }
+}
+
+/* Abas: maiores, com contraste AA e foco visível. */
+.dashboard-page .dashboard-tab {
+  min-height: 44px;
+  padding: 0 18px;
+  color: #5f5769;
+  font-size: 15px;
+  transition: color 0.2s, background-color 0.2s;
+}
+.dashboard-page .dashboard-tab-active { color: #fff; }
+.dashboard-page .dashboard-tab:focus-visible,
+.dashboard-page .refresh-button:focus-visible,
+.dashboard-page .dashboard-logout-button:focus-visible {
+  outline: 2px solid var(--chart-mint);
+  outline-offset: 2px;
+}
+.dashboard-page .refresh-button,
+.dashboard-page .dashboard-logout-button { width: 44px; height: 44px; }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page * { transition: none !important; }
+}
+
+/* Ajustes após conferir os prints (1920, 1366 e 390px). */
+.dashboard-page .sector-bar-row { grid-template-columns: minmax(180px, 0.55fr) minmax(120px, 2fr) 64px; }
+.dashboard-page .dashboard-footer { font-size: 13px; color: #6b6374; }
+
+@media (max-width: 860px) {
+  /* As abas continuam acessíveis no celular, com rolagem lateral. */
+  .dashboard-page .dashboard-tabs {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -4px;
+    padding: 4px;
+  }
+  .dashboard-page .dashboard-tab { flex: 0 0 auto; }
+}
+@media (max-width: 600px) {
+  /* Nome do setor em cima, barra e valor embaixo: sem cortar o texto. */
+  .dashboard-page .sector-bar-row {
+    grid-template-columns: minmax(0, 1fr) 54px;
+    row-gap: 6px;
+  }
+  .dashboard-page .sector-bar-label { grid-column: 1 / -1; white-space: normal; }
+}
