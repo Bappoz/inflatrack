@@ -1,7 +1,5 @@
-export const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
-  /\/$/,
-  "",
-);
+// Por padrão, a API é chamada pelo próprio site (/api, ver o rewrite em next.config.ts).
+export const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "/api").replace(/\/$/, "");
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 

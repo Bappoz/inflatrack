@@ -13,6 +13,7 @@ import {
   LockKeyhole,
   Mail,
 } from "lucide-react";
+import { apiUrl } from "../dashboard/formato";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,8 +29,7 @@ export default function LoginPage() {
     setMessage("");
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/auth/login`, {
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

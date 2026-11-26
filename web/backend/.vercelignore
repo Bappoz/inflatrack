@@ -1,0 +1,6 @@
+# Nunca enviar segredos nem o ambiente local num deploy pela CLI.
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+tests/

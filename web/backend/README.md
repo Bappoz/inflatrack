@@ -43,9 +43,10 @@ Para parar a API, use **Ctrl+C** (Ctrl+Z apenas suspende o processo).
 
 O login cria cookies de sessão `HttpOnly`; em produção com HTTPS, defina `COOKIE_SECURE=true`.
 
-O frontend usa `NEXT_PUBLIC_API_URL` para localizar a API; sem essa variável,
-usa `http://localhost:8000`. Configure `CORS_ORIGINS` com as origens reais do
-frontend em cada ambiente.
+O frontend chama a API pelo próprio domínio, em `/api`, e o Next repassa para
+`BACKEND_URL` (padrão `http://localhost:8000`). Assim os cookies ficam no domínio
+do site. Configure `CORS_ORIGINS` com as origens reais do frontend em cada
+ambiente. O deploy está em `docs/como_rodar/deploy_vercel.md`.
 
 `POST /auth/register` recebe `name`, `email`, `state` (sigla da UF), `password`
 e `confirm_password`. O cadastro verifica a disponibilidade da tabela antes de

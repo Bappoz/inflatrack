@@ -13,7 +13,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 27 | 2026-09-14 a 2026-11-19 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (14), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 28 | 2026-09-14 a 2026-11-26 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (15), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
 | Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
@@ -75,6 +75,7 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
 | 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
 | 2026-11-19 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #21 (PROCON), preços de atacadista no Postgres (PR #23) e avaliação dos modelos de previsão (regressões x XGBoost) |
+| 2026-11-26 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Preparo do deploy do site na Vercel: Felicia sem o Google ADK e API pelo domínio do site |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Integração do cadastro de usuário com Supabase Auth via backend Python |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Tabela pública de perfis sincronizada com Supabase Auth |
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Home simples e navegação de teste entre cadastro, login e home |
@@ -1446,6 +1447,25 @@ de tarefas nessa linha.
   - a coleta e a gravação dos dados reais num schema temporário desfeito no fim (cerca de 1,5 MB);
   - `anon` lê e não escreve.
 - Não verificado: a publicação num Supabase de verdade (a URL fica para o integrante preencher), o site e o agente.
+
+### 2026-11-26 — Claude Code (Opus 5.5) — Preparo do deploy do site na Vercel
+
+**O que a ferramenta fez**
+- Seguiu o guia `docs/handoff/deploy-vercel-supabase.md`. O integrante decidiu: backend num projeto próprio da Vercel, o mesmo Supabase como produção e os segredos cadastrados por ele no painel.
+- Tirou o Google ADK e a biblioteca `litellm` da Felicia. O `chat.py` passou a chamar o proxy LiteLLM direto com `httpx`, com os esquemas das 3 ferramentas escritos à mão, no máximo 5 rodadas e uma nova tentativa quando o proxy responde 503 (partida a frio).
+- O histórico da conversa saiu do servidor. O navegador envia as 10 últimas mensagens em `history`, e o backend recusa papéis diferentes de `user` e `assistant`.
+- Fez o site chamar a API por `/api` no próprio domínio (rewrite do Next para `BACKEND_URL`), para os cookies de login funcionarem em produção.
+- Criou a configuração da Vercel para o backend (`vercel.json`, `.python-version`, `.vercelignore`), os `.env.example` de produção e o guia `docs/como_rodar/deploy_vercel.md`. Removeu um `package.json` Node sem uso de `web/backend`.
+
+**O que foi verificado e como**
+- Os testes foram escritos antes do código, com o proxy simulado: 82 testes do backend passaram, e `ruff`, `tsc`, `eslint` e `npm run build` ficaram limpos.
+- Uma conversa real de 3 perguntas com o proxy e o Supabase: a pergunta de continuação ("E o INPC?") foi entendida pelo histórico, com respostas de 8 a 13 s. A 1ª tentativa pegou um 503 de partida a frio.
+- O `requirements.txt` instalado num ambiente limpo ocupa cerca de 58 MB (antes, só o chat ocupava uns 245 MB), e o backend importa só com ele.
+- Com o build de produção local, `/api/health`, `/api/auth/me` e `/api/auth/login` passaram pelo rewrite.
+- Contagem, só para leitura, das tabelas do Supabase: as 6 tabelas do dashboard têm dados.
+
+**O que NÃO foi verificado**
+- O build do backend na própria Vercel e o site na URL pública (o deploy ainda não foi feito).
 
 ---
 
