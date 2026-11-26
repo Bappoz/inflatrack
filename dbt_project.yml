@@ -5,6 +5,7 @@
 #   intermediate/  silver.int_<fonte>__mensal      views no grão mes_referencia = YYYY-MM-01
 #   marts/         gold.dim_* / gold.fct_*         tabelas do esquema estrela
 #   semantic/      gold.sem_*                      métricas da E4
+#   predicao/      gold.fct_previsao_*             previsão do modelo (E4), rodada no predicao_job
 #
 # O dbt só lê bronze.* (como source) e nunca escreve lá.
 
@@ -37,6 +38,10 @@ models:
       +schema: gold
       +materialized: table
     semantic:
+      +schema: gold
+      +materialized: table
+    # Previsão do modelo (E4): tabela da Gold, mas grupo próprio no Dagster (predicao_job mensal).
+    predicao:
       +schema: gold
       +materialized: table
 

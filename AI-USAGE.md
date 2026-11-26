@@ -13,10 +13,10 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | Integrante | Sessões | Período | Ferramentas |
 |---|---|---|---|
 | Lucas Zanetti | 7 | 2026-09-08 a 2026-11-08 | Claude Code (Opus 5.5) (4), Claude Code (Opus 5) (1), Codex (2) |
-| João Pedro Lopes da Cruz | 26 | 2026-09-14 a 2026-11-11 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (13), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
+| João Pedro Lopes da Cruz | 28 | 2026-09-14 a 2026-11-26 | Claude Code (Opus 5) (8), Claude Code (Opus 5.5) (15), Claude Code (Sonnet 5) (1), Claude Code (Sonnet 5.5) (3), Antigravity (Gemini 3.1 Pro) (1) |
 | Artur Fernandes Galdino | 7 | 2026-09-25 a 2026-11-02 | Antigravity (Gemini 3.6 Flash) (1), Antigravity (Gemini 3.8 Flash) (6) |
 | Pedro Américo | 4 | 2026-09-25 a 2026-11-01 | Antigravity (Gemini 3.1 Pro) (3), Antigravity (Gemini 3.8 Flash) (1) |
-| Johnnatan Salles | 5 | 2026-09-28 a 2026-11-09 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (2) |
+| Johnnatan Salles | 4 | 2026-09-28 a 2026-10-31 | Antigravity (Gemini 3.8 Flash) (3), GitHub Copilot (1) |
 
 
 ## Todas as sessões
@@ -74,6 +74,14 @@ Exigido pela [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/) da
 | 2026-11-09 | Johnnatan Salles | GitHub Copilot | Automação das medições INMET e preparo da Bronze antes do dbt |
 | 2026-11-09 | João Pedro Lopes da Cruz | Claude Code (Sonnet 5.5 e Opus 5.5) | Comando `just painel-up` para pôr o Metabase no ar |
 | 2026-11-11 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #22 (clima): medições pelo BDMEP, `gold.fct_clima_mensal` e merge com a main |
+| 2026-11-19 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Revisão do PR #21 (PROCON), preços de atacadista no Postgres (PR #23) e avaliação dos modelos de previsão (regressões x XGBoost) |
+| 2026-11-26 | João Pedro Lopes da Cruz | Claude Code (Opus 5.5) | Preparo do deploy do site na Vercel: Felicia sem o Google ADK e API pelo domínio do site |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Integração do cadastro de usuário com Supabase Auth via backend Python |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Tabela pública de perfis sincronizada com Supabase Auth |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Home simples e navegação de teste entre cadastro, login e home |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Dashboard Dagster protegido por sessão Supabase e diagnóstico de login |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Diagnóstico, carga inicial Gold e schedule focado do dashboard |
+| 2026-11-09 | Johnnatan Salles | GitHub Copilot | Remoção do limite máximo de caracteres da senha |
 
 ---
 
@@ -1377,6 +1385,88 @@ de tarefas nessa linha.
 - Verificado: testes de integração no Postgres de desenvolvimento (escrita fora da publicação avança o slot; com `avancar=False` não avança; transação aberta durante a captura chega na seguinte; tabela da migration vira `UNLOGGED` com índice e dados; cópia de 50 mil linhas com menos de 1 MB de WAL), `pytest` com 454 passando, ruff limpo e `mkdocs build --strict`. Nos dados reais, `just serie` passou de ~1 GB para 250 kB de WAL por cópia, com as 11 tabelas `UNLOGGED`. O integrante rodou os jobs de novo e confirmou que funcionou.
 - Não verificado: o comportamento das tabelas `UNLOGGED` depois de uma queda do Postgres (pela documentação, voltam vazias até o próximo `just serie`).
 
+### 2026-11-19 — Claude Code (Opus 5.5) — revisão do PR #21 (PROCON) e nova abordagem para preços de produto
+
+**O que a ferramenta fez**
+- Revisou o PR #21 (Cesta Básica PROCON, autor Artur Fernandes Galdino) contra a regra do integrante de que preço de produto fica só no banco relacional, sem passar por Bronze, Silver e Gold. O PR faz exatamente esse caminho (Delta, DuckDB, `stg`/`int`/`fct_cesta_basica_mensal`) e foi considerado não apto para a main.
+- Apontou também: os ativos do Dagster chamam `main(list(argv))` em funções `main()` sem parâmetro (todo run falharia com `TypeError`); sem arquivo, a ingestão carrega a fixture de testes, com preços inventados; o cliente HTTP não tem URL nem é chamado; `coalesce(codigo_localidade, 1)` joga praças não casadas no Brasil; e o PR tem conflitos com a main em 3 arquivos.
+- Pesquisou na web se o PROCON publica preços de produtos como dados: só encontrou relatórios em PDF/DOCX (Procon-SP com DIEESE, Goiás, Anápolis, Rio Verde, Campina Grande), sem CSV, API ou conjunto no dados.gov.br. Abriu o PDF de outubro/2026 do Procon-SP: o preço aparece só para alguns dos 39 produtos, em gráficos e texto.
+- Analisou o que do PR se aproveita (só os conversores de número e data em formato brasileiro) e recomendou uma branch nova a partir da main.
+- Com o integrante, desenhou a nova abordagem: o modelo da E4 aprende a variação do subitem do IPCA (real, desde 2006) e uma base relacional de preços de atacadista traduz o percentual em R$. Escreveu design e plano em `docs/superpowers/` e o integrante aprovou.
+- Implementou na branch `feat/precos-atacadista`: migration `0007` (schema `atacado` fora da publicação do CDC, `preco` insert-only, visão `preco_atual`), conversores de formato brasileiro com `Decimal` (vindos do PR #21), importador `just atacado-importar` direto no Postgres, atacadista fictício com 45 produtos de subitens reais, ADR 0004, dicionário e Seção 2.5 do `PLAN_E3_E4.md`. Os testes vieram antes do código.
+- Um revisor independente (subagente) leu a branch inteira e apontou casos que gravariam dado errado numa tabela insert-only: `1.250` virando R$ 1,25, coluna a mais derrubando o importador com traceback, troca de embalagem ou subitem e rótulo `ficticio` ignorados em silêncio, preço com data futura como atual e `.gitignore` liberando qualquer CSV de `data/atacado/`. Cada um ganhou um teste que falhou antes da correção.
+- A pedido do integrante, pôs a carga no Dagster: ativo `atacado_postgres` (grupo `atacado`, só Postgres), `atacado_job` diário às 6h e entrada no `popular_banco_job`, esperando o `ipca_job` (o importador exige os subitens em `classificacao`). A guarda que proibia `orchestration/` de citar `atacado` foi trocada por testes do grafo: o ativo não tem dependentes e não entra no `analitico_job`. Verificado: `atacado_job` executado contra o Postgres local com sucesso e `just check` com 507 testes passando.
+
+**O que foi verificado e como**
+- Assinaturas de `main()` do PR lidas com `ast` na branch do PR; conflitos pela simulação `git merge-tree` contra a `origin/main`.
+- Conteúdo do PDF do Procon-SP lido página a página.
+- Migration aplicada duas vezes no Postgres de desenvolvimento; importação real do exemplo (45 produtos; a segunda importação grava 0); `just check` com 501 testes passando; `mkdocs build --strict`; códigos dos 45 subitens conferidos na `classificacao`.
+
+**O que NÃO foi verificado**
+- Nenhum teste do PR #21 foi executado localmente.
+- As fontes alternativas citadas (loja online do Atacadão, programas estaduais de preço por nota fiscal) não foram conferidas.
+- Os preços do atacadista de exemplo são inventados; a migration não foi testada num `just reset` do zero.
+- Pendências menores do revisor, não corrigidas: arquivo cp1252 dá erro pouco claro, nome de produto diferencia maiúsculas, a FK aceita código que não é subitem.
+
+**Continuação (2026-11-19): avaliação dos modelos de previsão (PR empilhado, `feat/modelo-reajuste`)**
+- Com o integrante, desenhou a avaliação: a pedido da professora, regressão linear e logarítmica (linhas de tendência sobre o índice do subitem) comparadas ao XGBoost, mais as duas previsões ingênuas da Regra 8. A avaliação fica num notebook, sem Dagster (escolha do integrante), e a praça é o Brasil (escolha do integrante, depois que um revisor-subagente mostrou que Brasília só tinha 39 dos 45 subitens no período de teste).
+- Implementou, com os testes antes, `src/inflatrack/predicao/` (base sem vazamento, com o ENSO pela data de publicação e o clima só de mês fechado; os modelos; o walk-forward e as métricas nas mesmas linhas) e o notebook `notebooks/avaliacao_modelos.ipynb` (`just modelo-notebook`). Trocou o `XGBRegressor` pela API nativa do xgboost, para não trazer o scikit-learn.
+- Achado no caminho: a regressão "pelo nível" (reta contra o último índice real) errava 6 p.p. por embutir uma volta para a reta. A ferramenta acrescentou a leitura "pela tendência" (2,26 p.p.) para a comparação ser justa, e registrou isso no design.
+- Resultado: o XGBoost sem clima erra 1,73 p.p. contra 2,21 p.p. da ingênua (ganho de cerca de 21%), mas perde em 6 dos 45 subitens (arroz, café, feijão, os dois açúcares e margarina); o clima piorou o erro.
+- Um revisor-subagente reproduziu os números e não achou vazamento nos modelos, mas apontou que o clima dos polos usava o `mes_fechado` de hoje (corrigido para o mês anterior, com teste que falhou antes) e que a conclusão subcontava os produtos em que o XGBoost perde (corrigida). Evidência em `docs/evidencias/e4/avaliacao_modelos.md`.
+- A pedido do integrante, pôs os gráficos do notebook na página da evidência E4 do mkdocs, como PNG em `docs/assets/e4/`, mantendo o link para o `.ipynb`. O `just modelo-notebook` regrava as imagens junto, e um teste falha se elas divergirem do notebook.
+- Não verificado: o desempenho em outras praças, ajuste de hiperparâmetros e as defasagens longas de clima da Regra 4.
+
+**Continuação (2026-11-19): planejamento da fase de aplicação e avaliação em todas as praças (`feat/aplicacao-modelo`)**
+- Com o integrante, planejou a fase de aplicação em três trabalhos: previsão e publicação, site e agente Google ADK. Leu o site existente na branch `feat/site` (Next.js + FastAPI + Supabase, de Johnnatan Salles) e o exemplo de agente ADK com LiteLLM enviado pelo integrante.
+- Decisões do integrante:
+  - treino local e publicação do mínimo no Supabase (plano gratuito);
+  - o site faz `preço × (1 + variação)` com o preço digitado, sem gravá-lo;
+  - caminho misto (gráficos do painel do lojista prontos, mais previsão e resumo para o agente);
+  - retenção por substituição;
+  - escolha de modelo por subitem;
+  - avaliação ampliada como ponto de parada.
+
+  Um revisor-subagente leu o design; a ferramenta decidiu a reserva (ingênua) para pares que o vencedor não prevê.
+- Implementou, com os testes antes: base e walk-forward com várias praças (a praça na chave e como variável; regressões por `groupby`), a escolha por subitem com medição em meses que ela não viu (`escolha.py`) e o notebook `avaliacao_todas_pracas.ipynb`. Conferiu que a avaliação anterior, com uma praça, dá os mesmos números.
+- Resultado:
+  - o XGBoost único erra 1,70 p.p. contra 2,39 da ingênua (+29%) e ganha em todas as 17 localidades;
+  - a escolha por subitem erra 1,64 contra 1,66 do XGBoost sozinho nos meses que não viu.
+
+  A ferramenta parou aqui para o integrante revisar, como combinado.
+- Depois do ponto de parada, o integrante escolheu o XGBoost fixo. A ferramenta simplificou o design (a previsão vai da Gold direto ao Supabase, sem cópia na `serie`) e implementou, com os testes antes:
+  - `aplicacao.py` (previsão do mês seguinte e erro típico de 12 meses, com reserva pelo grupo);
+  - o modelo Python do dbt `gold.fct_previsao_subitem`, num grupo próprio, sem automação e fora do `analitico_job`;
+  - a migration do Supabase `web/backend/migrations/003_publicacao_inflatrack.sql` (5 tabelas, RLS com leitura pública);
+  - `reverse_etl/publicar_site.py` (apaga e reescreve tudo numa transação);
+  - o ativo `site_supabase`, o `predicao_job` mensal e as receitas `just previsao` e `just publicar-site`.
+
+  Dois testes antigos foram ajustados para tratar a previsão como exceção explícita.
+- Verificado:
+  - `dbt build` real em 4m45s, com 4.045 previsões (17 praças, 377 subitens, mês previsto nov/2026) e os testes do dbt passando;
+  - a coleta e a gravação dos dados reais num schema temporário desfeito no fim (cerca de 1,5 MB);
+  - `anon` lê e não escreve.
+- Não verificado: a publicação num Supabase de verdade (a URL fica para o integrante preencher), o site e o agente.
+
+### 2026-11-26 — Claude Code (Opus 5.5) — Preparo do deploy do site na Vercel
+
+**O que a ferramenta fez**
+- Seguiu o guia `docs/handoff/deploy-vercel-supabase.md`. O integrante decidiu: backend num projeto próprio da Vercel, o mesmo Supabase como produção e os segredos cadastrados por ele no painel.
+- Tirou o Google ADK e a biblioteca `litellm` da Felicia. O `chat.py` passou a chamar o proxy LiteLLM direto com `httpx`, com os esquemas das 3 ferramentas escritos à mão, no máximo 5 rodadas e uma nova tentativa quando o proxy responde 503 (partida a frio).
+- O histórico da conversa saiu do servidor. O navegador envia as 10 últimas mensagens em `history`, e o backend recusa papéis diferentes de `user` e `assistant`.
+- Fez o site chamar a API por `/api` no próprio domínio (rewrite do Next para `BACKEND_URL`), para os cookies de login funcionarem em produção.
+- Criou a configuração da Vercel para o backend (`vercel.json`, `.python-version`, `.vercelignore`), os `.env.example` de produção e o guia `docs/como_rodar/deploy_vercel.md`. Removeu um `package.json` Node sem uso de `web/backend`.
+
+**O que foi verificado e como**
+- Os testes foram escritos antes do código, com o proxy simulado: 82 testes do backend passaram, e `ruff`, `tsc`, `eslint` e `npm run build` ficaram limpos.
+- Uma conversa real de 3 perguntas com o proxy e o Supabase: a pergunta de continuação ("E o INPC?") foi entendida pelo histórico, com respostas de 8 a 13 s. A 1ª tentativa pegou um 503 de partida a frio.
+- O `requirements.txt` instalado num ambiente limpo ocupa cerca de 58 MB (antes, só o chat ocupava uns 245 MB), e o backend importa só com ele.
+- Com o build de produção local, `/api/health`, `/api/auth/me` e `/api/auth/login` passaram pelo rewrite.
+- Contagem, só para leitura, das tabelas do Supabase: as 6 tabelas do dashboard têm dados.
+
+**O que NÃO foi verificado**
+- O build do backend na própria Vercel e o site na URL pública (o deploy ainda não foi feito).
+
 ---
 
 ## Artur Fernandes Galdino
@@ -1681,6 +1771,147 @@ de tarefas nessa linha.
 - Nenhuma requisição real de medições foi feita; a disponibilidade atual do endpoint do INMET precisa ser confirmada. Fortaleza não possui estação correspondente no fixture, e o projeto não possui uma fonte independente para custo da cesta básica.
 - O `dbt build` com tabelas Bronze reais, a coleta ponta a ponta e o clone limpo não foram executados.
 
+### 2026-11-09 — GitHub Copilot — Integração do cadastro com Supabase Auth
+
+**O que a ferramenta fez**
+- Implementou uma API FastAPI em `web/backend` para criar usuários pelo endpoint de signup do Supabase Auth e conectou o formulário do frontend ao endpoint.
+- Configurou o ambiente local com a URL e a chave publishable, sem armazenar nem usar a chave secreta.
+
+**O que foi verificado e como**
+- Três testes automatizados do backend passaram, cobrindo o encaminhamento ao Supabase simulado, validação da confirmação de senha e configuração ausente.
+- `ruff check` e o lint do frontend passaram.
+- O endpoint público de configurações do Supabase respondeu HTTP 200 e indicou signup habilitado; CORS autorizou a origem local do frontend.
+- O formulário enviou os quatro campos esperados e exibiu a confirmação usando uma resposta de API simulada, sem criar um usuário real.
+
+**O que NÃO foi verificado**
+- Não foi feito cadastro real nem verificada a entrega de e-mail de confirmação. A chave secreta compartilhada na conversa não foi usada; a Squad deve rotacioná-la.
+
+### 2026-11-09 — GitHub Copilot — Tabela pública de perfis do Supabase
+
+**O que a ferramenta fez**
+- Criou uma migration para `public.profiles`, vinculada a `auth.users`, com e-mail único, RLS e trigger para novos usuários; a migration também preenche perfis dos usuários já existentes.
+- Documentou a execução da migration pelo SQL Editor do Supabase. A senha permanece exclusivamente no Auth.
+
+**O que foi verificado e como**
+- Revisão do SQL, das políticas de acesso e do fluxo do trigger; a migration é idempotente para reexecução.
+
+**O que NÃO foi verificado**
+- A migration não foi aplicada no projeto Supabase remoto nesta sessão; a tabela só aparecerá no Table Editor depois que a Squad executar o arquivo no SQL Editor.
+
+### 2026-11-09 — GitHub Copilot — Home e navegação de teste
+
+**O que a ferramenta fez**
+- Criou a home em `/`, moveu a tela de login para `/login` e conectou o envio do formulário ao redirecionamento para a home.
+- Ajustou o retorno do cadastro para `/login` e preservou os links entre as rotas.
+
+**O que foi verificado e como**
+- `npm run lint` passou.
+- No navegador, a home exibiu o texto solicitado, o submit de login redirecionou para `/` e um cadastro simulado redirecionou para `/login`.
+
+**O que NÃO foi verificado**
+- O login continua sendo apenas uma navegação de teste; autenticação real não foi implementada nem validada.
+
+### 2026-11-09 — GitHub Copilot — Dashboard protegido e diagnóstico de login
+
+**O que a ferramenta fez**
+- Ligou o login FastAPI ao Supabase Auth com cookies `HttpOnly`, renovação de sessão e logout; a home redireciona visitantes sem sessão e mostra o nome do perfil autenticado.
+- Ajustou as respostas do login para distinguir e-mail não confirmado de credenciais inválidas.
+
+**O que foi verificado e como**
+- Doze testes automatizados passaram, cobrindo login simulado, cookies, perfil, acesso anônimo, dashboard e respostas de erro.
+- Build e lint do frontend passaram; Ruff passou no backend.
+- No navegador, requests simuladas verificaram bloqueio anônimo, saudação e saída sem criar usuário.
+
+**O que NÃO foi verificado**
+- Não foi feito login real no Supabase, pois isso exige as credenciais do usuário. A conta e o estado de confirmação devem ser conferidos no Supabase Auth.
+- O Postgres local estava indisponível, então os dados reais do dashboard não foram carregados.
+
+### 2026-11-09 — GitHub Copilot — Remoção do limite máximo da senha
+
+**O que a ferramenta fez**
+- Removeu do backend o limite máximo local de 128 caracteres, mantendo a exigência mínima de 8 caracteres.
+
+**O que foi verificado e como**
+- Os 12 testes do backend passaram; o teste de signup envia e confere integralmente uma senha de 256 caracteres.
+- `ruff check` passou.
+
+**O que NÃO foi verificado**
+- Nenhuma senha longa foi enviada ao Supabase real; a chamada ficou simulada nos testes.
+
+### 2026-11-09 — GitHub Copilot — Carga inicial do dashboard a partir da Gold
+
+**O que a ferramenta fez**
+- Diagnosticou que o Postgres do projeto estava vazio e a API apontava para a porta ocupada 5432; subiu o Postgres do Inflatrack em 5433 e atualizou o `.env` local ignorado pelo Git.
+- Executou os backfills SIDRA de IPCA, INPC e número-índice, carregou a Bronze IPCA no DuckDB, aplicou seeds, gerou Gold de inflação e publicou as quatro tabelas usadas pelo dashboard em `serie`.
+- Criou o `dashboard_job` e seu schedule diário às 20h30, com seleção restrita às Gold de inflação consumidas pela home; os schedules de outras fontes permanecem opt-in para proteger cotas. Atualizou a paleta da home para roxo, preto e branco.
+
+**O que foi verificado e como**
+- IPCA, INPC e número-índice terminaram com `RUN_SUCCESS`; 9.114.558 observações e 1.833 metadados entraram na Bronze do DuckDB.
+- Build dbt direcionado concluiu com 71 testes aprovados; a execução Dagster focada passou 65 checks e publicou 1.662.001 linhas em `serie.fct_inflacao_mensal`.
+- A consulta real do endpoint retornou dados até 09/2026, com IPCA 4,58%, INPC 4,29%, 10 setores, 17 praças e as séries históricas esperadas.
+- Build/lint frontend, testes do schedule, Ruff e MkDocs strict passaram; o layout roxo/branco foi conferido no navegador em viewport mobile.
+
+**O que NÃO foi verificado**
+- A sessão autenticada real do usuário não foi reutilizada no navegador; o payload foi verificado diretamente na função de consulta e em testes simulados de UI.
+- Outras fontes econômicas que não são necessárias aos gráficos atuais não foram coletadas.
+
+### 2026-11-17 — GitHub Copilot — Estado de residência no cadastro
+
+**O que a ferramenta fez**
+- Adicionou ao formulário de cadastro um dropdown obrigatório com as 27 UFs e enviou a sigla escolhida à API.
+- Validou a UF no backend e salvou a seleção nos metadados do usuário no Supabase Auth; atualizou a documentação do endpoint.
+
+**O que foi verificado e como**
+- 13 testes do backend passaram, incluindo envio da UF aos metadados e rejeição de sigla inválida.
+- Lint direcionado e build de produção do frontend passaram.
+
+**O que NÃO foi verificado**
+- O cadastro não foi testado contra um projeto Supabase real; os testes de API simulam a chamada de autenticação.
+
+### 2026-11-17 — GitHub Copilot — Instalação local do backend
+
+**O que a ferramenta fez**
+- Orientou a execução do frontend na subpasta correta e investigou a falha de importação de `pyarrow` no backend.
+- Instalou o pacote local e suas dependências no ambiente virtual do backend e corrigiu o guia de instalação para incluir `pip install -e .`.
+
+**O que foi verificado e como**
+- A instalação no ambiente virtual do backend concluiu com sucesso.
+- A importação de `web.backend.app` nesse ambiente retornou o título `Inflatrack Auth API`.
+
+**O que NÃO foi verificado**
+- O servidor HTTP e a autenticação real no Supabase não foram testados nesta correção de instalação.
+
+### 2026-11-17 — GitHub Copilot — Liberação da porta do backend
+
+**O que a ferramenta fez**
+- Diagnosticou processos suspensos do Uvicorn que mantinham a porta 8000 ocupada e retomou os processos para concluir seu encerramento.
+- Orientou a inicialização da API diretamente em `web/backend`.
+
+**O que foi verificado e como**
+- Uma execução temporária do backend a partir dessa pasta respondeu em `/openapi.json` com o título `Inflatrack Auth API`.
+- O servidor temporário foi encerrado e a porta 8000 ficou livre para o usuário.
+
+**O que NÃO foi verificado**
+- O modo de recarga automática e a autenticação real não foram testados nesta verificação.
+
+### 2026-11-17 — GitHub Copilot — Persistência de usuários com SQLAlchemy
+
+**O que a ferramenta fez**
+- Manteve Python/FastAPI e Supabase Auth, integrando SQLAlchemy ao cadastro para gravar nome, e-mail e UF em `public.users`.
+- Adicionou conexão por `DATABASE_URL`, aplicação explícita do esquema por `DIRECT_URL` e compatibilidade com o parâmetro `pgbouncer` de URLs vindas do Prisma.
+- Aplicou o esquema no Supabase e sincronizou os usuários existentes, preservando a política de acesso restrito ao próprio usuário.
+- Atualizou o guia de execução e os exemplos de configuração sem registrar credenciais.
+
+**O que foi verificado e como**
+- 19 testes do backend passaram, incluindo upsert, indisponibilidade do banco e configuração das conexões; Ruff e verificação de whitespace passaram.
+- A aplicação do esquema pela conexão direta e a consulta da tabela pela conexão da API funcionaram.
+- Não restaram usuários do Auth sem registro correspondente em `public.users`; a conexão da API tem permissões de inserção e atualização.
+- A importação da API a partir de `web/backend` funcionou.
+
+**O que NÃO foi verificado**
+- Não foi criada uma conta real de teste nem enviado e-mail de confirmação.
+- O teste automatizado de upsert usa SQLite; a configuração do esquema e a conectividade foram verificadas no PostgreSQL real.
+
 ---
 
 ### 2026-11-09 — GitHub Copilot — Automação de clima e preparo do DuckDB
@@ -1698,3 +1929,148 @@ de tarefas nessa linha.
 **O que NÃO foi verificado**
 - Disponibilidade atual do endpoint de medições do INMET, coleta real das 15 estações, execução do agendador em produção ou build completo das demais fontes.
 - A validação final por Pylance ficou indisponível por falha de conexão do servidor; a verificação executável foi feita pelos testes e pelo Ruff.
+
+### 2026-11-24 — Claude Code — Resolução de merge, orientação de execução e chatbot Felicia
+
+**O que a ferramenta fez**
+- Resolveu o conflito de merge em `tests/orchestration/test_checks.py`, mantendo o teste do `dashboard_job` e os novos testes de SLA por fonte.
+- Orientou a execução do frontend, do backend e do pipeline (`dashboard_job`), e explicou as URLs do Supabase e os limites de cadastro.
+- Criou `web/backend/chat.py` (agente Google ADK com modelo via proxy LiteLLM e uma ferramenta que lê os dados do dashboard), o endpoint autenticado `POST /chat` e ligou o `felicia-chat.tsx` a ele.
+
+**O que foi verificado e como**
+- `pytest tests/orchestration/test_checks.py` (40 passaram) e `pytest web/backend/tests` (19 passaram), `ruff` no backend e `tsc`/`eslint` no frontend sem erros.
+
+**O que NÃO foi verificado**
+- Chamada real ao proxy LiteLLM: as credenciais não estavam no `.env`, e o nome do modelo (`LITELLM_MODEL`) é um palpite.
+- O fluxo completo no navegador (login, abrir a Felicia e receber resposta).
+
+### 2026-11-24 — Claude Code — Diagnóstico do `dashboard_job` travado no pool `duckdb_writer`
+
+**O que a ferramenta fez**
+- Explicou o erro "finished without success or failure event" (subprocesso do passo morreu) e como o `run_retries` do `.dagster/dagster.yaml` se aplica ao `dashboard_job`.
+- Leu o armazenamento local do Dagster (`.dagster/history/runs/*.db`) e achou a causa do "bloqueio": a única vaga do pool `duckdb_writer` (tabela `concurrency_slots`) ficou presa com o passo morto `ipca_duckdb_check_ipca_freshness_e_volume` do run `7b2e4743`, que seguia como STARTED. O arquivo DuckDB não estava travado.
+- Orientou terminar o run e liberar a vaga na UI; o integrante fez isso e o job rodou completo.
+- Confirmou no `web/backend/app.py` que `GET /dashboard` lê o Postgres a cada requisição, sem cache.
+
+**O que NÃO foi verificado**
+- Por que o subprocesso morreu: os logs `.out`/`.err` do passo estavam vazios. Suspeita de memória, não confirmada.
+
+### 2026-11-24 — Claude Code — Site e Felicia passam a ler só o Supabase
+
+**O que a ferramenta fez**
+- Discutiu com o integrante a mudança de arquitetura: treino e cálculos ficam no ambiente local, e o site e a Felicia leem só o que é publicado no Supabase.
+- Mediu antes o tamanho da publicação, montando-a localmente sem enviar: cerca de 0,64 MB nas 5 tabelas que já existiam, mais 0,41 MB do dashboard das 17 praças. Ficou em torno de 1 MB.
+- Moveu as consultas do dashboard do backend para `src/inflatrack/reverse_etl/dashboard_site.py`, criou a tabela `dashboard_localidade` (`web/backend/migrations/004_dashboard_localidade.sql`) e a incluiu na transação do `publicar_site`, que recusa a publicação sem o Brasil.
+- Fez o `site_supabase` depender do `dashboard_serie_postgres` e o pôs no fim do `dashboard_job`.
+- Criou `web/backend/publicacao.py`: o `GET /dashboard` lê o Supabase (`DATABASE_URL`) e recorta o período. A Felicia ganhou `buscar_produto` e `prever_reajuste` (preço x (1 + variação prevista) ± erro, sem gravar o preço).
+- Escreveu os testes antes do código e atualizou `docs/como_rodar/publicar_site.md`.
+
+**O que foi verificado e como**
+- 93 testes passaram (`tests/unit` da publicação, `web/backend/tests`, `tests/integration/test_publicar_site.py` no Postgres local, `tests/orchestration/test_checks.py` e `test_predicao.py`), além do `ruff`.
+- Coleta real sem envio: 17 praças, 407 KB; Brasil com IPCA 12m de 4,63% em 2026-10; recorte de 12 meses de 2025-11 a 2026-10.
+
+**O que NÃO foi verificado**
+- Publicação real no Supabase: falta aplicar a migração 004 no projeto e rodar o `dashboard_job`.
+- A Felicia chamando as ferramentas novas com o modelo real (o proxy LiteLLM não está configurado).
+
+### 2026-11-24 — Claude Code — Orientação de publicação e deploy
+
+**O que a ferramenta fez**
+- Explicou onde pegar a `SUPABASE_DB_URL` (Session pooler) e qual job gera a `gold.fct_previsao_subitem` (`predicao_job`, depois do `analitico_job`).
+- Analisou o deploy na Vercel:
+  - frontend Next.js com Root Directory `web/frontend`;
+  - backend FastAPI melhor fora da Vercel, pelo tamanho do `google-adk` e pela sessão em memória da Felicia;
+  - os cookies de sessão no domínio do backend quebrariam o login entre domínios, e a solução sugerida foi um rewrite `/api` no Next.
+- Avaliou hospedar o backend no Supabase: as Edge Functions rodam Deno/TypeScript, não Python.
+
+**O que NÃO foi verificado**
+- Nenhum deploy foi feito; o tamanho exato do pacote Python na Vercel não foi medido.
+
+### 2026-11-24 — Claude Code — Diagnóstico da publicação e desenho do dashboard do lojista
+
+**O que a ferramenta fez**
+- Achou por que o `site_supabase` falhava: no Supabase só existia a tabela da migração 004; as 5 da 003 não tinham sido criadas. Conferiu isso numa conexão só de leitura, sem gravar nada.
+- Testou o proxy LiteLLM (respondeu em 3 s) quando a Felicia pareceu não responder; ela respondeu logo depois.
+- Comparou o dashboard do site com os painéis do Metabase e propôs três abordagens. O integrante escolheu abas de verdade.
+- Escreveu o desenho em `docs/superpowers/specs/2026-11-24-dashboard-lojista-design.md`.
+
+**O que NÃO foi verificado**
+- Nada foi implementado ainda; o desenho aguarda aprovação.
+
+### 2026-11-24 — Claude Code — Dashboard do site para o pequeno lojista
+
+**O que a ferramenta fez**
+- Implementou o desenho aprovado: as abas Visão geral, Produtos, Praças e Relatórios passaram a funcionar, divididas em componentes em `web/frontend/app/dashboard/`, com textos em linguagem de lojista.
+- A Visão geral ganhou uma frase de tendência. A aba Produtos é nova: um simulador de preço para qualquer produto e preço digitados e os 10 itens com maior alta prevista. A aba Relatórios ganhou o gráfico do salário mínimo real.
+- No backend, criou `GET /produtos`, `POST /reajuste` (a mesma `publicacao.prever_reajuste` da Felicia) e `GET /previsoes/destaques`, e pôs o `minimum_wage` no `/dashboard`.
+- A Felicia passou a procurar pela categoria genérica (Coca-Cola → refrigerante).
+- Com dados reais, viu que o IPCA repete nomes entre consumo em casa (11xx) e fora de casa (12xx). A busca agora mostra essa diferença.
+- Um revisor independente (subagente) apontou dois problemas, ambos corrigidos: a busca oferecia produtos sem previsão, e o preço "1.234" era lido como 1,234.
+- Apagou o desenho e o plano temporários, como o integrante pediu.
+
+**O que foi verificado e como**
+- Testes escritos antes do código: 47 testes do backend passaram, e `tsc` e `eslint` do frontend ficaram limpos.
+- Leituras reais no Supabase: arroz a R$ 25,50 em SP sai a R$ 26,58 (faixa de R$ 26,09 a R$ 27,06, previsão para 11/2026); os destaques de SP são passagem aérea, tomate e cebola; o salário mínimo tem 250 meses.
+
+**O que NÃO foi verificado**
+- As telas no navegador, logado: o backend em execução precisa ser reiniciado para carregar as rotas novas.
+- A Felicia respondendo com a busca por categoria genérica, usando o modelo real.
+
+### 2026-11-24 — Claude Code — Ajustes de uso no dashboard do lojista
+
+**O que a ferramenta fez**
+- Corrigiu o espaçamento do simulador, a rolagem lateral da aba Praças e o gráfico de poder de compra vazio nas praças: o número-índice só existe para o Brasil, e a praça passou a mostrar a série nacional com um aviso.
+- Criou um cache de 24 h no navegador (`getComCache`) para o dashboard e os destaques; o botão de atualizar ignora o cache do dashboard.
+- Trocou a busca de produtos por uma lista completa (377 itens, 35 KB) guardada no cache e filtrada no navegador, sem diferenciar acentos. `GET /produtos` passou a devolver a lista inteira.
+- Redesenhou a aba Praças a pedido do integrante: quanto custam hoje R$ 100 em compras de 12 meses atrás, por região, com consumo amplo (IPCA) e básico (INPC), a diferença para o Brasil e opções de ordenação, com o Brasil e a região da conta fixos no topo.
+
+**O que foi verificado e como**
+- 50 testes do backend passaram (testes escritos antes do código), e `tsc` e `eslint` do frontend ficaram limpos; a lista e o filtro foram conferidos com os dados reais do Supabase.
+
+**O que NÃO foi verificado**
+- As telas novas no navegador.
+
+### 2026-11-24 — Claude Code — Confiança da previsão no simulador
+
+**O que a ferramenta fez**
+- Voltou a aba Praças para barras, agora em reais (R$ 100 de 12 meses atrás), e corrigiu o texto do simulador para "caiu" ou "subiu" conforme o sinal.
+- Explicou a faixa larga: o `erro_tipico_pct` é o MAE do XGBoost por subitem em 12 meses, e em 94% das previsões ele é maior que a variação prevista.
+- Com o integrante, criou a confiança da previsão em `publicacao.prever_reajuste`, usada pelo simulador e pela Felicia:
+  - "baixa" quando o erro típico passa de 2 p.p. (72 dos 377 itens no Brasil);
+  - a faixa não cruza o preço atual contra a previsão;
+  - com confiança baixa, a tela mostra o preço sugerido com um alerta, sem a faixa.
+- Listou os itens mais estáveis e os mais voláteis, com dados reais do Supabase.
+
+**O que foi verificado e como**
+- 57 testes do backend passaram (testes escritos antes do código), e `tsc` e `eslint` ficaram limpos.
+
+**O que NÃO foi verificado**
+- A tela no navegador e a resposta da Felicia com o modelo real.
+
+### 2026-11-24 — Claude Code — Avaliação de segurança de skills de design
+
+**O que a ferramenta fez**
+- Avaliou a segurança de duas skills de terceiros para o Claude Code: a taste-skill (tasteskill.dev) e a ui-ux-pro-max (aitmpl.com), lendo os sites, o SKILL.md, os scripts de instalação e o código das skills.
+- Apontou os riscos: a taste-skill instala um hook que roda código ao fim de cada resposta; os instaladores via `npx` não fixam versão; a ui-ux-pro-max manda o agente instalar o Python com `sudo`.
+- A pedido do integrante, baixou só a pasta da ui-ux-pro-max, numa pasta temporária isolada fora do projeto, sem permissão de administrador, e não a instalou.
+
+**O que foi verificado e como**
+- Buscas nos 23 CSVs e nos 3 scripts Python por instruções escondidas, segredos, acesso à rede e caracteres invisíveis não encontraram nada suspeito; os links apontam só para documentação oficial e para o Google Fonts.
+- O script de busca rodou com uma consulta de teste e devolveu um design system de dashboard.
+
+**O que NÃO foi verificado**
+- Os scripts Node da taste-skill e o pacote npm `claude-code-templates`.
+
+### 2026-11-24 — Claude Code — Instalação da skill ui-ux-pro-max e revisão visual do dashboard
+
+**O que a ferramenta fez**
+- Instalou a skill ui-ux-pro-max só neste projeto (`.claude/skills/`), copiando a versão já revisada em vez de usar o `npx`. A pedido do integrante, trocou o trecho que mandava instalar o Python com `sudo`, `brew` ou `winget` por uma regra de não instalar nada.
+- Usou a skill para definir uma escala de tipos (12–32 px), contraste AA, botões de 44 px e foco visível, e aplicou isso ao dashboard num bloco de CSS no fim do `globals.css`. Manteve a paleta roxa e a fonte Geist.
+- Fez o conteúdo ocupar a largura da tela (até 1760 px, com margem lateral proporcional), dividir a linha entre os cartões de indicador e esticar um painel sozinho na largura toda.
+- Corrigiu problemas vistos nos prints: as abas sumiam no celular, os nomes dos setores apareciam cortados e o rodapé tinha letra de 10 px.
+
+**O que foi verificado e como**
+- Com uma conta de teste informada pelo integrante, um script local abriu o Edge sem janela, entrou no dashboard e tirou prints a 1920, 1366 e 390 px; os prints foram conferidos antes e depois de cada ajuste. A senha não foi gravada em arquivo.
+
+**O que NÃO foi verificado**
+- As abas Produtos, Praças e Relatórios por print; o modo escuro.

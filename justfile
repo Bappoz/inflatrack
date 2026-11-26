@@ -280,6 +280,31 @@ transacional-load:
 simular-cdc:
     uv run python -m inflatrack.cdc.simular_mudancas
 
+# Tabela de preços de um atacadista direto no Postgres (schema atacado; nunca na Bronze, ADR 0004).
+# Exige a migration 0007 e a carga do IPCA (os subitens precisam existir em classificacao).
+# Sem argumentos, importa o atacadista fictício de exemplo. Atacadista real:
+#   just atacado-importar tabela.csv "Nome do Atacadista" ""
+atacado-importar arquivo="data/atacado/tabela_exemplo.csv" fornecedor="Atacadista Exemplo" ficticio="--ficticio":
+    uv run python -m inflatrack.atacado.importar_tabela --arquivo "{{arquivo}}" --fornecedor "{{fornecedor}}" {{ficticio}}
+
+# E4: prevê o mês seguinte para cada praça e subitem (dbt, ~5 min) e publica no Supabase o que o
+# site e o agente leem. Exige SUPABASE_DB_URL no .env e a migration
+# web/backend/migrations/003_publicacao_inflatrack.sql aplicada no Supabase.
+previsao:
+    uv run dbt build --select fct_previsao_subitem
+
+publicar-site:
+    uv run python -m inflatrack.reverse_etl.publicar_site
+
+# E4: compara ingênuas, regressões linear/logarítmica e XGBoost em walk-forward e regrava o
+# notebook com as saídas (lê a Gold do DuckDB só para leitura; nada é gravado em banco). Os
+# gráficos vão também para docs/assets/e4/, que a página da evidência E4 mostra no mkdocs.
+# O de todas as praças leva dezenas de minutos (36 treinos do XGBoost com ~880 mil linhas).
+modelo-notebook:
+    uv run jupyter nbconvert --to notebook --execute --inplace notebooks/avaliacao_modelos.ipynb
+    uv run jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 notebooks/avaliacao_todas_pracas.ipynb
+    uv run python -m inflatrack.predicao.exportar_graficos
+
 # E3 da trilha IPCA + lojista, do Delta à vitrine. Exige `just up` e `just bronze-ipca-metadados`.
 e3-lojista: ipca-load simular-cdc transacional-load
     uv run dbt build --select +fct_inflacao_mensal +fct_reajuste_lojista dim_localidade dim_calendario

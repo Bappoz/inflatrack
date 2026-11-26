@@ -1,7 +1,7 @@
-"""Jobs e agendamentos, um por grupo de ativos (cadências de docs/pipeline/orquestracao.md).
+"""Jobs e schedules de fontes e publicação do dashboard.
 
-Os agendamentos nascem desligados: ligue na interface (Automation) para não gastar a
-cota da Alpha Vantage nem bater nas APIs só por abrir o `dagster dev`.
+Só IPCA/INPC e número-índice são ativados por padrão: são as séries públicas consumidas pelo
+dashboard. As demais fontes externas continuam opt-in para proteger suas cotas.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 from dagster import (
     AssetKey,
     AssetSelection,
+    DefaultScheduleStatus,
     JobDefinition,
     RunRequest,
     ScheduleDefinition,
@@ -35,6 +36,10 @@ dieese_job = define_asset_job("dieese_job", AssetSelection.groups("dieese"))
 clima_job = define_asset_job("clima_job", AssetSelection.groups("clima"))
 enso_job = define_asset_job("enso_job", AssetSelection.groups("enso"))
 transacional_job = define_asset_job("transacional_job", AssetSelection.groups("transacional"))
+# Preços do atacadista: só o Postgres, sem Bronze nem dbt (ADR 0004).
+atacado_job = define_asset_job("atacado_job", AssetSelection.groups("atacado"))
+# Previsão do mês seguinte (dbt, ~5 min) e publicação no Supabase para o site e o agente.
+predicao_job = define_asset_job("predicao_job", AssetSelection.groups("predicao", "site"))
 
 # As cargas do IPCA e do PIB no DuckDB não são particionadas (espelham o Delta inteiro) e
 # dependem de coletas particionadas que só materializam o que a fonte publicou, sem `Output`
@@ -49,6 +54,27 @@ analitico_job = define_asset_job(
     AssetSelection.groups("silver", "gold", "vitrine") | CARGAS_SEM_JOB_PROPRIO,
 )
 
+dashboard_job = define_asset_job(
+    "dashboard_job",
+    AssetSelection.assets(
+        AssetKey("ipca_duckdb"),
+        AssetKey("ipca_metadados_duckdb"),
+        AssetKey(["silver", "seed_agregado_sidra"]),
+        AssetKey(["silver", "seed_localidade_ibge"]),
+        AssetKey(["silver", "seed_variavel_sidra"]),
+        AssetKey(["silver", "stg_ipca__metadados"]),
+        AssetKey(["silver", "stg_ipca__observacao"]),
+        AssetKey(["silver", "int_ipca__mensal"]),
+        AssetKey(["gold", "dim_calendario"]),
+        AssetKey(["gold", "dim_localidade"]),
+        AssetKey(["gold", "dim_cesta_ipca_scd2"]),
+        AssetKey(["gold", "fct_inflacao_mensal"]),
+        AssetKey("dashboard_serie_postgres"),
+        # O site lê só o Supabase: o job termina publicando lá o que acabou de calcular.
+        AssetKey("site_supabase"),
+    ),
+)
+
 JOBS = [
     ipca_job,
     inpc_job,
@@ -61,7 +87,10 @@ JOBS = [
     clima_job,
     enso_job,
     transacional_job,
+    atacado_job,
+    predicao_job,
     analitico_job,
+    dashboard_job,
 ]
 
 
@@ -79,6 +108,7 @@ def _agendamento_sidra(job: JobDefinition, ativo: str):
         job=job,
         cron_schedule="0 10 9-13 * *",
         execution_timezone=FUSO,
+        default_status=DefaultScheduleStatus.RUNNING,
     )
     def _agendamento(context: ScheduleEvaluationContext):
         execucao = context.scheduled_execution_time
@@ -107,8 +137,8 @@ def agendamento_pib(context: ScheduleEvaluationContext):
 
 # Ordem do dia (fuso de São Paulo): clima 7h, commodities 8h, 9h para PIB (meses de
 # divulgação), PIB internacional (dia 1) e DIEESE (dia 5), IPCA 10h (dias 9 a 13),
-# Dólar/Selic 19h (dias úteis), transacional de hora em hora; o analitico_job fecha o dia
-# às 20h30. Um escritor por vez no DuckDB (pool).
+# Dólar/Selic 19h (dias úteis), transacional de hora em hora, atacadista 6h; o analitico_job
+# fecha o dia às 20h30. Um escritor por vez no DuckDB (pool).
 SCHEDULES = [
     _agendamento_sidra(ipca_job, "ipca"),
     _agendamento_sidra(inpc_job, "inpc"),
@@ -121,6 +151,8 @@ SCHEDULES = [
     ScheduleDefinition(job=clima_job, cron_schedule="0 7 * * *", execution_timezone=FUSO),
     # De hora em hora: cada leitura só traz o que mudou, e o WAL segura o resto entre as leituras.
     ScheduleDefinition(job=transacional_job, cron_schedule="0 * * * *", execution_timezone=FUSO),
+    # 1×/dia: reimportar não duplica nada, então só entra o que mudou na tabela de preços.
+    ScheduleDefinition(job=atacado_job, cron_schedule="0 6 * * *", execution_timezone=FUSO),
     agendamento_pib,
     # 1×/mês: o Banco Mundial revisa fora de calendário.
     ScheduleDefinition(
@@ -130,5 +162,12 @@ SCHEDULES = [
     # Segundas, 9h: o NOAA publica o RONI do mês no começo do mês seguinte; uma coleta por
     # semana pega a publicação em até 7 dias e a eventual revisão da série.
     ScheduleDefinition(job=enso_job, cron_schedule="0 9 * * 1", execution_timezone=FUSO),
-    ScheduleDefinition(job=analitico_job, cron_schedule="30 20 * * *", execution_timezone=FUSO),
+    ScheduleDefinition(
+        job=dashboard_job,
+        cron_schedule="30 20 * * *",
+        execution_timezone=FUSO,
+        default_status=DefaultScheduleStatus.RUNNING,
+    ),
+    # Dia 14, 11h: depois da janela do IPCA (dias 9 a 13), prevê o mês seguinte e publica.
+    ScheduleDefinition(job=predicao_job, cron_schedule="0 11 14 * *", execution_timezone=FUSO),
 ]

@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: fct_previsao_subitem
+    description: >
+      Variação prevista do subitem do IPCA no mês seguinte ao último divulgado, por praça
+      (XGBoost único para todas as praças, sem clima). `erro_tipico_pct` é o erro médio absoluto
+      do modelo naquele subitem nos últimos 12 meses, para o site mostrar uma faixa. Publicada no
+      Supabase por `inflatrack.reverse_etl.publicar_site`. Não tem preço (ADR 0004).
+    columns:
+      - name: codigo_localidade
+        data_tests: [not_null]
+      - name: codigo_subitem
+        data_tests: [not_null]
+      - name: mes_base
+        description: Último mês com IPCA divulgado.
+        data_tests: [not_null]
+      - name: mes_previsto
+        description: mes_base + 1 mês.
+        data_tests: [not_null]
+      - name: variacao_prevista_pct
+        data_tests: [not_null]
+      - name: erro_tipico_pct
+        description: Nunca negativo (dbt/tests/assert_fct_previsao_subitem_valida.sql).
+        data_tests: [not_null]

@@ -48,6 +48,9 @@ Todo ativo que abre o DuckDB entra no pool `duckdb_writer` (um escritor por vez)
 | `clima` | `clima_parquet` → `clima_duckdb` (catálogo, API); `clima_medicoes` → `clima_medicoes_duckdb` (medições, BDMEP); `clima_medicoes` → `clima_provisorio` → `clima_provisorio_duckdb` (provisório, Open-Meteo) | Delta → DuckDB | `bronze.clima`, `load_clima --tabela estacao\|medicao\|provisoria` |
 | `enso` | `enso_parquet` → `enso_duckdb` | Delta → DuckDB | `bronze.enso`, `loaders.load_enso` |
 | `transacional` | `transacional_delta` → `transacional_duckdb` | Delta → DuckDB | `cdc.transacional`, `loaders.load_transacional` |
+| `atacado` | `atacado_postgres` (sem dependentes: o preço não vai para a Bronze, ADR 0004) | Postgres (`atacado`) | `atacado.importar_tabela` |
+| `predicao` | `fct_previsao_subitem` (modelo Python do dbt; XGBoost único, mês seguinte por praça e subitem) | DuckDB (`gold`) | `predicao.aplicacao` |
+| `site` | `site_supabase` (sem dependentes) | Supabase do site | `reverse_etl.publicar_site` |
 | `silver`, `gold` | modelos do dbt | DuckDB | `dbt build` (`dbt_assets.py`) |
 | `vitrine` | `serie_postgres` | Postgres (`serie`) | `reverse_etl.exportar_serie` |
 
@@ -62,6 +65,7 @@ orchestration/
 │   ├── commodities.py, dolar.py, selic.py, salario_minimo.py, clima.py, pib_internacional.py
 │   ├── ipca.py             # IPCA, INPC e número-índice, particionados por mês, e a carga no DuckDB
 │   ├── transacional.py     # CDC do banco do lojista e a carga no DuckDB
+│   ├── atacado.py          # preços do atacadista direto no Postgres (nunca na Bronze)
 │   ├── dbt_assets.py       # @dbt_assets: Silver e Gold, ligados às cargas pelo meta.dagster.asset_key
 │   ├── serie.py            # serie_postgres: cópia da Gold para o schema serie (Metabase)
 │   └── checks.py           # asset checks de frescura e volume
@@ -87,7 +91,8 @@ Só o IPCA/INPC (por mês) e o PIB (por ano) são particionados. As demais fonte
 | El Niño / La Niña (RONI, NOAA) | Mensal | 1×/semana, segunda às 9h (série inteira, detecta revisão) | Publicação do NOAA no começo do mês |
 | Salário mínimo (DIEESE) | Mensal | 1×/mês | Publicação do DIEESE |
 | PIB internacional (Banco Mundial) | — | 1×/mês, dia 1 (detecta revisão) | Revisões fora de calendário |
-| Silver, Gold e vitrine (`analitico_job`) | — | 1×/dia às 20h30, depois das fontes | Dependência do grafo |
+| Gold de inflação e vitrine (`dashboard_job`) | — | 1×/dia às 20h30, depois do SIDRA | Dependência do dashboard |
+| Silver, Gold e vitrine de todas as fontes (`analitico_job`) | — | Manual | Consolidação analítica completa |
 
 Fontes com calendário irregular (o IBGE às vezes antecipa, o DIEESE não tem dia fixo) usam agendamento **tolerante**: roda todo dia da janela e o asset só materializa quando o dado novo aparece — mais barato que acertar a data exata.
 
@@ -107,14 +112,16 @@ just materializar macro_job # roda um job sem abrir a interface
 
 A partir da interface: materializar um ativo, selecionar um intervalo de partições para backfill (um intervalo do IPCA vira uma única execução, quebrada por agregado), ou inspecionar a última execução de cada ativo.
 
-!!! warning "Agendamentos nascem desligados"
-    Ligue cada um em *Automation* na interface. Assim, abrir o `dagster dev` não chama nenhuma API nem gasta a cota da Alpha Vantage. Os ativos do grupo `sidra` precisam do Postgres no ar (`just up`).
+!!! info "Atualização do dashboard"
+    Os schedules de IPCA, INPC e número-índice SIDRA, mais o `dashboard_job`, iniciam ativos. O job do dashboard atualiza apenas as quatro tabelas de inflação usadas pela home. Os schedules de commodities, macroeconomia e demais fontes continuam desligados para proteger cotas externas. Mantenha o Postgres no ar (`just up`) e o daemon Dagster ativo (`just orquestrador`).
 
 ### Primeira execução numa máquina nova
 
 `popular_banco_job` (em `orchestration/popular.py`) enche a Bronze do zero. Ele não é um job de ativos: IPCA, INPC e número-índice são particionados por mês e o PIB por ano, e o Dagster recusa partições diferentes num mesmo job de ativos. Em vez disso, cada op pede ao webserver (API GraphQL, porta `DAGSTER_PORT`) que dispare um job de fonte como run separado e espera o fim. Os particionados vão com o intervalo completo (IPCA desde 2006, número-índice desde 1979, INPC desde 2020, PIB desde 1996), que vira um run só por causa do `BackfillPolicy.single_run()`.
 
-Os jobs rodam em paralelo, com uma exceção: o `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
+O `predicao_job` (dia 14, 11h) roda os grupos `predicao` e `site`: prevê o mês seguinte ao último IPCA e publica no Supabase, para o site e o agente. Fica fora do `analitico_job` diário porque a previsão leva uns 5 minutos, e fora do `popular_banco_job` porque precisa da Gold pronta.
+
+Os jobs rodam em paralelo, com duas exceções. O `atacado_job` espera o `ipca_job`, porque o importador exige os subitens em `classificacao`, que a carga do IPCA grava no Postgres. O `transacional_job` espera as três coletas do SIDRA. A carga completa do IPCA grava ~6 milhões de linhas em `public.observacao` (mais de 2 GB de WAL); com o slot do CDC criado no meio dela e sem leitura, o Postgres o invalida por `max_slot_wal_keep_size` (visto num clone limpo em 2026-11-08). O banco do lojista nasce vazio: para a P5 ter dado, rode `just simular-cdc` antes do `analitico_job`.
 
 Uma fonte que falha deixa o run dela vermelho e **não impede as outras**: a op `resumo` lista quem falhou e marca só então o job pai como falho. Lançar de novo refaz apenas o que falta, porque os coletores pulam o que já existe. Silver, Gold e vitrine ficam de fora de propósito: depois rode o `analitico_job`.
 
@@ -122,7 +129,7 @@ Exige o `dagster dev` no ar (é lançado pela interface, não por `just material
 
 O `clima_duckdb` e o `clima_medicoes_duckdb` aplicam o DDL do clima antes de carregar, então as duas tabelas `bronze.clima_*` existem mesmo antes da primeira coleta. Fora do Dagster, `just dbt` roda antes o `just duckdb-init` (os DDLs idempotentes de `scripts/sql/setup_duckdb*.sql`, respeitando `DBT_DUCKDB_PATH`, sem API e sem apagar dados); fontes sem DDL ainda dependem de seus loaders.
 
-Os agendamentos seguem a tabela acima. Os do SIDRA rodam nos dias 9 a 13: pedem a partição do mês anterior enquanto ela não estiver materializada e, uma vez por ciclo, releem os três meses antes dela, para captar revisão do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)).
+O `dashboard_job` fica ativo diariamente às 20h30; os schedules SIDRA rodam nos dias 9 a 13 e releem os três meses anteriores para captar revisões do IBGE (ver [política de dado atrasado do IPCA](../evidencias/e2/ipca.md#politica-de-dado-atrasado)). O `analitico_job` completo continua manual. Numa máquina nova, faça o backfill SIDRA antes da primeira execução do dashboard.
 
 Enquanto o IBGE não divulga o mês, o SIDRA responde com uma lista vazia. O mês é pulado sem gravar nada e a partição dele fica *pendente* (não materializada), então o agendamento pede de novo no dia seguinte; os outros meses do intervalo são materializados normalmente. A execução só fica vermelha quando **nenhum** mês do intervalo saiu (`nada de ... foi divulgado pela fonte ainda`), e sem retry, porque esperar 30 s não faz o IBGE publicar. Se o mês fosse marcado como carregado sem dado, os dias seguintes seriam pulados e o mês nunca entraria.
 

@@ -83,15 +83,18 @@ nav:
     - ADR 0001 (Modelagem da origem): arquitetura.md
     - ADR 0002 (DuckDB único): adr/0002-duckdb-unico.md
     - ADR 0003 (Séries macro diárias): adr/0003-bcb-macro.md
+    - ADR 0004 (Preço de produto só no relacional): adr/0004-preco-produto-so-relacional.md
     - ADR (a numerar) CDC x lote: adr/cdc-vs-lote.md
   - Pipeline de Dados:
     - Orquestração (Dagster): pipeline/orquestracao.md
     - Contrato das Etapas: pipeline/contratoEtapas.md
     - Como rodar (Commodities): como_rodar/cr_commodities.md
+    - Como publicar no site (Supabase): como_rodar/publicar_site.md
   - Dicionário de Dados:
     - Visão Geral: dicionario/dicionario.md
     - IPCA/INPC (SIDRA): dicionario/sidra.md
     - Transacional (Lojista): dicionario/transacional.md
+    - Preços de Atacadista: dicionario/atacado.md
     - Commodities e Energia (Alpha Vantage): dicionario/commodities.md
     - Macroeconomia (Dólar e Selic): dicionario/macroeconomia.md
     - PIB e Setores (SIDRA 1846): dicionario/pib.md
@@ -120,6 +123,8 @@ nav:
     - E3 — SLA e frescura (câmbio x juros): evidencias/e3/sla_e_freshness.md
     - E3 — Clima pelo BDMEP até a Gold: evidencias/e3/clima_bdmep.md
     - E3 — Release Notes: evidencias/e3/release_notes.md
+    - E4 — Avaliação dos modelos de previsão: evidencias/e4/avaliacao_modelos.md
+    - E4 — Avaliação em todas as praças: evidencias/e4/avaliacao_todas_pracas.md
     - Diário de bordo (Lucas): diario/lucas.md
     - Diário de bordo (Artur): diario/artur.md
     - Uso de IA: evidencias/uso_ia.md
