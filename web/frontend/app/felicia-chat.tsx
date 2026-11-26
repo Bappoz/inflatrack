@@ -3,13 +3,25 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 import Image from "next/image";
+import { apiUrl } from "./dashboard/formato";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// O servidor não guarda a conversa: cada pergunta leva as últimas mensagens como contexto.
+const HISTORICO_MAXIMO = 10;
+const TAMANHO_MAXIMO_HISTORICO = 4000;
 
 type ChatMessage = {
   role: "assistant" | "user";
   text: string;
+  // Saudação e avisos de falha são só da tela; não vão para o modelo.
+  local?: boolean;
 };
+
+function historicoParaEnviar(messages: ChatMessage[]) {
+  return messages
+    .filter((item) => !item.local)
+    .slice(-HISTORICO_MAXIMO)
+    .map(({ role, text }) => ({ role, text: text.slice(0, TAMANHO_MAXIMO_HISTORICO) }));
+}
 
 export default function FeliciaChat() {
   const [open, setOpen] = useState(false);
@@ -18,10 +30,10 @@ export default function FeliciaChat() {
     {
       role: "assistant",
       text: "Olá! Sou a Felicia. Posso responder perguntas sobre os dados de inflação do InflaTrack.",
+      local: true,
     },
   ]);
   const [sending, setSending] = useState(false);
-  const sessionId = useRef("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -51,26 +63,33 @@ export default function FeliciaChat() {
     const text = message.trim();
     if (!text || sending) return;
 
-    if (!sessionId.current) sessionId.current = crypto.randomUUID();
+    const history = historicoParaEnviar(messages);
     setMessages((current) => [...current, { role: "user", text }]);
     setMessage("");
     setSending(true);
 
-    let reply = "Não consegui falar com o servidor. Tente de novo em instantes.";
+    let reply: ChatMessage = {
+      role: "assistant",
+      text: "Não consegui falar com o servidor. Tente de novo em instantes.",
+      local: true,
+    };
     try {
       const response = await fetch(`${apiUrl}/chat`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: sessionId.current }),
+        body: JSON.stringify({ message: text, history }),
       });
       const body = await response.json().catch(() => null);
-      if (response.ok && typeof body?.reply === "string") reply = body.reply;
-      else if (typeof body?.detail === "string") reply = body.detail;
+      if (response.ok && typeof body?.reply === "string") {
+        reply = { role: "assistant", text: body.reply };
+      } else if (typeof body?.detail === "string") {
+        reply = { ...reply, text: body.detail };
+      }
     } catch {
       // mantém a mensagem padrão de falha de rede
     }
-    setMessages((current) => [...current, { role: "assistant", text: reply }]);
+    setMessages((current) => [...current, reply]);
     setSending(false);
   }
 
@@ -123,6 +142,7 @@ export default function FeliciaChat() {
               ref={inputRef}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
+              maxLength={2000}
               placeholder="Digite sua pergunta..."
               aria-label="Mensagem para a Felicia"
             />

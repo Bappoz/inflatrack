@@ -24,11 +24,11 @@ from starlette.concurrency import run_in_threadpool
 
 if __package__:
     from . import publicacao
-    from .chat import chat_configurado, responder
+    from .chat import FeliciaIndisponivel, chat_configurado, responder
     from .database import DatabaseConfigurationError, check_user_store, get_engine, save_user
 else:
     import publicacao
-    from chat import chat_configurado, responder
+    from chat import FeliciaIndisponivel, chat_configurado, responder
     from database import DatabaseConfigurationError, check_user_store, get_engine, save_user
 
 load_dotenv(Path(__file__).with_name(".env"))
@@ -484,11 +484,21 @@ async def previsoes_destaques(
     }
 
 
+class MensagemHistorico(BaseModel):
+    """Uma mensagem anterior da conversa, guardada no navegador."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=1, max_length=2000)
-    session_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    # As 10 últimas mensagens antes da pergunta nova; o servidor não guarda a conversa.
+    history: list[MensagemHistorico] = Field(default_factory=list, max_length=10)
 
 
 class ChatResponse(BaseModel):
@@ -523,21 +533,23 @@ def prever_reajuste(codigo_subitem: str, uf: str, preco_atual: float) -> dict:
         return {"erro": str(error)}
 
 
-FERRAMENTAS_FELICIA = [consultar_inflacao, buscar_produto, prever_reajuste]
+FERRAMENTAS_FELICIA = {
+    funcao.__name__: funcao for funcao in (consultar_inflacao, buscar_produto, prever_reajuste)
+}
 
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(payload: ChatRequest, request: Request, response: Response) -> ChatResponse:
-    user = await _authenticated_user(request, response)
+    await _authenticated_user(request, response)
     if not chat_configurado():
         raise HTTPException(status_code=503, detail="A Felicia não está configurada.")
+    historico = [item.model_dump() for item in payload.history]
     try:
-        reply = await responder(
-            user["id"], payload.session_id, payload.message, FERRAMENTAS_FELICIA
-        )
-    except Exception as error:
+        reply = await responder(payload.message, historico, FERRAMENTAS_FELICIA)
+    except FeliciaIndisponivel as error:
         raise HTTPException(
-            status_code=502, detail="A Felicia não conseguiu responder agora."
+            status_code=502,
+            detail="A Felicia não conseguiu responder agora. Tente de novo em instantes.",
         ) from error
     return ChatResponse(reply=reply or "Não consegui formular uma resposta.")
 
